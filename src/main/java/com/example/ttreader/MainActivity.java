@@ -2,6 +2,7 @@ package com.example.ttreader;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
@@ -56,6 +57,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ImageButton toggleSpeechButton;
     private ImageButton stopSpeechButton;
     private Button installTalgatButton;
+    private TtsReaderController ttsController;
+    private AlertDialog rhvoiceDialog;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
@@ -137,11 +140,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         ttsController = new TtsReaderController(this, readerView::getTranslations);
         ttsController.setTokenSequence(readerView.getTokenSpans());
 
-        Button installRhvoiceButton = findViewById(R.id.btnInstallRhvoice);
-        if (installRhvoiceButton != null) {
-            installRhvoiceButton.setOnClickListener(v -> showRhvoiceInstallDialog());
-        }
-
         if (readerScrollView != null) {
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
             observer.addOnScrollChangedListener(() ->
@@ -219,6 +217,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             mediaSession.release();
             mediaSession = null;
         }
+        dismissRhvoiceDialog();
         speechProgressHandler.removeCallbacksAndMessages(null);
         super.onDestroy();
     }
@@ -615,6 +614,30 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
+    private void ensureRhvoiceReady() {
+        RhvoiceAvailability.checkStatus(this, status -> {
+            if (isFinishing()) return;
+            switch (status) {
+                case RhvoiceAvailability.Status.READY:
+                    rhVoiceInstalled = true;
+                    updateRhVoiceState();
+                    break;
+                case RhvoiceAvailability.Status.ENGINE_MISSING:
+                    rhVoiceInstalled = false;
+                    updateRhVoiceState();
+                    showRhvoiceEngineDialog();
+                    break;
+                case RhvoiceAvailability.Status.VOICE_MISSING:
+                    rhVoiceInstalled = true;
+                    updateRhVoiceState();
+                    showRhvoiceVoiceDialog();
+                    break;
+                default:
+                    break;
+            }
+        });
+    }
+
     private boolean isRhVoiceInstalled() {
         try {
             PackageManager pm = getPackageManager();
@@ -642,5 +665,65 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
 
+    }
+
+    private void showRhvoiceEngineDialog() {
+        if (isFinishing()) return;
+        dismissRhvoiceDialog();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(R.string.rhvoice_install_title)
+                .setMessage(R.string.rhvoice_install_message)
+                .setPositiveButton(R.string.rhvoice_install_store, (dialog, which) -> openRhvoiceStore())
+                .setNeutralButton(R.string.rhvoice_install_download, (dialog, which) ->
+                        startActivitySafely(RhvoiceAvailability.createProjectPageIntent()))
+                .setNegativeButton(android.R.string.cancel, null);
+        rhvoiceDialog = builder.create();
+        rhvoiceDialog.setOnDismissListener(dialog -> rhvoiceDialog = null);
+        rhvoiceDialog.show();
+    }
+
+    private void showRhvoiceVoiceDialog() {
+        if (isFinishing()) return;
+        dismissRhvoiceDialog();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(R.string.rhvoice_voice_title)
+                .setMessage(R.string.rhvoice_voice_message)
+                .setPositiveButton(R.string.rhvoice_voice_open_app, (dialog, which) -> openRhvoiceApp())
+                .setNeutralButton(R.string.rhvoice_voice_download, (dialog, which) ->
+                        startActivitySafely(RhvoiceAvailability.createVoiceDownloadIntent()))
+                .setNegativeButton(android.R.string.cancel, null);
+        rhvoiceDialog = builder.create();
+        rhvoiceDialog.setOnDismissListener(dialog -> rhvoiceDialog = null);
+        rhvoiceDialog.show();
+    }
+
+    private void openRhvoiceStore() {
+        if (startActivitySafely(RhvoiceAvailability.createPlayStoreIntent())) return;
+        if (startActivitySafely(RhvoiceAvailability.createPlayStoreWebIntent())) return;
+        if (startActivitySafely(RhvoiceAvailability.createProjectPageIntent())) return;
+        Toast.makeText(this, R.string.rhvoice_no_handler, Toast.LENGTH_LONG).show();
+    }
+
+    private void openRhvoiceApp() {
+        Intent launchIntent = RhvoiceAvailability.createLaunchIntent(this);
+        if (startActivitySafely(launchIntent)) return;
+        openRhvoiceStore();
+    }
+
+    private boolean startActivitySafely(Intent intent) {
+        if (intent == null) return false;
+        try {
+            startActivity(intent);
+            return true;
+        } catch (ActivityNotFoundException e) {
+            return false;
+        }
+    }
+
+    private void dismissRhvoiceDialog() {
+        if (rhvoiceDialog != null) {
+            rhvoiceDialog.dismiss();
+            rhvoiceDialog = null;
+        }
     }
 }
