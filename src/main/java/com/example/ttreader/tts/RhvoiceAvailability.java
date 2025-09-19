@@ -57,7 +57,13 @@ public final class RhvoiceAvailability {
             return;
         }
         try {
-            final TextToSpeech tts = new TextToSpeech(appContext, status -> {
+            final TextToSpeech[] holder = new TextToSpeech[1];
+            holder[0] = new TextToSpeech(appContext, status -> {
+                TextToSpeech tts = holder[0];
+                if (tts == null) {
+                    postStatus(callback, Status.VOICE_MISSING);
+                    return;
+                }
                 Status result = Status.VOICE_MISSING;
                 if (status == TextToSpeech.SUCCESS) {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
@@ -78,6 +84,7 @@ public final class RhvoiceAvailability {
                     }
                 }
                 tts.shutdown();
+                holder[0] = null;
                 postStatus(callback, result);
             }, ENGINE_PACKAGE);
         } catch (Exception e) {
