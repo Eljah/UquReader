@@ -2,11 +2,16 @@ package com.example.ttreader;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.PorterDuff;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -21,6 +26,8 @@ import com.example.ttreader.widget.UsageTimelineView;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -40,6 +47,26 @@ public class StatsActivity extends Activity {
     private String workId = "";
     private UsageStatsDao.TimeBounds timeBounds;
     private UsageStatsDao.PositionBounds positionBounds;
+    private LayoutInflater layoutInflater;
+    private LinearLayout lemmaStatsContainer;
+    private final List<LemmaStats> lemmaStatsSource = new ArrayList<>();
+    private boolean lemmaStatsLoaded = false;
+    private String lemmaFilterLower = "";
+    private LemmaSortMode lemmaSortMode = LemmaSortMode.ALPHABET_ASC;
+    private final Map<LemmaSortMode, ImageButton> sortButtons = new EnumMap<>(LemmaSortMode.class);
+
+    private static final Map<Character, Integer> TATAR_ALPHABET_INDEX = new HashMap<>();
+    private static final int TATAR_UNKNOWN_BASE = 1000;
+
+    static {
+        String alphabet = "АӘБВГДЕЁЖҖЗИЙКЛМНҢОӨПРСТУҮФХҺЦЧШЩЪЫЬЭЮЯ";
+        for (int i = 0; i < alphabet.length(); i++) {
+            char upper = alphabet.charAt(i);
+            char lower = Character.toLowerCase(upper);
+            TATAR_ALPHABET_INDEX.put(upper, i);
+            TATAR_ALPHABET_INDEX.put(lower, i);
+        }
+    }
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,8 +96,12 @@ public class StatsActivity extends Activity {
                 ? usageStatsDao.getCharBounds(languagePair, workId)
                 : new UsageStatsDao.PositionBounds(0, 0);
 
+        layoutInflater = LayoutInflater.from(this);
+
         TextView axisDescription = findViewById(R.id.statsAxisDescription);
         updateAxisDescription(axisDescription);
+
+        setupSortControls();
 
         LinearLayout lemmaContainer = findViewById(R.id.lemmaStatsContainer);
         LinearLayout featureContainer = findViewById(R.id.featureStatsContainer);
@@ -78,8 +109,74 @@ public class StatsActivity extends Activity {
         populateFeatureStats(featureContainer);
     }
 
+    private void setupSortControls() {
+        EditText filterInput = findViewById(R.id.statsFilterInput);
+        if (filterInput != null) {
+            filterInput.addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
+                @Override public void afterTextChanged(Editable s) {
+                    String value = s != null ? s.toString() : "";
+                    String normalized = value.trim();
+                    lemmaFilterLower = normalized.toLowerCase(Locale.getDefault());
+                    if (lemmaStatsLoaded) {
+                        refreshLemmaStats();
+                    }
+                }
+            });
+        }
+        sortButtons.clear();
+        addSortButton(LemmaSortMode.ALPHABET_ASC, R.id.buttonSortAlphaAsc);
+        addSortButton(LemmaSortMode.ALPHABET_DESC, R.id.buttonSortAlphaDesc);
+        addSortButton(LemmaSortMode.LOOKUP_COUNT_DESC, R.id.buttonSortLookupCountDesc);
+        addSortButton(LemmaSortMode.LOOKUP_TIME_DESC, R.id.buttonSortLookupTimeDesc);
+        addSortButton(LemmaSortMode.LOOKUP_TIME_ASC, R.id.buttonSortLookupTimeAsc);
+        addSortButton(LemmaSortMode.LOOKUP_COUNT_ASC, R.id.buttonSortLookupCountAsc);
+        addSortButton(LemmaSortMode.EXPOSURE_COUNT_DESC, R.id.buttonSortExposureCountDesc);
+        addSortButton(LemmaSortMode.EXPOSURE_COUNT_ASC, R.id.buttonSortExposureCountAsc);
+        updateSortButtonState();
+    }
+
+    private void addSortButton(LemmaSortMode mode, int viewId) {
+        ImageButton button = findViewById(viewId);
+        if (button != null) {
+            sortButtons.put(mode, button);
+            button.setOnClickListener(v -> setLemmaSortMode(mode));
+        }
+    }
+
+    private void setLemmaSortMode(LemmaSortMode mode) {
+        if (mode == null) return;
+        if (lemmaSortMode != mode) {
+            lemmaSortMode = mode;
+            if (lemmaStatsLoaded) {
+                refreshLemmaStats();
+            }
+        }
+        updateSortButtonState();
+    }
+
+    private void updateSortButtonState() {
+        int activeColor = resolveColor(android.R.color.holo_blue_dark);
+        int inactiveColor = resolveColor(android.R.color.darker_gray);
+        for (Map.Entry<LemmaSortMode, ImageButton> entry : sortButtons.entrySet()) {
+            ImageButton button = entry.getValue();
+            if (button == null) continue;
+            if (entry.getKey() == lemmaSortMode) {
+                button.setColorFilter(activeColor, PorterDuff.Mode.SRC_IN);
+            } else {
+                button.setColorFilter(inactiveColor, PorterDuff.Mode.SRC_IN);
+            }
+        }
+    }
+
     private void populateLemmaStats(LinearLayout container) {
+        lemmaStatsContainer = container;
+        if (container == null) return;
         container.removeAllViews();
+        lemmaStatsSource.clear();
+        lemmaStatsLoaded = false;
+
         String workScope = mode == MODE_WORK ? workId : null;
         List<UsageStat> stats = usageStatsDao.getLemmaStats(languagePair, workScope);
         Map<String, LemmaStats> aggregated = new HashMap<>();
@@ -106,25 +203,39 @@ public class StatsActivity extends Activity {
                 bucket.lookupEvents = events.events;
             }
         }
-        LayoutInflater inflater = LayoutInflater.from(this);
-        if (aggregated.isEmpty()) {
+        lemmaStatsSource.addAll(aggregated.values());
+        lemmaStatsLoaded = true;
+        refreshLemmaStats();
+    }
+
+    private void refreshLemmaStats() {
+        if (lemmaStatsContainer == null) return;
+        lemmaStatsContainer.removeAllViews();
+        if (!lemmaStatsLoaded) return;
+
+        List<LemmaStats> filtered = new ArrayList<>();
+        for (LemmaStats entry : lemmaStatsSource) {
+            if (matchesFilter(entry)) {
+                filtered.add(entry);
+            }
+        }
+
+        if (filtered.isEmpty()) {
             TextView tv = new TextView(this);
-            tv.setText(R.string.stats_time_never);
-            container.addView(tv);
+            if (lemmaStatsSource.isEmpty()) {
+                tv.setText(R.string.stats_time_never);
+            } else {
+                tv.setText(R.string.stats_filter_empty);
+            }
+            lemmaStatsContainer.addView(tv);
             return;
         }
-        List<LemmaStats> lemmaStats = new ArrayList<>(aggregated.values());
-        Collections.sort(lemmaStats, (a, b) -> {
-            String la = safeString(a.lemma);
-            String lb = safeString(b.lemma);
-            int cmp = la.compareToIgnoreCase(lb);
-            if (cmp != 0) return cmp;
-            String pa = safeString(a.pos);
-            String pb = safeString(b.pos);
-            return pa.compareToIgnoreCase(pb);
-        });
-        for (LemmaStats entry : lemmaStats) {
-            View item = inflater.inflate(R.layout.item_stats_entry, container, false);
+
+        sortLemmaStats(filtered);
+
+        LayoutInflater inflater = layoutInflater != null ? layoutInflater : LayoutInflater.from(this);
+        for (LemmaStats entry : filtered) {
+            View item = inflater.inflate(R.layout.item_stats_entry, lemmaStatsContainer, false);
             TextView title = item.findViewById(R.id.statsTitle);
             TextView exposure = item.findViewById(R.id.statsExposure);
             TextView lookup = item.findViewById(R.id.statsLookup);
@@ -145,8 +256,122 @@ public class StatsActivity extends Activity {
             bindTimeline(lookupTimeline, lookupLabels, lookupStartLabel, lookupEndLabel,
                     entry.lookupCount, entry.lookupPositions, entry.lookupEvents,
                     resolveColor(android.R.color.holo_blue_dark));
-            container.addView(item);
+            lemmaStatsContainer.addView(item);
         }
+    }
+
+    private boolean matchesFilter(LemmaStats entry) {
+        if (TextUtils.isEmpty(lemmaFilterLower)) return true;
+        String lemma = safeString(entry.lemma);
+        return lemma.toLowerCase(Locale.getDefault()).contains(lemmaFilterLower);
+    }
+
+    private void sortLemmaStats(List<LemmaStats> stats) {
+        Comparator<LemmaStats> comparator;
+        switch (lemmaSortMode) {
+            case ALPHABET_DESC:
+                comparator = (a, b) -> compareLemma(b, a);
+                break;
+            case LOOKUP_COUNT_DESC:
+                comparator = (a, b) -> {
+                    int cmp = Integer.compare(b.lookupCount, a.lookupCount);
+                    if (cmp != 0) return cmp;
+                    return compareLemma(a, b);
+                };
+                break;
+            case LOOKUP_TIME_DESC:
+                comparator = (a, b) -> {
+                    long ta = a.lastLookup > 0 ? a.lastLookup : Long.MIN_VALUE;
+                    long tb = b.lastLookup > 0 ? b.lastLookup : Long.MIN_VALUE;
+                    int cmp = Long.compare(tb, ta);
+                    if (cmp != 0) return cmp;
+                    return compareLemma(a, b);
+                };
+                break;
+            case LOOKUP_TIME_ASC:
+                comparator = (a, b) -> {
+                    long ta = a.lastLookup > 0 ? a.lastLookup : Long.MAX_VALUE;
+                    long tb = b.lastLookup > 0 ? b.lastLookup : Long.MAX_VALUE;
+                    int cmp = Long.compare(ta, tb);
+                    if (cmp != 0) return cmp;
+                    return compareLemma(a, b);
+                };
+                break;
+            case LOOKUP_COUNT_ASC:
+                comparator = (a, b) -> {
+                    int cmp = Integer.compare(a.lookupCount, b.lookupCount);
+                    if (cmp != 0) return cmp;
+                    return compareLemma(a, b);
+                };
+                break;
+            case EXPOSURE_COUNT_DESC:
+                comparator = (a, b) -> {
+                    int cmp = Integer.compare(b.exposureCount, a.exposureCount);
+                    if (cmp != 0) return cmp;
+                    return compareLemma(a, b);
+                };
+                break;
+            case EXPOSURE_COUNT_ASC:
+                comparator = (a, b) -> {
+                    int cmp = Integer.compare(a.exposureCount, b.exposureCount);
+                    if (cmp != 0) return cmp;
+                    return compareLemma(a, b);
+                };
+                break;
+            case ALPHABET_ASC:
+            default:
+                comparator = this::compareLemma;
+                break;
+        }
+        Collections.sort(stats, comparator);
+    }
+
+    private int compareLemma(LemmaStats a, LemmaStats b) {
+        int cmp = compareTatar(safeString(a.lemma), safeString(b.lemma));
+        if (cmp != 0) return cmp;
+        return safeString(a.pos).compareToIgnoreCase(safeString(b.pos));
+    }
+
+    private int compareTatar(String first, String second) {
+        String a = safeString(first);
+        String b = safeString(second);
+        int length = Math.min(a.length(), b.length());
+        for (int i = 0; i < length; i++) {
+            char ca = a.charAt(i);
+            char cb = b.charAt(i);
+            int oa = getTatarOrder(ca);
+            int ob = getTatarOrder(cb);
+            if (oa != ob) {
+                return oa - ob;
+            }
+        }
+        if (a.length() != b.length()) {
+            return a.length() - b.length();
+        }
+        return a.compareToIgnoreCase(b);
+    }
+
+    private int getTatarOrder(char ch) {
+        Integer value = TATAR_ALPHABET_INDEX.get(ch);
+        if (value != null) return value;
+        char upper = Character.toUpperCase(ch);
+        value = TATAR_ALPHABET_INDEX.get(upper);
+        if (value != null) return value;
+        char lower = Character.toLowerCase(ch);
+        value = TATAR_ALPHABET_INDEX.get(lower);
+        if (value != null) return value;
+        return TATAR_UNKNOWN_BASE + ch;
+    }
+
+    private enum LemmaSortMode {
+        ALPHABET_ASC,
+        ALPHABET_DESC,
+        LOOKUP_COUNT_DESC,
+        LOOKUP_TIME_DESC,
+        LOOKUP_TIME_ASC,
+        LOOKUP_COUNT_ASC,
+        EXPOSURE_COUNT_DESC,
+        EXPOSURE_COUNT_ASC
     }
 
     private void populateFeatureStats(LinearLayout container) {
