@@ -10,6 +10,13 @@
         android:padding="16dp">
 
         <TextView
+            android:id="@+id/statsAxisDescription"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:paddingBottom="8dp"/>
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/stats_lemma_header"

@@ -11,11 +11,22 @@ public class TokenSpan extends ReplacementSpan {
     public final String featureKey;
 
     public float lastAlpha = 0f;
+    private int startIndex = -1;
+    private int endIndex = -1;
 
     public TokenSpan(Token token) {
         this.token = token;
         this.featureKey = token != null && token.morphology != null ? token.morphology.featureKey : null;
     }
+
+    public void setCharacterRange(int start, int end) {
+        this.startIndex = start;
+        this.endIndex = end;
+    }
+
+    public int getStartIndex() { return startIndex; }
+
+    public int getEndIndex() { return endIndex; }
 
     @Override public int getSize(Paint paint, CharSequence text, int start, int end, Paint.FontMetricsInt fm) {
         return (int) paint.measureText(text, start, end);

@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">UquReader</string>
-    <string name="stats_button">Статистика</string>
+    <string name="stats_button_language">Статистика языка</string>
+    <string name="stats_button_work">Статистика произведения</string>
     <string name="lemma_format">лемма: %1$s</string>
     <string name="pos_format">часть речи: %1$s</string>
     <string name="segments_format">морфемы: %1$s</string>
@@ -17,11 +18,14 @@
     <string name="feature_dialog_examples">Примеры:
 %1$s</string>
     <string name="no_features_placeholder">Дополнительных грамматических элементов нет</string>
-    <string name="stats_title">Статистика чтения</string>
+    <string name="stats_language_title">Статистика языка</string>
+    <string name="stats_work_title">Статистика произведения</string>
     <string name="stats_lemma_header">Леммы и части речи</string>
     <string name="stats_feature_header">Просмотры суффиксов</string>
     <string name="stats_exposure_label">Просмотрено в тексте: %1$d (последний раз %2$s)</string>
     <string name="stats_lookup_label">Открыто в подсказке: %1$d (последний раз %2$s)</string>
     <string name="stats_feature_label">%1$s — %2$d (последний раз %3$s)</string>
     <string name="stats_time_never">никогда</string>
+    <string name="stats_axis_time">Ось времени: от %1$s до %2$s</string>
+    <string name="stats_axis_text">Ось текста: от начала до символа %1$d</string>
 </resources>
