@@ -5,14 +5,17 @@
   <groupId>com.example</groupId>
   <artifactId>uqureader</artifactId>
   <version>1.0.0</version>
-  <packaging>jar</packaging>
+  <packaging>apk</packaging>
 
   <name>UquReader</name>
 
   <properties>
     <android.sdk.location>${project.basedir}/android-sdk</android.sdk.location>
-    <android.platform>34</android.platform>
-    <java.version>17</java.version>
+    <android.platform>35</android.platform>
+    <android.build-tools>35.0.0</android.build-tools>
+    <java.version>1.8</java.version>
+    <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
+    <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>
   </properties>
 
   <build>
@@ -21,6 +24,7 @@
         <groupId>com.simpligility.maven.plugins</groupId>
         <artifactId>android-maven-plugin</artifactId>
         <version>4.6.0</version>
+        <extensions>true</extensions>
         <configuration>
           <sdk>
             <path>${android.sdk.location}</path>
@@ -65,7 +69,7 @@
             <artifactId>base64encoder</artifactId>
             <version>1.0</version>
             <scope>system</scope>
-            <systemPath>${project.build.directory}/base64encoder/base64encoder.jar</systemPath>
+            <systemPath>${base64encoder.jar}</systemPath>
           </dependency>
         </dependencies>
       </plugin>
@@ -76,23 +80,67 @@
         <version>3.1.0</version>
         <executions>
           <execution>
-            <id>build-base64encoder-shim</id>
-            <phase>generate-resources</phase>
+            <id>ensure-legacy-tools-metadata</id>
+            <phase>validate</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
               <target>
-                <mkdir dir="${project.build.directory}/base64encoder/classes" />
-                <javac destdir="${project.build.directory}/base64encoder/classes"
-                       includeantruntime="false"
-                       source="${java.version}"
-                       target="${java.version}">
-                  <src path="${project.basedir}/tools/base64encoder/src/main/java" />
-                </javac>
-                <mkdir dir="${project.build.directory}/base64encoder" />
-                <jar destfile="${project.build.directory}/base64encoder/base64encoder.jar"
-                     basedir="${project.build.directory}/base64encoder/classes" />
+                <mkdir dir="${android.sdk.location}/tools" />
+                <echo file="${android.sdk.location}/tools/source.properties" append="false">Pkg.Revision=0.0.0
+</echo>
+                <property name="d8.lib.dir" value="${android.sdk.location}/build-tools/${android.build-tools}/lib" />
+                <echo file="${project.build.directory}/wrap-d8.sh" append="false"><![CDATA[
+#!/bin/bash
+set -euo pipefail
+D8_DIR="${d8.lib.dir}"
+if [ -d "$D8_DIR" ]; then
+  if [ ! -f "$D8_DIR/d8-orig.jar" ]; then
+    mv "$D8_DIR/d8.jar" "$D8_DIR/d8-orig.jar"
+  fi
+  cat <<'EOF' > "$D8_DIR/d8-wrapper.mf"
+Manifest-Version: 1.0
+Main-Class: com.android.tools.r8.D8
+Class-Path: d8-orig.jar
+EOF
+  (cd "$D8_DIR" && jar cfm d8.jar d8-wrapper.mf >/dev/null)
+  rm -f "$D8_DIR/d8-wrapper.mf"
+fi
+]]></echo>
+                <chmod file="${project.build.directory}/wrap-d8.sh" perm="755" />
+                <exec executable="bash">
+                  <arg value="${project.build.directory}/wrap-d8.sh" />
+                </exec>
+                <delete file="${project.build.directory}/wrap-d8.sh" />
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sign-debug-apk</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <property name="apksigner.executable" value="${android.sdk.location}/build-tools/${android.build-tools}/apksigner" />
+                <property name="apk.output" value="${project.build.directory}/${project.artifactId}-${project.version}.apk" />
+                <property name="debug.keystore" value="${android.debug.keystore}" />
+                <available file="${apksigner.executable}" property="apksigner.present" />
+                <fail message="apksigner not found at ${apksigner.executable}" unless="apksigner.present" />
+                <exec executable="${apksigner.executable}">
+                  <arg value="sign" />
+                  <arg value="--ks" />
+                  <arg value="${debug.keystore}" />
+                  <arg value="--ks-pass" />
+                  <arg value="pass:android" />
+                  <arg value="--key-pass" />
+                  <arg value="pass:android" />
+                  <arg value="--ks-key-alias" />
+                  <arg value="androiddebugkey" />
+                  <arg value="${apk.output}" />
+                </exec>
               </target>
             </configuration>
           </execution>
@@ -111,6 +159,20 @@
     </plugins>
   </build>
 
+  <profiles>
+    <profile>
+      <id>env-android-sdk</id>
+      <activation>
+        <property>
+          <name>env.ANDROID_SDK_ROOT</name>
+        </property>
+      </activation>
+      <properties>
+        <android.sdk.location>${env.ANDROID_SDK_ROOT}</android.sdk.location>
+      </properties>
+    </profile>
+  </profiles>
+
   <repositories>
     <repository>
       <id>google</id>
@@ -125,108 +187,6 @@
       <version>${android.platform}</version>
       <scope>system</scope>
       <systemPath>${android.sdk.location}/platforms/android-${android.platform}/android.jar</systemPath>
-    </dependency>
-    <dependency>
-      <groupId>androidx.appcompat</groupId>
-      <artifactId>appcompat</artifactId>
-      <version>1.2.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.appcompat</groupId>
-      <artifactId>appcompat-resources</artifactId>
-      <version>1.2.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.core</groupId>
-      <artifactId>core</artifactId>
-      <version>1.2.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.cursoradapter</groupId>
-      <artifactId>cursoradapter</artifactId>
-      <version>1.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.drawerlayout</groupId>
-      <artifactId>drawerlayout</artifactId>
-      <version>1.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.fragment</groupId>
-      <artifactId>fragment</artifactId>
-      <version>1.1.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.activity</groupId>
-      <artifactId>activity</artifactId>
-      <version>1.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.viewpager</groupId>
-      <artifactId>viewpager</artifactId>
-      <version>1.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.loader</groupId>
-      <artifactId>loader</artifactId>
-      <version>1.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.customview</groupId>
-      <artifactId>customview</artifactId>
-      <version>1.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.lifecycle</groupId>
-      <artifactId>lifecycle-viewmodel</artifactId>
-      <version>2.1.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.lifecycle</groupId>
-      <artifactId>lifecycle-runtime</artifactId>
-      <version>2.1.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.lifecycle</groupId>
-      <artifactId>lifecycle-livedata</artifactId>
-      <version>2.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.lifecycle</groupId>
-      <artifactId>lifecycle-livedata-core</artifactId>
-      <version>2.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.savedstate</groupId>
-      <artifactId>savedstate</artifactId>
-      <version>1.0.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.vectordrawable</groupId>
-      <artifactId>vectordrawable</artifactId>
-      <version>1.1.0</version>
-      <type>aar</type>
-    </dependency>
-    <dependency>
-      <groupId>androidx.vectordrawable</groupId>
-      <artifactId>vectordrawable-animated</artifactId>
-      <version>1.1.0</version>
-      <type>aar</type>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
