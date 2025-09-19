@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -43,15 +45,20 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          minor="${GITHUB_RUN_NUMBER}"
-          version="1.${minor}.0"
+          commit_count="$(git rev-list --count HEAD)"
+          version="1.${commit_count}.0"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "code=${minor}" >> "$GITHUB_OUTPUT"
+          echo "code=${commit_count}" >> "$GITHUB_OUTPUT"
 
       - name: Update Maven project version
         run: |
           set -euo pipefail
           ./mvnw -B versions:set -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
+
+      - name: Update Android versionCode property
+        run: |
+          set -euo pipefail
+          ./mvnw -B versions:set-property -Dproperty=app.version.code -DnewVersion=${{ steps.version.outputs.code }} -DgenerateBackupPoms=false
 
       - name: Install Android platform tools
         run: |
