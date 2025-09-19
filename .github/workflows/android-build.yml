@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: write
     env:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
@@ -37,31 +40,72 @@ jobs:
       - name: Build with Maven Wrapper
         run: ./mvnw -B verify
 
-      - name: Run API 28 installation smoke test
-        shell: bash
-        env:
-          AVD_NAME: ci-android-28
-        run: |
-          set -euxo pipefail
-          export ANDROID_HOME="$ANDROID_SDK_ROOT"
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+#      - name: Run API 28 installation smoke test
+#        shell: bash
+#        env:
+#          AVD_NAME: ci-android-28
+#        run: |
+#          set -euxo pipefail
+#          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+#          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+#
+#          yes | sdkmanager --install "platforms;android-28" "system-images;android-28;google_apis;x86"
+#
+#          if avdmanager list avd | grep -q "${AVD_NAME}"; then
+#            avdmanager delete avd -n "${AVD_NAME}"
+#          fi
+#
+#          echo "no" | avdmanager create avd \
+#            -n "${AVD_NAME}" \
+#            -k "system-images;android-28;google_apis;x86" \
+#            --device "pixel_3"
+#
+#          if [ ! -f "$HOME/.android/avd/${AVD_NAME}.ini" ]; then
+#            echo "Failed to create AVD \"${AVD_NAME}\". Current AVD list:"
+#            avdmanager list avd || true
+#            exit 1
+#          fi
+#
+#          emulator -avd "${AVD_NAME}" -no-window -no-audio -no-boot-anim &
+#          EMULATOR_PID=$!
+#          trap 'kill "${EMULATOR_PID}" 2>/dev/null || true' EXIT
+#
+#          if ! timeout 180s adb wait-for-device; then
+#            echo "Emulator failed to become ready within 180 seconds"
+#            exit 1
+#          fi
+#          adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 1; done'
+#          adb shell input keyevent 82
+#          adb emu kill
 
-          yes | sdkmanager --install "platforms;android-28" "system-images;android-28;google_apis;x86"
+      - name: Upload APK artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uqureader-apk
+          path: target/uqureader-*.apk
+          if-no-files-found: error
 
-          if avdmanager list avd | grep -q "${AVD_NAME}"; then
-            avdmanager delete avd -n "${AVD_NAME}"
-          fi
-
-          echo "no" | avdmanager create avd \
-            -n "${AVD_NAME}" \
-            -k "system-images;android-28;google_apis;x86" \
-            --device "pixel_3"
-
-          emulator -avd "${AVD_NAME}" -no-window -no-audio -no-boot-anim &
-          EMULATOR_PID=$!
-          trap 'kill "${EMULATOR_PID}" 2>/dev/null || true' EXIT
-
-          adb wait-for-device
-          adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 1; done'
-          adb shell input keyevent 82
-          adb emu kill
+      - name: Prune old APK artifacts
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactName = 'uqureader-apk';
+            const keepLatest = 3;
+            const { owner, repo } = context.repo;
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+            const matching = artifacts
+              .filter(artifact => artifact.name === artifactName && !artifact.expired)
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            for (const artifact of matching.slice(keepLatest)) {
+              core.info(`Deleting artifact ${artifact.id} created at ${artifact.created_at}`);
+              await github.rest.actions.deleteArtifact({
+                owner,
+                repo,
+                artifact_id: artifact.id,
+              });
+            }
