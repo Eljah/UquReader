@@ -7,10 +7,10 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import androidx.fragment.app.DialogFragment;
 import com.example.UquReader.R;
 
-public class TokenInfoBottomSheet extends BottomSheetDialogFragment {
+public class TokenInfoBottomSheet extends DialogFragment {
     public static final String ARG_SURFACE = "surface";
     public static final String ARG_LEMMA = "lemma";
     public static final String ARG_POS = "pos";

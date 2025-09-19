@@ -1,15 +1,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>com.example</groupId>
   <artifactId>uqureader</artifactId>
   <version>1.0.0</version>
-  <packaging>apk</packaging>
+  <packaging>jar</packaging>
 
   <name>UquReader</name>
 
   <properties>
-    <android.sdk.path>${env.ANDROID_HOME}</android.sdk.path>
+    <android.sdk.location>${project.basedir}/android-sdk</android.sdk.location>
     <android.platform>34</android.platform>
     <java.version>17</java.version>
   </properties>
@@ -22,15 +23,80 @@
         <version>4.6.0</version>
         <configuration>
           <sdk>
+            <path>${android.sdk.location}</path>
             <platform>${android.platform}</platform>
           </sdk>
+          <dexCompiler>D8</dexCompiler>
+          <d8MinApi>21</d8MinApi>
           <undeployBeforeDeploy>true</undeployBeforeDeploy>
-          <deleteConflictingFiles>true</deleteConflictingFiles>
           <manifest>
             <debuggable>true</debuggable>
           </manifest>
+          <artifactSet>
+            <excludes>
+              <exclude>android:android</exclude>
+            </excludes>
+          </artifactSet>
+          <sign>
+            <debug>false</debug>
+          </sign>
         </configuration>
-        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>apk</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.5</version>
+          </dependency>
+          <dependency>
+            <groupId>local.sun</groupId>
+            <artifactId>base64encoder</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.build.directory}/base64encoder/base64encoder.jar</systemPath>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>build-base64encoder-shim</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${project.build.directory}/base64encoder/classes" />
+                <javac destdir="${project.build.directory}/base64encoder/classes"
+                       includeantruntime="false"
+                       source="${java.version}"
+                       target="${java.version}">
+                  <src path="${project.basedir}/tools/base64encoder/src/main/java" />
+                </javac>
+                <mkdir dir="${project.build.directory}/base64encoder" />
+                <jar destfile="${project.build.directory}/base64encoder/base64encoder.jar"
+                     basedir="${project.build.directory}/base64encoder/classes" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
       <plugin>
@@ -45,23 +111,121 @@
     </plugins>
   </build>
 
+  <repositories>
+    <repository>
+      <id>google</id>
+      <url>https://maven.google.com</url>
+    </repository>
+  </repositories>
+
   <dependencies>
+    <dependency>
+      <groupId>android</groupId>
+      <artifactId>android</artifactId>
+      <version>${android.platform}</version>
+      <scope>system</scope>
+      <systemPath>${android.sdk.location}/platforms/android-${android.platform}/android.jar</systemPath>
+    </dependency>
     <dependency>
       <groupId>androidx.appcompat</groupId>
       <artifactId>appcompat</artifactId>
-      <version>1.7.0</version>
+      <version>1.2.0</version>
       <type>aar</type>
     </dependency>
     <dependency>
-      <groupId>com.google.android.material</groupId>
-      <artifactId>material</artifactId>
-      <version>1.12.0</version>
+      <groupId>androidx.appcompat</groupId>
+      <artifactId>appcompat-resources</artifactId>
+      <version>1.2.0</version>
       <type>aar</type>
     </dependency>
     <dependency>
-      <groupId>androidx.constraintlayout</groupId>
-      <artifactId>constraintlayout</artifactId>
-      <version>2.1.4</version>
+      <groupId>androidx.core</groupId>
+      <artifactId>core</artifactId>
+      <version>1.2.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.cursoradapter</groupId>
+      <artifactId>cursoradapter</artifactId>
+      <version>1.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.drawerlayout</groupId>
+      <artifactId>drawerlayout</artifactId>
+      <version>1.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.fragment</groupId>
+      <artifactId>fragment</artifactId>
+      <version>1.1.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.activity</groupId>
+      <artifactId>activity</artifactId>
+      <version>1.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.viewpager</groupId>
+      <artifactId>viewpager</artifactId>
+      <version>1.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.loader</groupId>
+      <artifactId>loader</artifactId>
+      <version>1.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.customview</groupId>
+      <artifactId>customview</artifactId>
+      <version>1.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.lifecycle</groupId>
+      <artifactId>lifecycle-viewmodel</artifactId>
+      <version>2.1.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.lifecycle</groupId>
+      <artifactId>lifecycle-runtime</artifactId>
+      <version>2.1.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.lifecycle</groupId>
+      <artifactId>lifecycle-livedata</artifactId>
+      <version>2.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.lifecycle</groupId>
+      <artifactId>lifecycle-livedata-core</artifactId>
+      <version>2.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.savedstate</groupId>
+      <artifactId>savedstate</artifactId>
+      <version>1.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.vectordrawable</groupId>
+      <artifactId>vectordrawable</artifactId>
+      <version>1.1.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
+      <groupId>androidx.vectordrawable</groupId>
+      <artifactId>vectordrawable-animated</artifactId>
+      <version>1.1.0</version>
       <type>aar</type>
     </dependency>
     <dependency>
