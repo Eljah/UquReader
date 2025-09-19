@@ -24,8 +24,8 @@ jobs:
       - name: Set up Android SDK tools
         uses: android-actions/setup-android@v3
 
-      - name: Build with Maven
-        run: mvn -B verify
+      - name: Build with Maven Wrapper
+        run: ./mvnw -B verify
 
       - name: Run API 28 installation smoke test
         shell: bash
