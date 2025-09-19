@@ -23,11 +23,11 @@ CREATE INDEX tt_ru_tt_idx ON tt_ru(lemma_tt);
 ## Сборка
 Нужен Android SDK (`ANDROID_HOME`) и build-tools.
 
-Пример команд:
+Пример команд (скрипт `./mvnw` перед запуском Maven автоматически собирает вспомогательный `sun.misc.BASE64Encoder` shim):
 ```bash
-mvn -e clean install
+./mvnw -e clean install
 # при подключенном устройстве / эмуляторе:
-mvn android:deploy android:run
+./mvnw android:deploy android:run
 ```
 
 ## Поведение памяти и подсветки

@@ -1,13 +1,11 @@
 package com.example.UquReader.ui;
 
+import android.app.DialogFragment;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.DialogFragment;
 import com.example.UquReader.R;
 
 public class TokenInfoBottomSheet extends DialogFragment {
@@ -29,7 +27,7 @@ public class TokenInfoBottomSheet extends DialogFragment {
         return f;
     }
 
-    @Nullable @Override public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.bottomsheet_token_info, container, false);
         Bundle a = getArguments();
         ((TextView)v.findViewById(R.id.tvSurface)).setText(a.getString(ARG_SURFACE, ""));
