@@ -1,18 +1,17 @@
 package com.example.UquReader;
 
+import android.app.Activity;
 import android.os.Bundle;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import com.example.UquReader.data.DbHelper;
 import com.example.UquReader.reader.ReaderView;
 import com.example.UquReader.reader.TokenSpan;
 import com.example.UquReader.ui.TokenInfoBottomSheet;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements ReaderView.TokenInfoProvider {
+public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
     private DbHelper dbHelper;
 
-    @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -26,6 +25,6 @@ public class MainActivity extends AppCompatActivity implements ReaderView.TokenI
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
         String ruCsv = ruLemmas.isEmpty()? "—" : String.join(", ", ruLemmas);
         TokenInfoBottomSheet.newInstance(span.surface, span.lemma, span.pos, span.featureKey, ruCsv)
-                .show(getSupportFragmentManager(), "token-info");
+                .show(getFragmentManager(), "token-info");
     }
 }
