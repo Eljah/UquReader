@@ -3,7 +3,7 @@ package com.example.UquReader.reader;
 import android.content.Context;
 import android.text.SpannableStringBuilder;
 import android.util.AttributeSet;
-import androidx.appcompat.widget.AppCompatTextView;
+import android.widget.TextView;
 import com.example.UquReader.data.DbHelper;
 import com.example.UquReader.data.DictionaryDao;
 import com.example.UquReader.data.MemoryDao;
@@ -14,7 +14,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ReaderView extends AppCompatTextView {
+public class ReaderView extends TextView {
     public interface TokenInfoProvider { void onTokenLongPress(TokenSpan span, List<String> ruLemmas); }
 
     private DbHelper dbHelper;
