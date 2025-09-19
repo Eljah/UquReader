@@ -514,7 +514,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
             }
         });
-        updatePlaybackState(false);
+        updatePlaybackState(PlaybackState.STATE_STOPPED);
         mediaSession.setActive(false);
     }
 
@@ -524,6 +524,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } else {
             startSpeech();
         }
+    }
+
+    private void pauseSpeechFromHeadset() {
+        pauseSpeech();
     }
 
     private int resolveFocusCharIndex() {
@@ -556,8 +560,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                         | PlaybackState.ACTION_STOP
                         | PlaybackState.ACTION_SKIP_TO_NEXT
                         | PlaybackState.ACTION_SKIP_TO_PREVIOUS);
-        int playbackState = playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
-        builder.setState(playbackState, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f);
+        int playbackState = state;
+        if (playbackState != PlaybackState.STATE_PLAYING
+                && playbackState != PlaybackState.STATE_PAUSED
+                && playbackState != PlaybackState.STATE_STOPPED) {
+            playbackState = isSpeaking ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
+        }
+        float playbackSpeed = playbackState == PlaybackState.STATE_PLAYING ? 1f : 0f;
+        builder.setState(playbackState, PlaybackState.PLAYBACK_POSITION_UNKNOWN, playbackSpeed);
         mediaSession.setPlaybackState(builder.build());
     }
 
