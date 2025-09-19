@@ -30,6 +30,10 @@ CREATE INDEX tt_ru_tt_idx ON tt_ru(lemma_tt);
 ./mvnw android:deploy android:run
 ```
 
+### Маркетинговые ассеты
+
+Файлы витрины (например, `play_store_512.png`) держите в каталоге `marketing/`. Во время сборки Maven автоматически перемещает ошибочно оставленные рядом с `src/main/res` маркетинговые картинки в этот каталог, чтобы `aapt` не воспринимал их как каталоги ресурсов и не падал на этапе генерации `R.java`.
+
 ### Codex container
 
 * В контейнере Codex Android SDK уже установлен в `/usr/lib/android-sdk`. Если переменные окружения `ANDROID_SDK_ROOT` и `ANDROID_HOME` не заданы, скрипт `./mvnw` автоматически подставит этот путь и добавит в `PATH` каталоги `cmdline-tools`, `platform-tools` и `emulator`.
