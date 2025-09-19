@@ -17,9 +17,13 @@ import com.example.ttreader.util.GrammarResources;
 import java.util.List;
 
 public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
+    private static final String CURRENT_BOOK_ASSET = "sample_book.ttmorph.jsonl";
+    private static final String CURRENT_BOOK_ID = "sample_book";
+
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
     private UsageStatsDao usageStatsDao;
+    private String currentBookTitle;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,10 +37,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
         ReaderView reader = findViewById(R.id.readerView);
         reader.setup(dbHelper, memoryDao, usageStatsDao, this);
-        reader.loadFromJsonlAsset("sample_book.ttmorph.jsonl");
+        currentBookTitle = getString(R.string.sample_book_title);
+        reader.loadFromJsonlAsset(CURRENT_BOOK_ASSET, CURRENT_BOOK_ID);
 
         Button statsButton = findViewById(R.id.btnStats);
-        statsButton.setOnClickListener(v -> startActivity(new Intent(this, StatsActivity.class)));
+        statsButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, StatsActivity.class);
+            intent.putExtra(StatsActivity.EXTRA_BOOK_ID, CURRENT_BOOK_ID);
+            intent.putExtra(StatsActivity.EXTRA_BOOK_TITLE, currentBookTitle);
+            startActivity(intent);
+        });
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
@@ -44,6 +54,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         String ruCsv = ruLemmas.isEmpty()? "—" : String.join(", ", ruLemmas);
         TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, ruCsv);
         sheet.setUsageStatsDao(usageStatsDao);
+        sheet.setBookId(CURRENT_BOOK_ID);
         sheet.show(getFragmentManager(), "token-info");
     }
 }

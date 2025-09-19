@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">UquReader</string>
+    <string name="stats_button">Статистика</string>
+    <string name="sample_book_title">Күрсәтмә әсәр</string>
+    <string name="lemma_format">лемма: %1$s</string>
+    <string name="pos_format">сүз төркеме: %1$s</string>
+    <string name="segments_format">морфемалар: %1$s</string>
+    <string name="feature_codes_format">морфологик җыелма: %1$s</string>
+    <string name="features_title">Кушымчалар һәм тәмамлыклар</string>
+    <string name="translation_format">→ %1$s</string>
+    <string name="feature_chip_format">%1$s · %2$s</string>
+    <string name="feature_no_form">—</string>
+    <string name="feature_dialog_tt">Татарча атамасы: %1$s</string>
+    <string name="feature_dialog_ru">Русча атамасы: %1$s</string>
+    <string name="feature_dialog_desc">Аңлатма: %1$s</string>
+    <string name="feature_dialog_actual">Чын форма: %1$s</string>
+    <string name="feature_dialog_variants">Фонетик вариантлар: %1$s</string>
+    <string name="feature_dialog_examples">Мисаллар:\n%1$s</string>
+    <string name="no_features_placeholder">Өстәмә грамматик элементлар юк</string>
+    <string name="stats_title">Уку статистикасы</string>
+    <string name="stats_language_section_title">Тел пары буенча статистика</string>
+    <string name="stats_book_section_title">«%1$s» әсәре статистикасы</string>
+    <string name="stats_book_section_title_fallback">Сайланган әсәр статистикасы</string>
+    <string name="stats_lemma_header">Леммалар һәм сүз төркемнәре</string>
+    <string name="stats_feature_header">Грамматик билгеләр</string>
+    <string name="stats_exposure_label">Текстта очрау: %1$d (соңгысы %2$s)</string>
+    <string name="stats_lookup_label">Подсказда ачылу: %1$d (соңгысы %2$s)</string>
+    <string name="stats_time_never">беркайчан да</string>
+</resources>

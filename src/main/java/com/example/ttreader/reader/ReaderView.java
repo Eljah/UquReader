@@ -3,6 +3,7 @@ package com.example.ttreader.reader;
 import android.content.Context;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.widget.TextView;
 
@@ -10,6 +11,7 @@ import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.DictionaryDao;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
+import com.example.ttreader.model.MorphFeature;
 import com.example.ttreader.model.Morphology;
 import com.example.ttreader.model.Token;
 import com.example.ttreader.util.JsonlParser;
@@ -26,6 +28,7 @@ public class ReaderView extends TextView {
     private UsageStatsDao usageDao;
     private DictionaryDao dictDao;
     private TokenInfoProvider provider;
+    private String bookId = "";
 
     public ReaderView(Context context) { super(context); init(); }
     public ReaderView(Context context, AttributeSet attrs) { super(context, attrs); init(); }
@@ -49,8 +52,9 @@ public class ReaderView extends TextView {
         }
     }
 
-    public void loadFromJsonlAsset(String assetName) {
+    public void loadFromJsonlAsset(String assetName, String bookId) {
         try {
+            this.bookId = bookId == null ? "" : bookId;
             List<Token> tokens = JsonlParser.readTokensFromAssets(getContext(), assetName);
             SpannableStringBuilder ssb = new SpannableStringBuilder();
             long now = System.currentTimeMillis();
@@ -70,7 +74,15 @@ public class ReaderView extends TextView {
                     span.lastAlpha = (float)alpha;
                     ssb.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                     if (usageDao != null) {
-                        usageDao.recordEvent(morph.lemma, morph.pos, null, UsageStatsDao.EVENT_EXPOSURE, now);
+                        usageDao.recordEvent(morph.lemma, morph.pos, null, UsageStatsDao.EVENT_EXPOSURE, now, this.bookId);
+                        if (morph.features != null) {
+                            for (MorphFeature feature : morph.features) {
+                                if (feature != null && !TextUtils.isEmpty(feature.code)) {
+                                    usageDao.recordEvent(morph.lemma, morph.pos, feature.code,
+                                            UsageStatsDao.EVENT_EXPOSURE, now, this.bookId);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -82,7 +94,8 @@ public class ReaderView extends TextView {
                 List<String> ru = new ArrayList<>();
                 if (dictDao != null) dictDao.translateLemmaToRu(morph.lemma).forEach(p -> ru.add(p.first));
                 if (usageDao != null) {
-                    usageDao.recordEvent(morph.lemma, morph.pos, null, UsageStatsDao.EVENT_LOOKUP, System.currentTimeMillis());
+                    usageDao.recordEvent(morph.lemma, morph.pos, null, UsageStatsDao.EVENT_LOOKUP,
+                            System.currentTimeMillis(), ReaderView.this.bookId);
                 }
                 if (provider != null) provider.onTokenLongPress(span, ru);
                 memoryDao.updateOnLookup(morph.lemma, span.featureKey, System.currentTimeMillis(), 1.0);
