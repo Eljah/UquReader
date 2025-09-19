@@ -86,8 +86,7 @@
                 <mkdir dir="${project.build.directory}/base64encoder/classes" />
                 <javac destdir="${project.build.directory}/base64encoder/classes"
                        includeantruntime="false"
-                       source="${java.version}"
-                       target="${java.version}">
+                       release="8">
                   <src path="${project.basedir}/tools/base64encoder/src/main/java" />
                 </javac>
                 <mkdir dir="${project.build.directory}/base64encoder" />
