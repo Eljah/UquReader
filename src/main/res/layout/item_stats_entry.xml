@@ -24,6 +24,28 @@
         android:layout_height="36dp"
         android:paddingTop="4dp"/>
 
+    <LinearLayout
+        android:id="@+id/statsExposureTimelineLabels"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="2dp">
+
+        <TextView
+            android:id="@+id/statsExposureTimelineStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"/>
+
+        <TextView
+            android:id="@+id/statsExposureTimelineEnd"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:textAppearance="?android:attr/textAppearanceSmall"/>
+    </LinearLayout>
+
     <TextView
         android:id="@+id/statsLookup"
         android:layout_width="wrap_content"
@@ -35,5 +57,27 @@
         android:layout_width="match_parent"
         android:layout_height="36dp"
         android:paddingTop="4dp"/>
+
+    <LinearLayout
+        android:id="@+id/statsLookupTimelineLabels"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="2dp">
+
+        <TextView
+            android:id="@+id/statsLookupTimelineStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"/>
+
+        <TextView
+            android:id="@+id/statsLookupTimelineEnd"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:textAppearance="?android:attr/textAppearanceSmall"/>
+    </LinearLayout>
 
 </LinearLayout>

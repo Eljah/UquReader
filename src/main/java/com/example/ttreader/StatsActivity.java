@@ -93,13 +93,17 @@ public class StatsActivity extends Activity {
             if (UsageStatsDao.EVENT_EXPOSURE.equals(stat.eventType)) {
                 bucket.exposureCount = stat.count;
                 bucket.lastExposure = stat.lastSeenMs;
-                bucket.exposurePositions = normalizeEvents(
+                TimelineEvents events = normalizeEvents(
                         usageStatsDao.getEvents(languagePair, workScope, stat.lemma, stat.pos, UsageStatsDao.EVENT_EXPOSURE));
+                bucket.exposurePositions = events.positions;
+                bucket.exposureEvents = events.events;
             } else if (UsageStatsDao.EVENT_LOOKUP.equals(stat.eventType)) {
                 bucket.lookupCount = stat.count;
                 bucket.lastLookup = stat.lastSeenMs;
-                bucket.lookupPositions = normalizeEvents(
+                TimelineEvents events = normalizeEvents(
                         usageStatsDao.getEvents(languagePair, workScope, stat.lemma, stat.pos, UsageStatsDao.EVENT_LOOKUP));
+                bucket.lookupPositions = events.positions;
+                bucket.lookupEvents = events.events;
             }
         }
         LayoutInflater inflater = LayoutInflater.from(this);
@@ -126,12 +130,20 @@ public class StatsActivity extends Activity {
             TextView lookup = item.findViewById(R.id.statsLookup);
             UsageTimelineView exposureTimeline = item.findViewById(R.id.statsExposureTimeline);
             UsageTimelineView lookupTimeline = item.findViewById(R.id.statsLookupTimeline);
+            View exposureLabels = item.findViewById(R.id.statsExposureTimelineLabels);
+            TextView exposureStartLabel = item.findViewById(R.id.statsExposureTimelineStart);
+            TextView exposureEndLabel = item.findViewById(R.id.statsExposureTimelineEnd);
+            View lookupLabels = item.findViewById(R.id.statsLookupTimelineLabels);
+            TextView lookupStartLabel = item.findViewById(R.id.statsLookupTimelineStart);
+            TextView lookupEndLabel = item.findViewById(R.id.statsLookupTimelineEnd);
             title.setText(formatLemmaTitle(entry));
             exposure.setText(getString(R.string.stats_exposure_label, entry.exposureCount, formatTime(entry.lastExposure)));
             lookup.setText(getString(R.string.stats_lookup_label, entry.lookupCount, formatTime(entry.lastLookup)));
-            bindTimeline(exposureTimeline, entry.exposureCount, entry.exposurePositions,
+            bindTimeline(exposureTimeline, exposureLabels, exposureStartLabel, exposureEndLabel,
+                    entry.exposureCount, entry.exposurePositions, entry.exposureEvents,
                     resolveColor(android.R.color.holo_green_dark));
-            bindTimeline(lookupTimeline, entry.lookupCount, entry.lookupPositions,
+            bindTimeline(lookupTimeline, lookupLabels, lookupStartLabel, lookupEndLabel,
+                    entry.lookupCount, entry.lookupPositions, entry.lookupEvents,
                     resolveColor(android.R.color.holo_blue_dark));
             container.addView(item);
         }
@@ -172,7 +184,7 @@ public class StatsActivity extends Activity {
         if (view == null) return;
         if (mode == MODE_LANGUAGE) {
             String start = formatAxisTime(timeBounds != null ? timeBounds.start : 0L);
-            String end = formatAxisTime(timeBounds != null ? timeBounds.end : 0L);
+            String end = formatAxisTime(System.currentTimeMillis());
             view.setText(getString(R.string.stats_axis_time, start, end));
         } else {
             int max = positionBounds != null ? positionBounds.max : -1;
@@ -181,54 +193,91 @@ public class StatsActivity extends Activity {
         }
     }
 
-    private void bindTimeline(UsageTimelineView view, int count, List<Float> positions, int color) {
+    private void bindTimeline(UsageTimelineView view, View labelsContainer, TextView startLabel, TextView endLabel,
+                              int count, List<Float> positions, List<UsageEvent> events, int color) {
         if (view == null) return;
         if (count <= 0 || positions == null || positions.isEmpty()) {
             view.setVisibility(View.GONE);
+            if (labelsContainer != null) labelsContainer.setVisibility(View.GONE);
+            view.setOnEventClickListener(null);
             return;
         }
         view.setVisibility(View.VISIBLE);
         view.setColor(color);
         view.setEvents(positions);
+        if (mode == MODE_LANGUAGE) {
+            if (labelsContainer != null) {
+                labelsContainer.setVisibility(View.VISIBLE);
+                if (startLabel != null) startLabel.setText(formatAxisTime(timeBounds != null ? timeBounds.start : 0L));
+                if (endLabel != null) endLabel.setText(formatAxisTime(System.currentTimeMillis()));
+            }
+            view.setOnEventClickListener(null);
+        } else {
+            if (labelsContainer != null) labelsContainer.setVisibility(View.GONE);
+            if (events != null && !events.isEmpty()) {
+                view.setOnEventClickListener(index -> {
+                    if (index >= 0 && index < events.size()) {
+                        handleTimelineEventClick(events.get(index));
+                    }
+                });
+            } else {
+                view.setOnEventClickListener(null);
+            }
+        }
     }
 
-    private List<Float> normalizeEvents(List<UsageEvent> events) {
+    private void handleTimelineEventClick(UsageEvent event) {
+        if (mode != MODE_WORK || event == null) return;
+        if (event.charIndex < 0) return;
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.putExtra(MainActivity.EXTRA_TARGET_CHAR_INDEX, event.charIndex);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish();
+    }
+
+    private TimelineEvents normalizeEvents(List<UsageEvent> events) {
         List<Float> normalized = new ArrayList<>();
-        if (events == null || events.isEmpty()) {
-            return normalized;
-        }
-        if (mode == MODE_LANGUAGE) {
-            long start = timeBounds != null ? timeBounds.start : 0L;
-            long end = timeBounds != null ? timeBounds.end : 0L;
-            long span = end - start;
-            if (span <= 0L) {
-                for (UsageEvent event : events) {
-                    if (event.timestampMs <= 0L) continue;
-                    normalized.add(0.5f);
+        List<UsageEvent> filtered = new ArrayList<>();
+        if (events != null && !events.isEmpty()) {
+            if (mode == MODE_LANGUAGE) {
+                long start = timeBounds != null ? timeBounds.start : 0L;
+                long end = Math.max(start, System.currentTimeMillis());
+                long span = end - start;
+                if (span <= 0L) {
+                    for (UsageEvent event : events) {
+                        if (event.timestampMs <= 0L) continue;
+                        normalized.add(0.5f);
+                        filtered.add(event);
+                    }
+                } else {
+                    for (UsageEvent event : events) {
+                        if (event.timestampMs <= 0L) continue;
+                        float value = (float) (event.timestampMs - start) / (float) span;
+                        normalized.add(clamp01(value));
+                        filtered.add(event);
+                    }
                 }
             } else {
+                int max = positionBounds != null ? positionBounds.max : 0;
+                int range = Math.max(max, 1);
                 for (UsageEvent event : events) {
-                    if (event.timestampMs <= 0L) continue;
-                    float value = (float) (event.timestampMs - start) / (float) span;
+                    if (event.charIndex < 0) continue;
+                    int position = Math.max(0, Math.min(event.charIndex, range));
+                    float value = (float) position / (float) range;
                     normalized.add(clamp01(value));
+                    filtered.add(event);
                 }
             }
-        } else {
-            int max = positionBounds != null ? positionBounds.max : 0;
-            int range = Math.max(max, 1);
+        }
+        if (normalized.isEmpty() && events != null) {
             for (UsageEvent event : events) {
-                if (event.charIndex < 0) continue;
-                int position = Math.max(0, Math.min(event.charIndex, range));
-                float value = (float) position / (float) range;
-                normalized.add(clamp01(value));
-            }
-        }
-        if (normalized.isEmpty()) {
-            for (int i = 0; i < events.size(); i++) {
+                if (mode == MODE_WORK && event.charIndex < 0) continue;
                 normalized.add(0.5f);
+                filtered.add(event);
             }
         }
-        return normalized;
+        return new TimelineEvents(normalized, filtered);
     }
 
     private float clamp01(float value) {
@@ -280,7 +329,9 @@ public class StatsActivity extends Activity {
         long lastExposure = 0;
         long lastLookup = 0;
         List<Float> exposurePositions = new ArrayList<>();
+        List<UsageEvent> exposureEvents = new ArrayList<>();
         List<Float> lookupPositions = new ArrayList<>();
+        List<UsageEvent> lookupEvents = new ArrayList<>();
 
         LemmaStats(String lemma, String pos) {
             this.lemma = lemma;
@@ -294,5 +345,15 @@ public class StatsActivity extends Activity {
         long lastSeen = 0;
 
         FeatureStats(String code) { this.code = code; }
+    }
+
+    private static class TimelineEvents {
+        final List<Float> positions;
+        final List<UsageEvent> events;
+
+        TimelineEvents(List<Float> positions, List<UsageEvent> events) {
+            this.positions = positions;
+            this.events = events;
+        }
     }
 }
