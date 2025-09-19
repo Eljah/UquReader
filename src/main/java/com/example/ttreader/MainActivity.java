@@ -1,20 +1,25 @@
 package com.example.ttreader;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.ScrollView;
+import android.widget.Toast;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
+import com.example.ttreader.reader.TtsReaderController;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
 import com.example.ttreader.util.GrammarResources;
+import com.example.ttreader.tts.RhvoiceAvailability;
 
 import java.util.List;
 
@@ -30,6 +35,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private UsageStatsDao usageStatsDao;
     private ScrollView readerScrollView;
     private ReaderView readerView;
+    private TtsReaderController ttsController;
+    private boolean rhvoiceReady = false;
+    private boolean rhvoiceEnginePromptShown = false;
+    private boolean rhvoiceVoicePromptShown = false;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,6 +55,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
         readerView.setUsageContext(LANGUAGE_PAIR_TT_RU, SAMPLE_WORK_ID);
         readerView.loadFromJsonlAsset(SAMPLE_ASSET);
+
+        ttsController = new TtsReaderController(this, readerView::getTranslations);
+        ttsController.setTokenSequence(readerView.getTokenSpans());
+
+        Button installRhvoiceButton = findViewById(R.id.btnInstallRhvoice);
+        if (installRhvoiceButton != null) {
+            installRhvoiceButton.setOnClickListener(v -> showRhvoiceInstallDialog());
+        }
 
         if (readerScrollView != null) {
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
@@ -75,6 +92,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         handleNavigationIntent(getIntent());
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        ensureRhvoiceReady();
+    }
+
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
@@ -82,6 +104,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
+        if (ttsController != null) {
+            ttsController.speakTokenDetails(span, ruLemmas, true);
+        }
         showTokenSheet(span, ruLemmas);
     }
 
@@ -135,5 +160,103 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         sheet.setUsageStatsDao(usageStatsDao);
         sheet.setUsageContext(LANGUAGE_PAIR_TT_RU, SAMPLE_WORK_ID, span.getStartIndex());
         sheet.show(getFragmentManager(), "token-info");
+    }
+
+    private void ensureRhvoiceReady() {
+        if (ttsController == null) return;
+        RhvoiceAvailability.checkStatus(this, this::handleRhvoiceStatus);
+    }
+
+    private void handleRhvoiceStatus(@RhvoiceAvailability.Status int status) {
+        switch (status) {
+            case RhvoiceAvailability.Status.READY:
+                if (!rhvoiceReady && ttsController != null) {
+                    ttsController.startReading();
+                }
+                rhvoiceReady = true;
+                rhvoiceEnginePromptShown = false;
+                rhvoiceVoicePromptShown = false;
+                break;
+            case RhvoiceAvailability.Status.ENGINE_MISSING:
+                rhvoiceReady = false;
+                if (!rhvoiceEnginePromptShown) {
+                    rhvoiceEnginePromptShown = true;
+                    showRhvoiceInstallDialog();
+                }
+                break;
+            case RhvoiceAvailability.Status.VOICE_MISSING:
+                rhvoiceReady = false;
+                if (!rhvoiceVoicePromptShown) {
+                    rhvoiceVoicePromptShown = true;
+                    showRhvoiceVoiceDialog();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void showRhvoiceInstallDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.rhvoice_install_title)
+                .setMessage(R.string.rhvoice_install_message)
+                .setPositiveButton(R.string.rhvoice_install_store, (d, which) -> openRhvoiceStore())
+                .setNeutralButton(R.string.rhvoice_install_download, (d, which) -> openRhvoiceInstructions())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void showRhvoiceVoiceDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.rhvoice_voice_title)
+                .setMessage(R.string.rhvoice_voice_message)
+                .setPositiveButton(R.string.rhvoice_voice_open_app, (d, which) -> openRhvoiceApp())
+                .setNeutralButton(R.string.rhvoice_voice_download, (d, which) -> openRhvoiceVoicePage())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void openRhvoiceStore() {
+        if (tryStartActivity(RhvoiceAvailability.createPlayStoreIntent())) return;
+        if (tryStartActivity(RhvoiceAvailability.createPlayStoreWebIntent())) return;
+        showInstallError();
+    }
+
+    private void openRhvoiceInstructions() {
+        if (tryStartActivity(RhvoiceAvailability.createProjectPageIntent())) return;
+        showInstallError();
+    }
+
+    private void openRhvoiceVoicePage() {
+        if (tryStartActivity(RhvoiceAvailability.createVoiceDownloadIntent())) return;
+        showInstallError();
+    }
+
+    private void openRhvoiceApp() {
+        Intent launch = RhvoiceAvailability.createLaunchIntent(this);
+        if (tryStartActivity(launch)) return;
+        openRhvoiceStore();
+    }
+
+    private boolean tryStartActivity(Intent intent) {
+        if (intent == null) return false;
+        try {
+            startActivity(intent);
+            return true;
+        } catch (ActivityNotFoundException e) {
+            return false;
+        }
+    }
+
+    private void showInstallError() {
+        Toast.makeText(this, R.string.rhvoice_no_handler, Toast.LENGTH_LONG).show();
+    }
+
+    @Override protected void onDestroy() {
+        if (ttsController != null) {
+            ttsController.release();
+            ttsController = null;
+        }
+        super.onDestroy();
     }
 }

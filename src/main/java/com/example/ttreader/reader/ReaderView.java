@@ -17,6 +17,7 @@ import com.example.ttreader.util.JsonlParser;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -130,6 +131,10 @@ public class ReaderView extends TextView {
 
     public void ensureExposureLogged(TokenSpan span) {
         recordExposure(span, System.currentTimeMillis());
+    }
+
+    public List<TokenSpan> getTokenSpans() {
+        return Collections.unmodifiableList(tokenSpans);
     }
 
     private void handleTokenSelection(TokenSpan span) {
