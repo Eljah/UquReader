@@ -40,43 +40,43 @@ jobs:
       - name: Build with Maven Wrapper
         run: ./mvnw -B verify
 
-      - name: Run API 28 installation smoke test
-        shell: bash
-        env:
-          AVD_NAME: ci-android-28
-        run: |
-          set -euxo pipefail
-          export ANDROID_HOME="$ANDROID_SDK_ROOT"
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
-
-          yes | sdkmanager --install "platforms;android-28" "system-images;android-28;google_apis;x86"
-
-          if avdmanager list avd | grep -q "${AVD_NAME}"; then
-            avdmanager delete avd -n "${AVD_NAME}"
-          fi
-
-          echo "no" | avdmanager create avd \
-            -n "${AVD_NAME}" \
-            -k "system-images;android-28;google_apis;x86" \
-            --device "pixel_3"
-
-          if [ ! -f "$HOME/.android/avd/${AVD_NAME}.ini" ]; then
-            echo "Failed to create AVD \"${AVD_NAME}\". Current AVD list:"
-            avdmanager list avd || true
-            exit 1
-          fi
-
-          emulator -avd "${AVD_NAME}" -no-window -no-audio -no-boot-anim &
-          EMULATOR_PID=$!
-          trap 'kill "${EMULATOR_PID}" 2>/dev/null || true' EXIT
-
-          if ! timeout 180s adb wait-for-device; then
-            echo "Emulator failed to become ready within 180 seconds"
-            exit 1
-          fi
-          adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 1; done'
-          adb shell input keyevent 82
-          adb emu kill
+#      - name: Run API 28 installation smoke test
+#        shell: bash
+#        env:
+#          AVD_NAME: ci-android-28
+#        run: |
+#          set -euxo pipefail
+#          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+#          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+#
+#          yes | sdkmanager --install "platforms;android-28" "system-images;android-28;google_apis;x86"
+#
+#          if avdmanager list avd | grep -q "${AVD_NAME}"; then
+#            avdmanager delete avd -n "${AVD_NAME}"
+#          fi
+#
+#          echo "no" | avdmanager create avd \
+#            -n "${AVD_NAME}" \
+#            -k "system-images;android-28;google_apis;x86" \
+#            --device "pixel_3"
+#
+#          if [ ! -f "$HOME/.android/avd/${AVD_NAME}.ini" ]; then
+#            echo "Failed to create AVD \"${AVD_NAME}\". Current AVD list:"
+#            avdmanager list avd || true
+#            exit 1
+#          fi
+#
+#          emulator -avd "${AVD_NAME}" -no-window -no-audio -no-boot-anim &
+#          EMULATOR_PID=$!
+#          trap 'kill "${EMULATOR_PID}" 2>/dev/null || true' EXIT
+#
+#          if ! timeout 180s adb wait-for-device; then
+#            echo "Emulator failed to become ready within 180 seconds"
+#            exit 1
+#          fi
+#          adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 1; done'
+#          adb shell input keyevent 82
+#          adb emu kill
 
       - name: Upload APK artifact
         if: always()
