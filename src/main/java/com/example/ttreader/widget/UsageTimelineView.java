@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
 
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ public class UsageTimelineView extends View {
     private float strokeWidth;
     private float dotRadius;
     private float horizontalPadding;
+    private OnEventClickListener eventClickListener;
 
     public UsageTimelineView(Context context) {
         this(context, null);
@@ -62,6 +64,33 @@ public class UsageTimelineView extends View {
         invalidate();
     }
 
+    public void setOnEventClickListener(OnEventClickListener listener) {
+        this.eventClickListener = listener;
+        setClickable(listener != null);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (eventClickListener == null || positions.isEmpty()) {
+            return super.onTouchEvent(event);
+        }
+        boolean handled = super.onTouchEvent(event);
+        if (event.getAction() == MotionEvent.ACTION_UP) {
+            int index = findEventIndex(event.getX());
+            if (index >= 0) {
+                performClick();
+                eventClickListener.onEventClick(index);
+                return true;
+            }
+        }
+        return handled;
+    }
+
+    @Override
+    public boolean performClick() {
+        return super.performClick();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -83,5 +112,33 @@ public class UsageTimelineView extends View {
             float x = startX + usableWidth * position;
             canvas.drawCircle(x, centerY, dotRadius, dotPaint);
         }
+    }
+
+    private int findEventIndex(float touchX) {
+        float width = getWidth();
+        float startX = horizontalPadding;
+        float endX = width - horizontalPadding;
+        if (endX <= startX) {
+            return -1;
+        }
+        float usableWidth = endX - startX;
+        float maxDistance = dotRadius * 2f;
+        int closestIndex = -1;
+        float closestDistance = maxDistance;
+        for (int i = 0; i < positions.size(); i++) {
+            Float position = positions.get(i);
+            if (position == null) continue;
+            float eventX = startX + usableWidth * position;
+            float distance = Math.abs(eventX - touchX);
+            if (distance <= closestDistance) {
+                closestIndex = i;
+                closestDistance = distance;
+            }
+        }
+        return closestIndex;
+    }
+
+    public interface OnEventClickListener {
+        void onEventClick(int index);
     }
 }
