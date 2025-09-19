@@ -1,4 +1,4 @@
-package com.example.UquReader.data;
+package com.example.ttreader.data;
 
 import android.content.ContentValues;
 import android.database.Cursor;

@@ -11,8 +11,8 @@
 
   <properties>
     <android.sdk.location>${project.basedir}/android-sdk</android.sdk.location>
-    <android.platform>35</android.platform>
-    <android.build-tools>35.0.0</android.build-tools>
+    <android.platform>28</android.platform>
+    <android.build-tools>28.0.3</android.build-tools>
     <java.version>1.8</java.version>
     <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
     <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>

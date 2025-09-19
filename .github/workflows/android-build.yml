@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+      ANDROID_HOME: ${{ github.workspace }}/android-sdk
 
     steps:
       - name: Checkout
@@ -24,8 +27,15 @@ jobs:
       - name: Set up Android SDK tools
         uses: android-actions/setup-android@v3
 
-      - name: Build with Maven
-        run: mvn -B verify
+      - name: Install Android platform tools
+        run: |
+          yes | sdkmanager --install "platforms;android-28" "build-tools;28.0.3"
+          if [ -d "$ANDROID_SDK_ROOT/build-tools" ]; then
+            find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d ! -name '28.0.3' -exec rm -rf {} +
+          fi
+
+      - name: Build with Maven Wrapper
+        run: ./mvnw -B verify
 
       - name: Run API 28 installation smoke test
         shell: bash

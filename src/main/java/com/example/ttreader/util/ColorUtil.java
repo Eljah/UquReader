@@ -1,2 +1,2 @@
-package com.example.UquReader.util;
+package com.example.ttreader.util;
 public class ColorUtil { }
