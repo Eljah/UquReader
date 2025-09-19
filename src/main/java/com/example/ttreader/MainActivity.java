@@ -72,7 +72,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     readerView.highlightLetter(currentSentenceStart);
                 }
                 updateSpeechButtons();
-                updatePlaybackState(true);
+                updatePlaybackState(PlaybackState.STATE_PLAYING);
             });
             speechProgressHandler.post(MainActivity.this::startProgressUpdates);
         }
@@ -206,7 +206,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override protected void onPause() {
-        pauseSpeech();
         super.onPause();
     }
 
@@ -304,7 +303,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (mediaSession != null) {
             mediaSession.setActive(true);
         }
-        updatePlaybackState(true);
+        updatePlaybackState(PlaybackState.STATE_PLAYING);
         updateSpeechButtons();
         speakCurrentSentence();
     }
@@ -316,10 +315,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (textToSpeech != null) {
             textToSpeech.stop();
         }
-        if (mediaSession != null) {
-            mediaSession.setActive(false);
-        }
-        updatePlaybackState(false);
+        updatePlaybackState(PlaybackState.STATE_PAUSED);
         updateSpeechButtons();
     }
 
@@ -338,10 +334,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView != null) {
             readerView.clearSpeechHighlights();
         }
-        if (mediaSession != null) {
-            mediaSession.setActive(false);
-        }
-        updatePlaybackState(false);
+        updatePlaybackState(PlaybackState.STATE_STOPPED);
         updateSpeechButtons();
     }
 
@@ -412,7 +405,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         } else {
             isSpeaking = false;
-            updatePlaybackState(false);
+            updatePlaybackState(PlaybackState.STATE_PAUSED);
             updateSpeechButtons();
         }
     }
@@ -421,7 +414,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         stopProgressUpdates();
         isSpeaking = false;
         shouldContinueSpeech = false;
-        updatePlaybackState(false);
+        updatePlaybackState(PlaybackState.STATE_PAUSED);
         updateSpeechButtons();
     }
 
@@ -533,15 +526,29 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
-    private void pauseSpeechFromHeadset() {
-        if (!isSpeaking) return;
-        pauseSpeech();
-        int focusIndex = currentCharIndex >= 0 ? currentCharIndex : currentSentenceStart;
-        if (focusIndex < 0 || readerView == null) return;
-        readerView.post(() -> navigateToCharIndex(focusIndex, 0));
+    private int resolveFocusCharIndex() {
+        if (currentCharIndex >= 0) {
+            return currentCharIndex;
+        }
+        if (currentSentenceStart >= 0) {
+            return currentSentenceStart;
+        }
+        if (currentSentenceIndex >= 0 && currentSentenceIndex < sentenceRanges.size()) {
+            ReaderView.SentenceRange range = sentenceRanges.get(currentSentenceIndex);
+            if (range != null) {
+                return range.start;
+            }
+        }
+        if (!sentenceRanges.isEmpty()) {
+            ReaderView.SentenceRange first = sentenceRanges.get(0);
+            if (first != null) {
+                return first.start;
+            }
+        }
+        return -1;
     }
 
-    private void updatePlaybackState(boolean playing) {
+    private void updatePlaybackState(int state) {
         if (mediaSession == null) return;
         PlaybackState.Builder builder = new PlaybackState.Builder()
                 .setActions(PlaybackState.ACTION_PLAY
