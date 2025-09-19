@@ -107,14 +107,78 @@ if [ -d "$BUILD_TOOLS_DIR" ]; then
   exit 0
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+CLI_ARCHIVE="$PROJECT_DIR/android-commandlinetools.zip"
+CLI_DEST="$SDK_ROOT/cmdline-tools/latest"
+
+install_cmdline_tools() {
+  local tmp
+  if [ ! -f "$CLI_ARCHIVE" ]; then
+    return 1
+  fi
+  tmp="$(mktemp -d)"
+  cleanup_install() {
+    rm -rf "$tmp"
+  }
+  trap cleanup_install EXIT
+  if ! unzip -q "$CLI_ARCHIVE" -d "$tmp"; then
+    trap - EXIT
+    cleanup_install
+    unset -f cleanup_install
+    return 1
+  fi
+  mkdir -p "$SDK_ROOT/cmdline-tools"
+  rm -rf "$CLI_DEST"
+  if ! mv "$tmp/cmdline-tools" "$CLI_DEST"; then
+    trap - EXIT
+    cleanup_install
+    unset -f cleanup_install
+    return 1
+  fi
+  trap - EXIT
+  cleanup_install
+  unset -f cleanup_install
+  return 0
+}
+
+if [ ! -x "$CLI_DEST/bin/sdkmanager" ]; then
+  install_cmdline_tools || true
+fi
+
+java_major_version() {
+  local version_line major minor
+  if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+    version_line="$($JAVA_HOME/bin/java -version 2>&1 | head -n 1)"
+  else
+    version_line="$(java -version 2>&1 | head -n 1)"
+  fi
+  if [[ $version_line =~ "([0-9]+)\.([0-9]+)\. ]]; then
+    major="${BASH_REMATCH[1]}"
+    minor="${BASH_REMATCH[2]}"
+    if [ "$major" = "1" ]; then
+      echo "$minor"
+    else
+      echo "$major"
+    fi
+  else
+    echo "0"
+  fi
+}
+
+JAVA_MAJOR="$(java_major_version)"
+
 declare -a CANDIDATES=(
-  "${android.sdk.location}/cmdline-tools/latest/bin/sdkmanager"
+  "$CLI_DEST/bin/sdkmanager"
   "${android.sdk.location}/cmdline-tools/bin/sdkmanager"
   "${android.sdk.location}/tools/bin/sdkmanager"
 )
 
 for candidate in "${CANDIDATES[@]}"; do
   if [ -x "$candidate" ]; then
+    if [[ "$candidate" == */tools/bin/sdkmanager ]] && [ "$JAVA_MAJOR" -gt 8 ]; then
+      continue
+    fi
     SDKMANAGER="$candidate"
     break
   fi
@@ -127,6 +191,11 @@ if [ -z "${SDKMANAGER:-}" ]; then
     echo "sdkmanager not found under $SDK_ROOT; install Android cmdline-tools or set ANDROID_SDK_ROOT/ANDROID_HOME" >&2
     exit 1
   fi
+fi
+
+if [[ "$SDKMANAGER" == */tools/bin/sdkmanager ]] && [ "$JAVA_MAJOR" -gt 8 ]; then
+  echo "Legacy tools/bin/sdkmanager requires Java 8; install modern cmdline-tools under $SDK_ROOT" >&2
+  exit 1
 fi
 
 printf 'y\n' | "$SDKMANAGER" --sdk_root="$SDK_ROOT" "build-tools;$BUILD_TOOLS_VERSION"
