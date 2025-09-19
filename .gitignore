@@ -1,0 +1,6 @@
+android-sdk/
+android-commandlinetools.zip
+apache-maven-3.9.11-bin.tar.gz
+target/
+*.log
+tools/base64encoder/*.jar

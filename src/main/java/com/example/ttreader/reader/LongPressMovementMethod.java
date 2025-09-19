@@ -16,7 +16,7 @@ public class LongPressMovementMethod extends LinkMovementMethod {
 
     public LongPressMovementMethod(OnLongPressTokenListener l) { this.listener = l; }
 
-    @Override public boolean onTouchEvent(View widget, Spannable buffer, MotionEvent event) {
+    @Override public boolean onTouchEvent(TextView widget, Spannable buffer, MotionEvent event) {
         int action = event.getAction();
         if (action == MotionEvent.ACTION_DOWN) {
             schedule(widget, buffer, event);
@@ -26,7 +26,7 @@ public class LongPressMovementMethod extends LinkMovementMethod {
         return true;
     }
 
-    private void schedule(View widget, Spannable buffer, MotionEvent event) {
+    private void schedule(TextView widget, Spannable buffer, MotionEvent event) {
         final int x = (int)event.getX();
         final int y = (int)event.getY();
         handler.postDelayed(() -> {
@@ -35,12 +35,11 @@ public class LongPressMovementMethod extends LinkMovementMethod {
         }, 350);
     }
 
-    private TokenSpan findSpanAt(View widget, Spannable buffer, int x, int y) {
-        TextView tv = (TextView) widget;
-        Layout layout = tv.getLayout();
+    private TokenSpan findSpanAt(TextView widget, Spannable buffer, int x, int y) {
+        Layout layout = widget.getLayout();
         if (layout == null) return null;
-        int line = layout.getLineForVertical(y - tv.getTotalPaddingTop());
-        int off = layout.getOffsetForHorizontal(line, x - tv.getTotalPaddingLeft());
+        int line = layout.getLineForVertical(y - widget.getTotalPaddingTop());
+        int off = layout.getOffsetForHorizontal(line, x - widget.getTotalPaddingLeft());
         TokenSpan[] spans = buffer.getSpans(off, off, TokenSpan.class);
         return spans != null && spans.length>0 ? spans[0] : null;
     }
