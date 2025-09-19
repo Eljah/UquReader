@@ -57,11 +57,20 @@ jobs:
             -k "system-images;android-28;google_apis;x86" \
             --device "pixel_3"
 
+          if [ ! -f "$HOME/.android/avd/${AVD_NAME}.ini" ]; then
+            echo "Failed to create AVD \"${AVD_NAME}\". Current AVD list:"
+            avdmanager list avd || true
+            exit 1
+          fi
+
           emulator -avd "${AVD_NAME}" -no-window -no-audio -no-boot-anim &
           EMULATOR_PID=$!
           trap 'kill "${EMULATOR_PID}" 2>/dev/null || true' EXIT
 
-          adb wait-for-device
+          if ! timeout 180s adb wait-for-device; then
+            echo "Emulator failed to become ready within 180 seconds"
+            exit 1
+          fi
           adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 1; done'
           adb shell input keyevent 82
           adb emu kill
