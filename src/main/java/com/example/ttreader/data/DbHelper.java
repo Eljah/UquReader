@@ -1,11 +1,17 @@
 package com.example.ttreader.data;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Build;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -13,6 +19,11 @@ import java.io.OutputStream;
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
     private static final int APP_DB_VERSION = 3;
+
+    private static final String TAG = "DbHelper";
+    private static final String PREFS_NAME = "com.example.ttreader.DB_PREFS";
+    private static final String PREF_DICT_VERSION = "dictionary.version";
+    private static final String DICTIONARY_ASSET = "dictionary.db";
 
     private final Context context;
 
@@ -46,16 +57,115 @@ public class DbHelper extends SQLiteOpenHelper {
     }
 
     public File ensureDictionaryDb() throws IOException {
-        File out = new File(context.getDatabasePath("dictionary.db").getAbsolutePath());
-        if (!out.getParentFile().exists()) out.getParentFile().mkdirs();
-        if (!out.exists()) {
-            try (InputStream is = context.getAssets().open("dictionary.db");
-                 OutputStream os = new FileOutputStream(out)) {
-                byte[] buf = new byte[8192]; int n;
-                while ((n = is.read(buf)) > 0) os.write(buf, 0, n);
+        File out = new File(context.getDatabasePath(DICTIONARY_ASSET).getAbsolutePath());
+        File parent = out.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        int installedVersion = resolveAppVersionCode();
+        int installedVersionNameHash = resolveAppVersionNameHash();
+        int storedVersion = prefs.getInt(PREF_DICT_VERSION, -1);
+        boolean needsRefresh = !out.exists() || storedVersion != installedVersion;
+        if (!needsRefresh && installedVersionNameHash != 0) {
+            int storedHash = prefs.getInt(PREF_DICT_VERSION + ".nameHash", 0);
+            if (storedHash != installedVersionNameHash) {
+                needsRefresh = true;
             }
         }
+
+        if (needsRefresh) {
+            File tmp = File.createTempFile("dictionary", ".db", context.getCacheDir());
+            try {
+                copyAssetToFile(DICTIONARY_ASSET, tmp);
+                moveDictionary(tmp, out);
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putInt(PREF_DICT_VERSION, installedVersion);
+                if (installedVersionNameHash != 0) {
+                    editor.putInt(PREF_DICT_VERSION + ".nameHash", installedVersionNameHash);
+                }
+                editor.apply();
+            } finally {
+                if (tmp.exists() && !tmp.equals(out)) {
+                    // Ensure we do not leave temporary files around.
+                    // Ignore failures silently as this is a best-effort cleanup.
+                    //noinspection ResultOfMethodCallIgnored
+                    tmp.delete();
+                }
+            }
+        }
+
         return out;
+    }
+
+    private void copyAssetToFile(String assetName, File destination) throws IOException {
+        try (InputStream is = context.getAssets().open(assetName);
+             OutputStream os = new FileOutputStream(destination)) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = is.read(buf)) > 0) {
+                os.write(buf, 0, n);
+            }
+        }
+    }
+
+    private void moveDictionary(File source, File target) throws IOException {
+        File parent = target.getParentFile();
+        if (parent != null && !parent.exists() && !parent.mkdirs()) {
+            throw new IOException("Unable to create directory " + parent);
+        }
+        if (target.exists() && !target.delete()) {
+            throw new IOException("Unable to delete existing dictionary at " + target);
+        }
+        if (!source.renameTo(target)) {
+            try (InputStream is = new FileInputStream(source);
+                 OutputStream os = new FileOutputStream(target)) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = is.read(buf)) > 0) {
+                    os.write(buf, 0, n);
+                }
+            }
+        }
+    }
+
+    private int resolveAppVersionCode() {
+        try {
+            PackageManager pm = context.getPackageManager();
+            if (pm == null) {
+                return 0;
+            }
+            PackageInfo info = pm.getPackageInfo(context.getPackageName(), 0);
+            if (info == null) {
+                return 0;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                long longCode = info.getLongVersionCode();
+                return (int) Math.min(Integer.MAX_VALUE, longCode);
+            }
+            return info.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.w(TAG, "Unable to read app version", e);
+            return 0;
+        }
+    }
+
+    private int resolveAppVersionNameHash() {
+        try {
+            PackageManager pm = context.getPackageManager();
+            if (pm == null) {
+                return 0;
+            }
+            PackageInfo info = pm.getPackageInfo(context.getPackageName(), 0);
+            if (info == null || info.versionName == null) {
+                return 0;
+            }
+            return info.versionName.hashCode();
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.w(TAG, "Unable to read app version name", e);
+            return 0;
+        }
     }
 
     private void createUsageTables(SQLiteDatabase db) {

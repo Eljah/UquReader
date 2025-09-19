@@ -4,7 +4,7 @@
 
   <groupId>com.example</groupId>
   <artifactId>uqureader</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <packaging>apk</packaging>
 
   <name>UquReader</name>
@@ -17,7 +17,7 @@
     <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
     <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>
     <app.version>${project.version}</app.version>
-    <app.version.code>1</app.version.code>
+    <app.version.code>2</app.version.code>
   </properties>
 
   <build>
@@ -50,6 +50,13 @@
           </sign>
         </configuration>
         <executions>
+          <execution>
+            <id>update-manifest</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>manifest-update</goal>
+            </goals>
+          </execution>
           <execution>
             <phase>package</phase>
             <goals>
