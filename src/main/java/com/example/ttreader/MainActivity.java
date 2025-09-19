@@ -77,6 +77,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             speechProgressHandler.post(MainActivity.this::startProgressUpdates);
         }
 
+        @Override public void onRangeStart(String utteranceId, int start, int end, int frame) {
+            speechProgressHandler.post(() -> handleUtteranceRange(start));
+        }
+
         @Override public void onDone(String utteranceId) {
             speechProgressHandler.post(MainActivity.this::handleUtteranceDone);
         }
@@ -421,6 +425,29 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         updateSpeechButtons();
     }
 
+    private void handleUtteranceRange(int rangeStart) {
+        if (!isSpeaking) return;
+        int sentenceStart = currentSentenceStart;
+        int sentenceEnd = currentSentenceEnd;
+        if (sentenceStart < 0 || sentenceEnd <= sentenceStart) return;
+        int sentenceLength = sentenceEnd - sentenceStart;
+        if (sentenceLength <= 0) return;
+        int safeStart = Math.max(0, Math.min(rangeStart, sentenceLength - 1));
+        int highlightIndex = sentenceStart + safeStart;
+        currentCharIndex = highlightIndex;
+        if (readerView != null) {
+            readerView.highlightLetter(highlightIndex);
+        }
+        if (estimatedUtteranceDurationMs > 0) {
+            long now = SystemClock.elapsedRealtime();
+            long elapsed = Math.max(0L, now - utteranceStartElapsed);
+            long targetElapsed = (long) ((safeStart / (float) sentenceLength) * estimatedUtteranceDurationMs);
+            if (targetElapsed < elapsed) {
+                utteranceStartElapsed = now - targetElapsed;
+            }
+        }
+    }
+
     private long estimateSentenceDurationMs(ReaderView.SentenceRange sentence) {
         if (sentence == null) return 0L;
         int length = Math.max(1, sentence.length());
@@ -480,18 +507,30 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 if (mediaButtonIntent == null) return super.onMediaButtonEvent(mediaButtonIntent);
                 KeyEvent event = mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
                 if (event != null && event.getAction() == KeyEvent.ACTION_DOWN) {
-                    handleHeadsetSignal();
+                    speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
                     return true;
                 }
                 return super.onMediaButtonEvent(mediaButtonIntent);
+            }
+
+            @Override public void onSkipToNext() {
+                speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
+            }
+
+            @Override public void onSkipToPrevious() {
+                speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
             }
         });
         updatePlaybackState(false);
         mediaSession.setActive(false);
     }
 
-    private void handleHeadsetSignal() {
-        speechProgressHandler.post(this::pauseSpeechFromHeadset);
+    private void performMediaButtonAction() {
+        if (isSpeaking) {
+            pauseSpeechFromHeadset();
+        } else {
+            startSpeech();
+        }
     }
 
     private void pauseSpeechFromHeadset() {
@@ -505,7 +544,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void updatePlaybackState(boolean playing) {
         if (mediaSession == null) return;
         PlaybackState.Builder builder = new PlaybackState.Builder()
-                .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_STOP);
+                .setActions(PlaybackState.ACTION_PLAY
+                        | PlaybackState.ACTION_PAUSE
+                        | PlaybackState.ACTION_STOP
+                        | PlaybackState.ACTION_SKIP_TO_NEXT
+                        | PlaybackState.ACTION_SKIP_TO_PREVIOUS);
         int state = playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
         builder.setState(state, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f);
         mediaSession.setPlaybackState(builder.build());
