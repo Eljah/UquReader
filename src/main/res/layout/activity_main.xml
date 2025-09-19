@@ -26,6 +26,16 @@
             android:padding="12dp"/>
     </LinearLayout>
 
+    <Button
+        android:id="@+id/btnInstallRhvoice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="8dp"
+        android:text="@string/rhvoice_button_install"
+        android:padding="12dp"/>
+
     <ScrollView
         android:id="@+id/readerScrollView"
         android:layout_width="match_parent"
