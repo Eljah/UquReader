@@ -74,3 +74,35 @@ jobs:
           adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 1; done'
           adb shell input keyevent 82
           adb emu kill
+
+      - name: Upload APK artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uqureader-apk
+          path: target/uqureader-*.apk
+          if-no-files-found: error
+
+      - name: Prune old APK artifacts
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactName = 'uqureader-apk';
+            const keepLatest = 3;
+            const { owner, repo } = context.repo;
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+            const matching = artifacts
+              .filter(artifact => artifact.name === artifactName && !artifact.expired)
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            for (const artifact of matching.slice(keepLatest)) {
+              core.info(`Deleting artifact ${artifact.id} created at ${artifact.created_at}`);
+              await github.rest.actions.deleteArtifact({
+                owner,
+                repo,
+                artifact_id: artifact.id,
+              });
+            }
