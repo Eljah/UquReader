@@ -50,3 +50,29 @@ jobs:
         with:
           name: uqureader-apk
           path: target/*.apk
+
+  emulator-smoke:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: uqureader-apk
+          path: apks
+
+      - name: Run API 28 installation smoke test
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 28
+          target: default
+          arch: x86
+          script: |
+            set -euxo pipefail
+            APK_PATH="$(ls apks/*.apk | head -n1)"
+            adb wait-for-device
+            adb install -r "$APK_PATH"
+            adb shell pm list packages com.example.UquReader

@@ -15,6 +15,7 @@
     <android.build-tools>35.0.0</android.build-tools>
     <java.version>1.8</java.version>
     <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
+    <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>
   </properties>
 
   <build>
@@ -112,6 +113,34 @@ fi
                   <arg value="${project.build.directory}/wrap-d8.sh" />
                 </exec>
                 <delete file="${project.build.directory}/wrap-d8.sh" />
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sign-debug-apk</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <property name="apksigner.executable" value="${android.sdk.location}/build-tools/${android.build-tools}/apksigner" />
+                <property name="apk.output" value="${project.build.directory}/${project.artifactId}-${project.version}.apk" />
+                <property name="debug.keystore" value="${android.debug.keystore}" />
+                <available file="${apksigner.executable}" property="apksigner.present" />
+                <fail message="apksigner not found at ${apksigner.executable}" unless="apksigner.present" />
+                <exec executable="${apksigner.executable}">
+                  <arg value="sign" />
+                  <arg value="--ks" />
+                  <arg value="${debug.keystore}" />
+                  <arg value="--ks-pass" />
+                  <arg value="pass:android" />
+                  <arg value="--key-pass" />
+                  <arg value="pass:android" />
+                  <arg value="--ks-key-alias" />
+                  <arg value="androiddebugkey" />
+                  <arg value="${apk.output}" />
+                </exec>
               </target>
             </configuration>
           </execution>
