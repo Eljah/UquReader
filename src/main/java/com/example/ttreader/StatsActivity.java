@@ -28,6 +28,7 @@ public class StatsActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        GrammarResources.initialize(this);
         setContentView(R.layout.activity_stats);
         setTitle(R.string.stats_title);
 

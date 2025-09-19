@@ -43,6 +43,7 @@ public class TokenInfoBottomSheet extends DialogFragment {
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.bottomsheet_token_info, container, false);
+        GrammarResources.initialize(inflater.getContext());
         Bundle a = getArguments();
         String surface = a.getString(ARG_SURFACE, "");
         String analysis = a.getString(ARG_ANALYSIS, null);
