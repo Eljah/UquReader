@@ -24,4 +24,10 @@
         android:layout_height="wrap_content"
         android:paddingTop="2dp"/>
 
+    <com.example.ttreader.ui.TimelineView
+        android:id="@+id/statsTimeline"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginTop="8dp"/>
+
 </LinearLayout>

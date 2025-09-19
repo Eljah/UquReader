@@ -26,6 +26,7 @@ public class TokenInfoBottomSheet extends DialogFragment {
     private static final String ARG_RU = "ru";
 
     private UsageStatsDao usageStatsDao;
+    private String bookId = "";
 
     public static TokenInfoBottomSheet newInstance(String surface, String analysis, String ruCsv) {
         TokenInfoBottomSheet f = new TokenInfoBottomSheet();
@@ -39,6 +40,10 @@ public class TokenInfoBottomSheet extends DialogFragment {
 
     public void setUsageStatsDao(UsageStatsDao dao) {
         this.usageStatsDao = dao;
+    }
+
+    public void setBookId(String bookId) {
+        this.bookId = bookId == null ? "" : bookId;
     }
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -151,7 +156,7 @@ public class TokenInfoBottomSheet extends DialogFragment {
 
         if (usageStatsDao != null) {
             usageStatsDao.recordEvent(morphology.lemma, morphology.pos, feature.code,
-                    UsageStatsDao.EVENT_FEATURE, System.currentTimeMillis());
+                    UsageStatsDao.EVENT_LOOKUP, System.currentTimeMillis(), bookId);
         }
     }
 }

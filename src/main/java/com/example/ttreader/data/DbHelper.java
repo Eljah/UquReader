@@ -12,7 +12,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 2;
+    private static final int APP_DB_VERSION = 3;
 
     private final Context context;
 
@@ -40,6 +40,17 @@ public class DbHelper extends SQLiteOpenHelper {
                 " last_seen_ms INTEGER NOT NULL,\n" +
                 " PRIMARY KEY(lemma, pos, feature_code, event_type)\n" +
                 ")");
+        db.execSQL("CREATE TABLE IF NOT EXISTS usage_events(\n" +
+                " id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+                " lemma TEXT NOT NULL,\n" +
+                " pos TEXT NOT NULL,\n" +
+                " feature_code TEXT NOT NULL,\n" +
+                " event_type TEXT NOT NULL,\n" +
+                " book_id TEXT NOT NULL,\n" +
+                " timestamp_ms INTEGER NOT NULL\n" +
+                ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS usage_events_lookup ON usage_events(lemma, pos, feature_code, event_type)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS usage_events_book ON usage_events(book_id)");
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -53,6 +64,19 @@ public class DbHelper extends SQLiteOpenHelper {
                     " last_seen_ms INTEGER NOT NULL,\n" +
                     " PRIMARY KEY(lemma, pos, feature_code, event_type)\n" +
                     ")");
+        }
+        if (oldVersion < 3) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS usage_events(\n" +
+                    " id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+                    " lemma TEXT NOT NULL,\n" +
+                    " pos TEXT NOT NULL,\n" +
+                    " feature_code TEXT NOT NULL,\n" +
+                    " event_type TEXT NOT NULL,\n" +
+                    " book_id TEXT NOT NULL,\n" +
+                    " timestamp_ms INTEGER NOT NULL\n" +
+                    ")");
+            db.execSQL("CREATE INDEX IF NOT EXISTS usage_events_lookup ON usage_events(lemma, pos, feature_code, event_type)");
+            db.execSQL("CREATE INDEX IF NOT EXISTS usage_events_book ON usage_events(book_id)");
         }
     }
 
