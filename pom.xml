@@ -95,6 +95,47 @@
                 <mkdir dir="${android.sdk.location}/tools" />
                 <echo file="${android.sdk.location}/tools/source.properties" append="false">Pkg.Revision=0.0.0
 </echo>
+                <echo file="${project.build.directory}/ensure-build-tools.sh" append="false"><![CDATA[
+#!/bin/bash
+set -euo pipefail
+
+SDK_ROOT="${android.sdk.location}"
+BUILD_TOOLS_VERSION="${android.build-tools}"
+BUILD_TOOLS_DIR="${android.sdk.location}/build-tools/${android.build-tools}"
+
+if [ -d "$BUILD_TOOLS_DIR" ]; then
+  exit 0
+fi
+
+declare -a CANDIDATES=(
+  "${android.sdk.location}/cmdline-tools/latest/bin/sdkmanager"
+  "${android.sdk.location}/cmdline-tools/bin/sdkmanager"
+  "${android.sdk.location}/tools/bin/sdkmanager"
+)
+
+for candidate in "${CANDIDATES[@]}"; do
+  if [ -x "$candidate" ]; then
+    SDKMANAGER="$candidate"
+    break
+  fi
+done
+
+if [ -z "${SDKMANAGER:-}" ]; then
+  if command -v sdkmanager >/dev/null 2>&1; then
+    SDKMANAGER="$(command -v sdkmanager)"
+  else
+    echo "sdkmanager not found under $SDK_ROOT; install Android cmdline-tools or set ANDROID_SDK_ROOT/ANDROID_HOME" >&2
+    exit 1
+  fi
+fi
+
+printf 'y\n' | "$SDKMANAGER" --sdk_root="$SDK_ROOT" "build-tools;$BUILD_TOOLS_VERSION"
+                ]]></echo>
+                <chmod file="${project.build.directory}/ensure-build-tools.sh" perm="755" />
+                <exec executable="bash">
+                  <arg value="${project.build.directory}/ensure-build-tools.sh" />
+                </exec>
+                <delete file="${project.build.directory}/ensure-build-tools.sh" />
                 <property name="d8.lib.dir" value="${android.sdk.location}/build-tools/${android.build-tools}/lib" />
                 <echo file="${project.build.directory}/wrap-d8.sh" append="false"><![CDATA[
 #!/bin/bash
@@ -185,6 +226,17 @@ fi
       </activation>
       <properties>
         <android.sdk.location>${env.ANDROID_SDK_ROOT}</android.sdk.location>
+      </properties>
+    </profile>
+    <profile>
+      <id>env-android-home</id>
+      <activation>
+        <property>
+          <name>env.ANDROID_HOME</name>
+        </property>
+      </activation>
+      <properties>
+        <android.sdk.location>${env.ANDROID_HOME}</android.sdk.location>
       </properties>
     </profile>
   </profiles>
