@@ -204,6 +204,10 @@ public class ReaderView extends TextView {
         recordExposure(span, System.currentTimeMillis());
     }
 
+    public List<TokenSpan> getTokenSpans() {
+        return Collections.unmodifiableList(tokenSpans);
+    }
+
     private void handleTokenSelection(TokenSpan span) {
         if (span == null || span.token == null || span.token.morphology == null) return;
         Morphology morph = span.token.morphology;

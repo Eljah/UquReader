@@ -32,4 +32,14 @@
     <string name="speech_toggle_content_pause">Поставить озвучку на паузу</string>
     <string name="speech_stop_content">Остановить озвучку</string>
     <string name="speech_install_talgat">Установить RHVoice Talgat</string>
+    <string name="rhvoice_button_install">Установить RHVoice Talgat</string>
+    <string name="rhvoice_install_title">Требуется RHVoice</string>
+    <string name="rhvoice_install_message">Для озвучивания текста необходимо установить приложение RHVoice и загрузить голос Talgat.</string>
+    <string name="rhvoice_install_store">Открыть в магазине</string>
+    <string name="rhvoice_install_download">Инструкция</string>
+    <string name="rhvoice_voice_title">Добавьте голос Talgat</string>
+    <string name="rhvoice_voice_message">Голос Talgat не найден. Откройте приложение RHVoice, скачайте голос Talgat и вернитесь в UquReader.</string>
+    <string name="rhvoice_voice_open_app">Открыть RHVoice</string>
+    <string name="rhvoice_voice_download">Страница голоса Talgat</string>
+    <string name="rhvoice_no_handler">Не удалось открыть ссылку для установки RHVoice.</string>
 </resources>

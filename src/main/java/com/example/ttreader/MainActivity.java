@@ -20,14 +20,17 @@ import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ScrollView;
+import android.widget.Toast;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
+import com.example.ttreader.reader.TtsReaderController;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
 import com.example.ttreader.util.GrammarResources;
+import com.example.ttreader.tts.RhvoiceAvailability;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -131,6 +134,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerView.loadFromJsonlAsset(SAMPLE_ASSET);
         readerView.post(this::updateSentenceRanges);
 
+        ttsController = new TtsReaderController(this, readerView::getTranslations);
+        ttsController.setTokenSequence(readerView.getTokenSpans());
+
+        Button installRhvoiceButton = findViewById(R.id.btnInstallRhvoice);
+        if (installRhvoiceButton != null) {
+            installRhvoiceButton.setOnClickListener(v -> showRhvoiceInstallDialog());
+        }
+
         if (readerScrollView != null) {
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
             observer.addOnScrollChangedListener(() ->
@@ -179,6 +190,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         handleNavigationIntent(getIntent());
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        ensureRhvoiceReady();
+    }
+
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
@@ -211,6 +227,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
+        if (ttsController != null) {
+            ttsController.speakTokenDetails(span, ruLemmas, true);
+        }
         showTokenSheet(span, ruLemmas);
     }
 
@@ -536,6 +555,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             pm.getPackageInfo(RHVOICE_PACKAGE, 0);
             return true;
         } catch (PackageManager.NameNotFoundException e) {
+
             return false;
         }
     }
@@ -555,5 +575,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 startActivity(new Intent(Intent.ACTION_VIEW, webUri));
             }
         }
+
     }
 }
