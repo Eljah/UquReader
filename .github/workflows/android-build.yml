@@ -30,6 +30,20 @@ jobs:
       - name: Set up Android SDK tools
         uses: android-actions/setup-android@v3
 
+      - name: Determine build version
+        id: version
+        run: |
+          set -euo pipefail
+          minor="${GITHUB_RUN_NUMBER}"
+          version="1.${minor}.0"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "code=${minor}" >> "$GITHUB_OUTPUT"
+
+      - name: Update Maven project version
+        run: |
+          set -euo pipefail
+          ./mvnw -B versions:set -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
+
       - name: Install Android platform tools
         run: |
           yes | sdkmanager --install "platforms;android-28" "build-tools;28.0.3"
@@ -38,7 +52,9 @@ jobs:
           fi
 
       - name: Build with Maven Wrapper
-        run: ./mvnw -B verify
+        env:
+          APP_VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: ./mvnw -B verify -Dapp.version.code=${APP_VERSION_CODE}
 
 #      - name: Run API 28 installation smoke test
 #        shell: bash

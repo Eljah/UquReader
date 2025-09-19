@@ -19,9 +19,25 @@
         android:paddingTop="4dp"/>
 
     <TextView
+        android:id="@+id/statsExposureDots"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="2dp"
+        android:textColor="@android:color/holo_green_dark"
+        android:textSize="12sp"/>
+
+    <TextView
         android:id="@+id/statsLookup"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingTop="2dp"/>
+
+    <TextView
+        android:id="@+id/statsLookupDots"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="2dp"
+        android:textColor="@android:color/holo_blue_dark"
+        android:textSize="12sp"/>
 
 </LinearLayout>

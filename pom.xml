@@ -16,6 +16,8 @@
     <java.version>1.8</java.version>
     <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
     <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>
+    <app.version>${project.version}</app.version>
+    <app.version.code>1</app.version.code>
   </properties>
 
   <build>
@@ -35,6 +37,8 @@
           <undeployBeforeDeploy>true</undeployBeforeDeploy>
           <manifest>
             <debuggable>true</debuggable>
+            <versionName>${app.version}</versionName>
+            <versionCode>${app.version.code}</versionCode>
           </manifest>
           <artifactSet>
             <excludes>

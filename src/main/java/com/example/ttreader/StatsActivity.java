@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.Map;
 
 public class StatsActivity extends Activity {
+    private static final int MAX_DOT_COUNT = 12;
+    private static final char DOT_CHAR = '\u2B24';
     private UsageStatsDao usageStatsDao;
     private DateFormat dateFormat;
 
@@ -76,9 +78,13 @@ public class StatsActivity extends Activity {
             TextView title = item.findViewById(R.id.statsTitle);
             TextView exposure = item.findViewById(R.id.statsExposure);
             TextView lookup = item.findViewById(R.id.statsLookup);
+            TextView exposureDots = item.findViewById(R.id.statsExposureDots);
+            TextView lookupDots = item.findViewById(R.id.statsLookupDots);
             title.setText(formatLemmaTitle(entry));
             exposure.setText(getString(R.string.stats_exposure_label, entry.exposureCount, formatTime(entry.lastExposure)));
             lookup.setText(getString(R.string.stats_lookup_label, entry.lookupCount, formatTime(entry.lastLookup)));
+            bindDots(exposureDots, entry.exposureCount);
+            bindDots(lookupDots, entry.lookupCount);
             container.addView(item);
         }
     }
@@ -130,6 +136,29 @@ public class StatsActivity extends Activity {
     private String formatTime(long ms) {
         if (ms <= 0) return getString(R.string.stats_time_never);
         return dateFormat.format(ms);
+    }
+
+    private void bindDots(TextView view, int count) {
+        if (view == null) return;
+        if (count <= 0) {
+            view.setText("");
+            view.setVisibility(View.GONE);
+        } else {
+            view.setVisibility(View.VISIBLE);
+            view.setText(buildDotString(count));
+        }
+    }
+
+    private CharSequence buildDotString(int count) {
+        int dots = Math.min(count, MAX_DOT_COUNT);
+        if (dots <= 0) return "";
+        StringBuilder sb = new StringBuilder(dots * 2);
+        for (int i = 0; i < dots; i++) {
+            if (i > 0) sb.append(' ');
+            sb.append(DOT_CHAR);
+        }
+        if (count > MAX_DOT_COUNT) sb.append(' ').append('+');
+        return sb.toString();
     }
 
     private static class LemmaStats {
