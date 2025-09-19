@@ -1,4 +1,4 @@
-package com.example.UquReader.model;
+package com.example.ttreader.model;
 
 public class Analysis {
     public String lemma;

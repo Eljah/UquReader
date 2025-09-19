@@ -1,3 +1,902 @@
-{"surface":"Китапны","lemma":"китап","pos":"NOUN","features":["ACC"],"start":0,"end":7}
-{"surface":"укыдым","lemma":"укы","pos":"VERB","features":["PAST","1SG"],"start":8,"end":14}
-{"surface":"тиз","lemma":"тиз","pos":"ADJ","features":[],"start":15,"end":18}
+{"prefix": "", "surface": "ВКЛЮЧИ", "analysis": "Rus"}
+{"prefix": " ", "surface": "КУБЫЗ", "analysis": "ку+N+Sg+1PL(бЫз)"}
+{"prefix": "", "surface": "/", "analysis": "Sign"}
+{"prefix": "", "surface": "КУБЫЗ", "analysis": "ку+N+Sg+1PL(бЫз)"}
+{"prefix": " ", "surface": "КАБЫЗ", "analysis": "кабыз+V+IMP_SG()"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "Авыл", "analysis": "авыл+N+Sg+Nom"}
+{"prefix": " ", "surface": "ишегалды", "analysis": "ишегалды+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "хәзер", "analysis": "хәзер+Adv"}
+{"prefix": " ", "surface": "андыйлар", "analysis": "андый+Adj+PL(ЛАр)+Nom"}
+{"prefix": " ", "surface": "юктыр", "analysis": "юк+MOD+PROB(ДЫр)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Капкасы", "analysis": "капка+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "бар", "analysis": "бар+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Агач", "analysis": "агач+N+Sg+Nom"}
+{"prefix": " ", "surface": "коймасы", "analysis": "койма+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": "!", "analysis": "Type1"}
+{"prefix": " ", "surface": "Чия", "analysis": "чия+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "миләшләр", "analysis": "миләш+N+PL(ЛАр)+Nom"}
+{"prefix": " ", "surface": "үсә", "analysis": "үс+V+PRES(Й)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Эскәмиядә", "analysis": "эскәмия+N+Sg+LOC(ДА)"}
+{"prefix": " ", "surface": "Бабай", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": " ", "surface": "утыра", "analysis": "утыр+V+PRES(Й)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Капкага", "analysis": "капка+N+Sg+DIR(ГА)"}
+{"prefix": " ", "surface": "шакыйлар", "analysis": "шакы+V+PRES(Й)+3PL(ЛАр)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Кем", "analysis": "кем+PN"}
+{"prefix": " ", "surface": "анда", "analysis": "анда+PN"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Исәнмесез", "analysis": "исәнмесез+INTRJ"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "Галимҗан", "analysis": "галимҗан+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "бабай", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": " ", "surface": "сезме", "analysis": "сез+PN+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Кем", "analysis": "кем+PN"}
+{"prefix": " ", "surface": "анда", "analysis": "анда+PN"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Мин", "analysis": "мин+PN"}
+{"prefix": " ", "surface": "Әлфия", "analysis": "әлфия+PROP+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Алайса", "analysis": "алайса+MOD"}
+{"prefix": " ", "surface": "кер", "analysis": "кер+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "Әлфия", "analysis": "әлфия+PROP+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Әйе", "analysis": "әйе+MOD"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "исәнмесез", "analysis": "исәнмесез+INTRJ"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "мин", "analysis": "мин+PN"}
+{"prefix": " ", "surface": "Әлфия", "analysis": "әлфия+PROP+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "Казаннан", "analysis": "казан+N+Sg+ABL(ДАн)"}
+{"prefix": " ", "surface": "килдем", "analysis": "кил+V+PST_DEF(ДЫ)+1SG(м)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "җырлар", "analysis": "җыр+N+PL(ЛАр)+Nom"}
+{"prefix": " ", "surface": "яздырам", "analysis": "яз+V+CAUS(ДЫр)+PRES(Й)+1SG(м)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "проект", "analysis": "проект+N+Sg+Nom"}
+{"prefix": " ", "surface": "өчен", "analysis": "өчен+POST"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Күршеләр", "analysis": "күрше+N+PL(ЛАр)+Nom"}
+{"prefix": " ", "surface": "әйтте", "analysis": "әйт+V+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "сез", "analysis": "сез+PN"}
+{"prefix": " ", "surface": "борыңгы", "analysis": "NR"}
+{"prefix": " ", "surface": "җырларны", "analysis": "җыр+N+PL(ЛАр)+ACC(нЫ)"}
+{"prefix": " ", "surface": "беләсез", "analysis": "бел+V+PRES(Й)+2PL(сЫз)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": " ", "surface": "(", "analysis": "Type3"}
+{"prefix": "", "surface": "уфтанып", "analysis": "уфтан+V+ADVV_ACC(Ып)"}
+{"prefix": "", "surface": ")", "analysis": "Type3"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Әйе", "analysis": "әйе+MOD"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "беләм", "analysis": "бел+V+PRES(Й)+1SG(м)"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "беләм", "analysis": "бел+V+PRES(Й)+1SG(м)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Яздырасыңмы", "analysis": "яз+V+CAUS(ДЫр)+OBL(ЙсЫ)+POSS_2SG(Ың)+Nom+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Әйе", "analysis": "әйе+MOD"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "шулай", "analysis": "шулай+PN"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "сез", "analysis": "сез+PN"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Кайда", "analysis": "кай+PN+LOC(ДА)"}
+{"prefix": " ", "surface": "магнитофон", "analysis": "магнитофон+N+Sg+Nom"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Сезне", "analysis": "сез+PN+ACC(нЫ)"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": " ", "surface": "яздырдылармы", "analysis": "яз+V+CAUS(ДЫр)+PST_DEF(ДЫ)+3PL(ЛАр)+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Миллион", "analysis": "миллион+Num"}
+{"prefix": " ", "surface": "тапкыр", "analysis": "тапкыр+Adj"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бумы", "analysis": "бу+N+Sg+Nom+INT(мЫ)"}
+{"prefix": " ", "surface": "магнитофоның", "analysis": "магнитофон+N+Sg+POSS_2SG(Ың)+Nom"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бикрәк", "analysis": "NR"}
+{"prefix": " ", "surface": "нечкә", "analysis": "нечкә+Adj"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Юк", "analysis": "юк+MOD"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "ноутбук", "analysis": "Rus"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "хәзер", "analysis": "хәзер+Adv"}
+{"prefix": " ", "surface": "барысын", "analysis": "бары+PN+POSS_3(СЫ)+ACC(нЫ)"}
+{"prefix": " ", "surface": "да", "analysis": "да+PART"}
+{"prefix": " ", "surface": "компьютерга", "analysis": "компьютер+N+Sg+DIR(ГА)"}
+{"prefix": " ", "surface": "яздыралар", "analysis": "яз+V+CAUS(ДЫр)+PRES(Й)+3PL(ЛАр)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Менә", "analysis": "мен+V+PRES(Й)"}
+{"prefix": " ", "surface": "бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "микрофон", "analysis": "микрофон+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "тавыш", "analysis": "тавыш+N+Sg+Nom"}
+{"prefix": " ", "surface": "картасы", "analysis": "карта+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ярый", "analysis": "яра+V+PRES(Й)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "аңлашылды", "analysis": "аңла+V+RECP(Ыш)+PASS(Ыл)+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Кинога", "analysis": "кино+N+Sg+DIR(ГА)"}
+{"prefix": " ", "surface": "төшермисеңме", "analysis": "төшер+V+NEG(мА)+OBL(ЙсЫ)+POSS_2SG(Ың)+Nom+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Элек", "analysis": "элек+Adv"}
+{"prefix": " ", "surface": "төшерәләр", "analysis": "төшер+V+PRES(Й)+3PL(ЛАр)"}
+{"prefix": " ", "surface": "иде", "analysis": "и+V+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Кая", "analysis": "кая+PN"}
+{"prefix": " ", "surface": "басыйм", "analysis": "бас+V+HOR_SG(Йм)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Кая", "analysis": "кая+PN"}
+{"prefix": " ", "surface": "телисез", "analysis": "телә+V+PRES(Й)+2PL(сЫз)"}
+{"prefix": " ", "surface": "шунда", "analysis": "шул+PN+LOC(ДА)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Авыл", "analysis": "авыл+N+Sg+Nom"}
+{"prefix": " ", "surface": "тавышлары", "analysis": "тавыш+N+PL(ЛАр)+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "да", "analysis": "да+PART"}
+{"prefix": " ", "surface": "керсең", "analysis": "кер+N+Sg+2SG(сЫң)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Төшермисең", "analysis": "төшер+V+NEG(мА)+OBL(ЙсЫ)+POSS_2SG(Ың)+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "димәк", "analysis": "ди+V+INF_2(мАк)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Юк", "analysis": "юк+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БААЙ", "analysis": "NR"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ну", "analysis": "ну+INTRJ"}
+{"prefix": " ", "surface": "ярый", "analysis": "яра+V+PRES(Й)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Авыл", "analysis": "авыл+N+Sg+Nom"}
+{"prefix": " ", "surface": "тавышлары", "analysis": "тавыш+N+PL(ЛАр)+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "сиңа", "analysis": "син+PN+DIR(ГА)"}
+{"prefix": " ", "surface": "нигә", "analysis": "ни+PN+DIR(ГА)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Алай", "analysis": "алай+PN"}
+{"prefix": " ", "surface": "аутентичныйрак", "analysis": "NR"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Белмим", "analysis": "бел+V+NEG(мА)+HOR_SG(Йм)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "нәрсә", "analysis": "нәрсә+PN"}
+{"prefix": " ", "surface": "сөйлисең", "analysis": "сөйлә+V+OBL(ЙсЫ)+POSS_2SG(Ың)+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Әйдә", "analysis": "әйдә+INTRJ"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "алайса", "analysis": "алайса+MOD"}
+{"prefix": " ", "surface": "сыер", "analysis": "сыер+N+Sg+Nom"}
+{"prefix": " ", "surface": "абзары", "analysis": "абзар+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "янына", "analysis": "ян+N+Sg+POSS_3(СЫ)+DIR(ГА)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "анда", "analysis": "анда+PN"}
+{"prefix": " ", "surface": "авыл", "analysis": "авыл+N+Sg+Nom"}
+{"prefix": " ", "surface": "тавышлары", "analysis": "тавыш+N+PL(ЛАр)+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "байтак", "analysis": "байтак+Adj"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Синең", "analysis": "син+PN+GEN(нЫң)"}
+{"prefix": " ", "surface": "магнитофоның", "analysis": "магнитофон+N+Sg+POSS_2SG(Ың)+Nom"}
+{"prefix": " ", "surface": "исләр", "analysis": "ис+N+PL(ЛАр)+Nom"}
+{"prefix": " ", "surface": "яздырмыймы", "analysis": "яз+V+CAUS(ДЫр)+NEG(мА)+PRES(Й)+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Юк", "analysis": "юк+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Анысы", "analysis": "анысы+PN"}
+{"prefix": " ", "surface": "яхшы", "analysis": "яхшы+Adj"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ярар", "analysis": "яр+V+PCP_FUT(Ыр)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "нәрсәне", "analysis": "нәрсә+PN+ACC(нЫ)"}
+{"prefix": " ", "surface": "җырлыйм", "analysis": "җырла+V+HOR_SG(Йм)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Күпме", "analysis": "күп+Adj+INT(мЫ)"}
+{"prefix": " ", "surface": "минут", "analysis": "минут+N+Sg+Nom"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бер-ике", "analysis": "бер-ике+Num"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Галимҗан", "analysis": "галимҗан+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "бабай", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "менә", "analysis": "мен+V+PRES(Й)"}
+{"prefix": " ", "surface": "күпме", "analysis": "күп+Adj+INT(мЫ)"}
+{"prefix": " ", "surface": "җыр", "analysis": "җыр+N+Sg+Nom"}
+{"prefix": " ", "surface": "бара", "analysis": "бар+V+PRES(Й)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "шулкадәр", "analysis": "шулкадәр+Adv"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Сәер", "analysis": "сәер+Adj"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "элек", "analysis": "элек+Adv"}
+{"prefix": " ", "surface": "ике", "analysis": "ике+Num"}
+{"prefix": " ", "surface": "минут", "analysis": "минут+N+Sg+Nom"}
+{"prefix": " ", "surface": "җырлый", "analysis": "җырла+V+PRES(Й)"}
+{"prefix": " ", "surface": "идем", "analysis": "и+V+PST_DEF(ДЫ)+1SG(м)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "аннары", "analysis": "аннары+PN"}
+{"prefix": " ", "surface": "шуны", "analysis": "шул+PN+ACC(нЫ)"}
+{"prefix": " ", "surface": "телевизорда", "analysis": "телевизор+N+Sg+LOC(ДА)"}
+{"prefix": " ", "surface": "күрсәткәннәр", "analysis": "күрсәт+V+PCP_PS(ГАн)+PL(ЛАр)+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ну", "analysis": "ну+INTRJ"}
+{"prefix": " ", "surface": "ярый", "analysis": "яра+V+PRES(Й)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "әйдә", "analysis": "әйдә+INTRJ"}
+{"prefix": "", "surface": "", "analysis": "Error"}
+{"prefix": " - ", "surface": "әзермен", "analysis": "әзер+Adj+1SG(мЫн)"}
+{"prefix": " ", "surface": "анда", "analysis": "анда+PN"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "", "analysis": "Error"}
+{"prefix": " - ", "surface": "сузыйм", "analysis": "суз+V+HOR_SG(Йм)"}
+{"prefix": " ", "surface": "берне", "analysis": "бер+Num+ACC(нЫ)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Фамилиягез", "analysis": "фамилия+N+Sg+POSS_2PL(ЫгЫз)+Nom"}
+{"prefix": " ", "surface": "ничек", "analysis": "ничек+PN"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "нәрсә", "analysis": "нәрсә+PN"}
+{"prefix": " ", "surface": "өчен", "analysis": "өчен+POST"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Тарих", "analysis": "тарих+N+Sg+Nom"}
+{"prefix": " ", "surface": "өчен", "analysis": "өчен+POST"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "бабай", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Алайса", "analysis": "алайса+MOD"}
+{"prefix": " ", "surface": "Галимҗанов", "analysis": "NR"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бабаем", "analysis": "бабай+N+Sg+POSS_1SG(Ым)+Nom"}
+{"prefix": " ", "surface": "хөрмәтенә", "analysis": "хөрмәт+N+Sg+POSS_3(СЫ)+DIR(ГА)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Окей", "analysis": "Rus"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "Галимҗан", "analysis": "галимҗан+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "Галимҗанов", "analysis": "NR"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "Котлы", "analysis": "кот+N+ATTR_MUN(лЫ)"}
+{"prefix": " ", "surface": "Бүкәш", "analysis": "NR"}
+{"prefix": " ", "surface": "авылы", "analysis": "авыл+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "26", "analysis": "Num"}
+{"prefix": " ", "surface": "апрель", "analysis": "апрель+N+Sg+Nom"}
+{"prefix": " ", "surface": "2020", "analysis": "Num"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ярыймы", "analysis": "яра+V+PRES(Й)+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "(", "analysis": "Type3"}
+{"prefix": "", "surface": "Җырлый", "analysis": "җырла+V+PRES(Й)"}
+{"prefix": " ", "surface": "башлый", "analysis": "башла+V+PRES(Й)"}
+{"prefix": "", "surface": ")", "analysis": "Type3"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Каз", "analysis": "каз+N+Sg+Nom"}
+{"prefix": " ", "surface": "канаты", "analysis": "канат+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "кат-кат", "analysis": "кат-кат+Adv"}
+{"prefix": " ", "surface": "була", "analysis": "бул+V+PRES(Й)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "Ир", "analysis": "ир+N+Sg+Nom"}
+{"prefix": " ", "surface": "канаты", "analysis": "канат+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "ат", "analysis": "ат+N+Sg+Nom"}
+{"prefix": " ", "surface": "була", "analysis": "бул+V+PRES(Й)"}
+{"prefix": "", "surface": ";", "analysis": "Type2"}
+{"prefix": " ", "surface": "Чит", "analysis": "чит+Adj"}
+{"prefix": " ", "surface": "җирләрдә", "analysis": "җир+N+PL(ЛАр)+LOC(ДА)"}
+{"prefix": " ", "surface": "бик", "analysis": "бик+Adv"}
+{"prefix": " ", "surface": "күп", "analysis": "күп+Adj"}
+{"prefix": " ", "surface": "йөрсәң", "analysis": "йөр+V+COND(сА)+2SG(ң)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "Сөйгән", "analysis": "сөй+V+PCP_PS(ГАн)"}
+{"prefix": " ", "surface": "ярың", "analysis": "яр+N+Sg+POSS_2SG(Ың)+Nom"}
+{"prefix": " ", "surface": "ят", "analysis": "ят+Adj"}
+{"prefix": " ", "surface": "була", "analysis": "бул+V+PRES(Й)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Галимҗан", "analysis": "галимҗан+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "бабай", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "бит", "analysis": "бит+N+Sg+Nom"}
+{"prefix": " ", "surface": "борыңгы", "analysis": "NR"}
+{"prefix": " ", "surface": "түгел", "analysis": "түгел+PART"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ничек", "analysis": "ничек+PN"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": " ", "surface": "борыңгы", "analysis": "NR"}
+{"prefix": " ", "surface": "түгел", "analysis": "түгел+PART"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Аны", "analysis": "ул+PN+ACC(нЫ)"}
+{"prefix": " ", "surface": "хәтта", "analysis": "хәтта+CNJ"}
+{"prefix": " ", "surface": "Первый", "analysis": "Rus"}
+{"prefix": " ", "surface": "каналда", "analysis": "канал+N+Sg+LOC(ДА)"}
+{"prefix": " ", "surface": "күрсәтәләр", "analysis": "күрсәт+V+PRES(Й)+3PL(ЛАр)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ярар", "analysis": "яр+V+PCP_FUT(Ыр)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "матур", "analysis": "матур+Adj"}
+{"prefix": " ", "surface": "җыр", "analysis": "җыр+N+Sg+Nom"}
+{"prefix": " ", "surface": "булсын", "analysis": "бул+V+JUS_SG(сЫн)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Тагын", "analysis": "тагын+Adv"}
+{"prefix": " ", "surface": "ниндиләрен", "analysis": "нинди+PN+PL(ЛАр)+POSS_3(СЫ)+ACC(нЫ)"}
+{"prefix": " ", "surface": "беләсез", "analysis": "бел+V+PRES(Й)+2PL(сЫз)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Пленкаң", "analysis": "пленка+N+Sg+POSS_2SG(Ың)+Nom"}
+{"prefix": " ", "surface": "җитәрме", "analysis": "җит+V+PCP_FUT(Ыр)+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Җитәрлек", "analysis": "җит+V+PCP_FUT(Ыр)+PSBL(лЫк)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Алайса", "analysis": "алайса+MOD"}
+{"prefix": " ", "surface": "менә", "analysis": "мен+V+PRES(Й)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "минем", "analysis": "мин+PN+GEN(нЫң)"}
+{"prefix": " ", "surface": "яратканым", "analysis": "яра+V+CAUS(т)+PCP_PS(ГАн)+POSS_1SG(Ым)+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Сугыш", "analysis": "сугыш+N+Sg+Nom"}
+{"prefix": " ", "surface": "турында", "analysis": "тур+N+Sg+POSS_3(СЫ)+LOC(ДА)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Гакыйль", "analysis": "NR"}
+{"prefix": " ", "surface": "булган", "analysis": "бул+V+PCP_PS(ГАн)"}
+{"prefix": " ", "surface": "татарларны", "analysis": "татар+N+PL(ЛАр)+ACC(нЫ)"}
+{"prefix": " ", "surface": "ник", "analysis": "ник+PN"}
+{"prefix": " ", "surface": "уятмыйсың", "analysis": "уят+V+NEG(мА)+OBL(ЙсЫ)+POSS_2SG(Ың)+Nom"}
+{"prefix": " ", "surface": "заман", "analysis": "заман+N+Sg+Nom"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Гакыйль", "analysis": "NR"}
+{"prefix": " ", "surface": "булган", "analysis": "бул+V+PCP_PS(ГАн)"}
+{"prefix": " ", "surface": "татарларны", "analysis": "татар+N+PL(ЛАр)+ACC(нЫ)"}
+{"prefix": " ", "surface": "ник", "analysis": "ник+PN"}
+{"prefix": " ", "surface": "уятмыйсың", "analysis": "уят+V+NEG(мА)+OBL(ЙсЫ)+POSS_2SG(Ың)+Nom"}
+{"prefix": " ", "surface": "заман", "analysis": "заман+N+Sg+Nom"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ах", "analysis": "ах+INTRJ"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "син", "analysis": "син+PN"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "заман", "analysis": "заман+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "заман", "analysis": "заман+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "заман", "analysis": "заман+N+Sg+Nom"}
+{"prefix": " ", "surface": "ник", "analysis": "ник+PN"}
+{"prefix": " ", "surface": "уятмыйсың", "analysis": "уят+V+NEG(мА)+OBL(ЙсЫ)+POSS_2SG(Ың)+Nom"}
+{"prefix": " ", "surface": "һаман", "analysis": "һаман+Adv"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ах", "analysis": "ах+INTRJ"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "син", "analysis": "син+PN"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "заман", "analysis": "заман+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "заман", "analysis": "заман+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "заман", "analysis": "заман+N+Sg+Nom"}
+{"prefix": " ", "surface": "ник", "analysis": "ник+PN"}
+{"prefix": " ", "surface": "уятмыйсың", "analysis": "уят+V+NEG(мА)+OBL(ЙсЫ)+POSS_2SG(Ың)+Nom"}
+{"prefix": " ", "surface": "һаман", "analysis": "һаман+Adv"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Галимҗан", "analysis": "галимҗан+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "бабай", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "мин", "analysis": "мин+PN"}
+{"prefix": " ", "surface": "бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "җырны", "analysis": "җыр+N+Sg+ACC(нЫ)"}
+{"prefix": " ", "surface": "беләм", "analysis": "бел+V+PRES(Й)+1SG(м)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ул", "analysis": "ул+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "әлбәттә", "analysis": "әлбәттә+MOD"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "иске", "analysis": "иске+Adj"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "әмма", "analysis": "әмма+CNJ"}
+{"prefix": " ", "surface": "аны", "analysis": "ул+PN+ACC(нЫ)"}
+{"prefix": " ", "surface": "Айдар", "analysis": "айдар+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "Фәйзрахманов", "analysis": "NR"}
+{"prefix": " ", "surface": "ансамбле", "analysis": "ансамбль+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "да", "analysis": "да+PART"}
+{"prefix": " ", "surface": "җырлый", "analysis": "җырла+V+PRES(Й)"}
+{"prefix": " ", "surface": "бит", "analysis": "бит+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ә", "analysis": "ә+INTRJ"}
+{"prefix": " ", "surface": "нәрсә", "analysis": "нәрсә+PN"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "синең", "analysis": "син+PN+GEN(нЫң)"}
+{"prefix": " ", "surface": "Айдарың", "analysis": "айдар+PROP+POSS_2SG(Ың)+Nom"}
+{"prefix": " ", "surface": "җырлагач", "analysis": "җырла+V+ADVV_ANT(ГАч)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "ул", "analysis": "ул+N+Sg+Nom"}
+{"prefix": " ", "surface": "халык", "analysis": "халык+N+Sg+Nom"}
+{"prefix": " ", "surface": "җыры", "analysis": "җыр+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "түгелмени", "analysis": "түгел+PART+INT_MIR(мЫни)"}
+{"prefix": " ", "surface": "хәзер", "analysis": "хәзер+Adv"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ярар", "analysis": "яр+V+PCP_FUT(Ыр)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "ярар", "analysis": "яр+V+PCP_FUT(Ыр)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "миңа", "analysis": "мин+PN+DIR(ГА)"}
+{"prefix": " ", "surface": "ошый", "analysis": "оша+V+PRES(Й)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Кара", "analysis": "кара+Adj"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "җырыңны", "analysis": "җыр+N+Sg+POSS_2SG(Ың)+ACC(нЫ)"}
+{"prefix": " ", "surface": "хәтта", "analysis": "хәтта+CNJ"}
+{"prefix": " ", "surface": "яңартырга", "analysis": "яңар+V+CAUS(т)+INF_1(ЫргА)"}
+{"prefix": " ", "surface": "була", "analysis": "бул+V+PRES(Й)"}
+{"prefix": " ", "surface": "(", "analysis": "Type3"}
+{"prefix": "", "surface": "Җырны", "analysis": "җыр+N+Sg+ACC(нЫ)"}
+{"prefix": " ", "surface": "сэмплларга", "analysis": "NR"}
+{"prefix": " ", "surface": "тураклый", "analysis": "туракла+V+PRES(Й)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "бит", "analysis": "бит+N+Sg+Nom"}
+{"prefix": " ", "surface": "сала", "analysis": "сал+V+PRES(Й)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "тыңлыйлар", "analysis": "тыңла+V+PRES(Й)+3PL(ЛАр)"}
+{"prefix": "", "surface": ")", "analysis": "Type3"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ничек", "analysis": "ничек+PN"}
+{"prefix": " ", "surface": "сезгә", "analysis": "сез+PN+DIR(ГА)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Өр-яңа", "analysis": "өр-яңа+Adj"}
+{"prefix": " ", "surface": "җыр", "analysis": "җыр+N+Sg+Nom"}
+{"prefix": " ", "surface": "кебек", "analysis": "кебек+POST"}
+{"prefix": "", "surface": "!", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "минем", "analysis": "мин+PN+GEN(нЫң)"}
+{"prefix": " ", "surface": "җырым", "analysis": "җыр+N+Sg+POSS_1SG(Ым)+Nom"}
+{"prefix": " ", "surface": "түгел", "analysis": "түгел+PART"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Теге", "analysis": "теге+PN"}
+{"prefix": " ", "surface": "Айдарның", "analysis": "айдар+PROP+GEN(нЫң)"}
+{"prefix": " ", "surface": "да", "analysis": "да+PART"}
+{"prefix": " ", "surface": "түгел", "analysis": "түгел+PART"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "синеке", "analysis": "си+N+Sg+ATTR_GEN(нЫкЫ)"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Син", "analysis": "син+PN"}
+{"prefix": " ", "surface": "бит", "analysis": "бит+N+Sg+Nom"}
+{"prefix": " ", "surface": "эшләдең", "analysis": "эшлә+V+PST_DEF(ДЫ)+2SG(ң)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Миңа", "analysis": "мин+PN+DIR(ГА)"}
+{"prefix": " ", "surface": "бик", "analysis": "бик+Adv"}
+{"prefix": " ", "surface": "үк", "analysis": "үк+PART"}
+{"prefix": " ", "surface": "ошамый", "analysis": "оша+V+NEG(мА)+PRES(Й)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "ләкин", "analysis": "ләкин+CNJ"}
+{"prefix": " ", "surface": "минем", "analysis": "мин+PN+GEN(нЫң)"}
+{"prefix": " ", "surface": "үз", "analysis": "үз+PN"}
+{"prefix": " ", "surface": "көйләрем", "analysis": "көй+N+PL(ЛАр)+POSS_1SG(Ым)+Nom"}
+{"prefix": " ", "surface": "бар", "analysis": "бар+MOD"}
+{"prefix": "", "surface": "", "analysis": "Error"}
+{"prefix": " - ", "surface": "«", "analysis": "Type4"}
+{"prefix": "", "surface": "Каз", "analysis": "каз+N+Sg+Nom"}
+{"prefix": " ", "surface": "канаты", "analysis": "канат+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": "»", "analysis": "Type4"}
+{"prefix": " ", "surface": "һәм", "analysis": "һәм+CNJ"}
+{"prefix": "  ", "surface": "сугыш", "analysis": "сугыш+N+Sg+Nom"}
+{"prefix": " ", "surface": "турында", "analysis": "тур+N+Sg+POSS_3(СЫ)+LOC(ДА)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Тагын", "analysis": "тагын+Adv"}
+{"prefix": " ", "surface": "үх", "analysis": "NR"}
+{"prefix": " ", "surface": "җырларыгыз", "analysis": "җыр+N+PL(ЛАр)+POSS_2PL(ЫгЫз)+Nom"}
+{"prefix": " ", "surface": "бармы", "analysis": "бар+MOD+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "«", "analysis": "Type4"}
+{"prefix": "", "surface": "Туган", "analysis": "ту+V+PCP_PS(ГАн)"}
+{"prefix": " ", "surface": "як", "analysis": "як+N+Sg+Nom"}
+{"prefix": "", "surface": "»", "analysis": "Type4"}
+{"prefix": " ", "surface": "ны", "analysis": "NR"}
+{"prefix": " ", "surface": "җырлый", "analysis": "җырла+V+PRES(Й)"}
+{"prefix": " ", "surface": "алам", "analysis": "ал+V+PRES(Й)+1SG(м)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "бит", "analysis": "бит+N+Sg+Nom"}
+{"prefix": " ", "surface": "попса", "analysis": "Rus"}
+{"prefix": "", "surface": "!", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Явыз", "analysis": "явыз+Adj"}
+{"prefix": " ", "surface": "кеше", "analysis": "кеше+N+Sg+Nom"}
+{"prefix": " ", "surface": "син", "analysis": "син+PN"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Сиңа", "analysis": "син+PN+DIR(ГА)"}
+{"prefix": " ", "surface": "җырлыйлар", "analysis": "җырла+V+PRES(Й)+3PL(ЛАр)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "ә", "analysis": "ә+INTRJ"}
+{"prefix": " ", "surface": "син", "analysis": "син+PN"}
+{"prefix": " ", "surface": "мыскыллыйсын", "analysis": "NR"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "минем", "analysis": "мин+PN+GEN(нЫң)"}
+{"prefix": " ", "surface": "җырлар", "analysis": "җыр+N+PL(ЛАр)+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "«", "analysis": "Type4"}
+{"prefix": "", "surface": "Каз", "analysis": "каз+N+Sg+Nom"}
+{"prefix": " ", "surface": "канатын", "analysis": "кана+V+CAUS(т)+REFL(Ын)+IMP_SG()"}
+{"prefix": "", "surface": "»", "analysis": "Type4"}
+{"prefix": " ", "surface": "икенче", "analysis": "ике+Num+NUM_ORD(ЫнчЫ)"}
+{"prefix": " ", "surface": "хатын", "analysis": "хат+N+Sg+POSS_3(СЫ)+ACC(нЫ)"}
+{"prefix": " ", "surface": "ярата", "analysis": "яра+V+CAUS(т)+PRES(Й)"}
+{"prefix": " ", "surface": "иде", "analysis": "и+V+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "яшь", "analysis": "яшь+Adj"}
+{"prefix": " ", "surface": "иде", "analysis": "и+V+PST_DEF(ДЫ)"}
+{"prefix": " ", "surface": "ул", "analysis": "ул+N+Sg+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "яшьли", "analysis": "яшьли+Adv"}
+{"prefix": " ", "surface": "китте", "analysis": "кит+V+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Сугыш", "analysis": "сугыш+N+Sg+Nom"}
+{"prefix": " ", "surface": "турында", "analysis": "тур+N+Sg+POSS_3(СЫ)+LOC(ДА)"}
+{"prefix": " ", "surface": "көйне", "analysis": "көй+N+Sg+ACC(нЫ)"}
+{"prefix": " ", "surface": "телевизордан", "analysis": "телевизор+N+Sg+ABL(ДАн)"}
+{"prefix": " ", "surface": "күрдем", "analysis": "күр+V+PST_DEF(ДЫ)+1SG(м)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "бердәнбер", "analysis": "бердәнбер+N+Sg+Nom"}
+{"prefix": " ", "surface": "дустым", "analysis": "дуст+N+Sg+POSS_1SG(Ым)+Nom"}
+{"prefix": " ", "surface": "булды", "analysis": "бул+V+PST_DEF(ДЫ)"}
+{"prefix": " ", "surface": "шул", "analysis": "шул+PART"}
+{"prefix": " ", "surface": "телевизор", "analysis": "телевизор+N+Sg+Nom"}
+{"prefix": "", "surface": "!", "analysis": "Type1"}
+{"prefix": " ", "surface": "«", "analysis": "Type4"}
+{"prefix": "", "surface": "Туган", "analysis": "ту+V+PCP_PS(ГАн)"}
+{"prefix": " ", "surface": "як", "analysis": "як+N+Sg+Nom"}
+{"prefix": "", "surface": "»", "analysis": "Type4"}
+{"prefix": " ", "surface": "ны", "analysis": "NR"}
+{"prefix": " ", "surface": "оныгым", "analysis": "онык+N+Sg+POSS_1SG(Ым)+Nom"}
+{"prefix": " ", "surface": "тыңлата", "analysis": "тыңла+V+CAUS(т)+PRES(Й)"}
+{"prefix": " ", "surface": "иде", "analysis": "и+V+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "авылга", "analysis": "авыл+N+Sg+DIR(ГА)"}
+{"prefix": " ", "surface": "кайтканда", "analysis": "кайт+V+PCP_PS(ГАн)+LOC(ДА)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "хәзер", "analysis": "хәзер+Adv"}
+{"prefix": " ", "surface": "кайтмый", "analysis": "кайт+V+NEG(мА)+PRES(Й)"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ошамаса", "analysis": "оша+V+NEG(мА)+COND(сА)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "әнә", "analysis": "әнә+PN"}
+{"prefix": " ", "surface": "чык", "analysis": "чык+N+Sg+Nom"}
+{"prefix": " ", "surface": "та", "analysis": "та+PART"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "башка", "analysis": "баш+N+Sg+DIR(ГА)"}
+{"prefix": " ", "surface": "кешеләрне", "analysis": "кеше+N+PL(ЛАр)+ACC(нЫ)"}
+{"prefix": " ", "surface": "аптырат", "analysis": "аптыра+V+CAUS(т)+IMP_SG()"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ярар", "analysis": "яр+V+PCP_FUT(Ыр)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "ярар", "analysis": "яр+V+PCP_FUT(Ыр)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "Галимҗан", "analysis": "галимҗан+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "абый", "analysis": "абый+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Җитәр", "analysis": "җит+V+PCP_FUT(Ыр)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Мин", "analysis": "мин+PN"}
+{"prefix": " ", "surface": "аңлыйм", "analysis": "аңла+V+HOR_SG(Йм)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ләкин", "analysis": "ләкин+CNJ"}
+{"prefix": " ", "surface": "бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "сәхнә", "analysis": "сәхнә+N+Sg+Nom"}
+{"prefix": " ", "surface": "җырлары", "analysis": "җыр+N+PL(ЛАр)+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "бит", "analysis": "бит+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ә", "analysis": "ә+INTRJ"}
+{"prefix": " ", "surface": "бу", "analysis": "бу+PN"}
+{"prefix": "  ", "surface": "нәрсә", "analysis": "нәрсә+PN"}
+{"prefix": " ", "surface": "–", "analysis": "Type2"}
+{"prefix": " ", "surface": "сәхнә", "analysis": "сәхнә+N+Sg+Nom"}
+{"prefix": " ", "surface": "мени", "analysis": "NR"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": " ", "surface": "Яхшы", "analysis": "яхшы+Adj"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "мин", "analysis": "мин+PN"}
+{"prefix": " ", "surface": "сиңа", "analysis": "син+PN+DIR(ГА)"}
+{"prefix": " ", "surface": "бик", "analysis": "бик+Adv"}
+{"prefix": " ", "surface": "борыңгы", "analysis": "NR"}
+{"prefix": " ", "surface": "җырны", "analysis": "җыр+N+Sg+ACC(нЫ)"}
+{"prefix": " ", "surface": "җырлый", "analysis": "җырла+V+PRES(Й)"}
+{"prefix": " ", "surface": "алайса", "analysis": "алайса+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Әни", "analysis": "әни+N+Sg+Nom"}
+{"prefix": " ", "surface": "җырлады", "analysis": "җырла+V+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "аңа", "analysis": "ул+PN+DIR(ГА)"}
+{"prefix": " ", "surface": "әнисе", "analysis": "әни+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "шулай", "analysis": "шулай+PN"}
+{"prefix": " ", "surface": "итеп", "analysis": "ит+V+ADVV_ACC(Ып)"}
+{"prefix": "", "surface": "…", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ничек", "analysis": "ничек+PN"}
+{"prefix": " ", "surface": "әле", "analysis": "әле+CNJ"}
+{"prefix": " ", "surface": "ул", "analysis": "ул+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Әйе", "analysis": "әйе+MOD"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "бишек", "analysis": "бишек+N+Sg+Nom"}
+{"prefix": " ", "surface": "җыры", "analysis": "җыр+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БИШЕК", "analysis": "бишек+N+Sg+Nom"}
+{"prefix": " ", "surface": "ҖЫРЫ", "analysis": "җыр+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "(", "analysis": "Type3"}
+{"prefix": "", "surface": "Туктый", "analysis": "тукта+V+PRES(Й)"}
+{"prefix": "", "surface": ")", "analysis": "Type3"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бетте", "analysis": "бет+V+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Кебек", "analysis": "кебек+POST"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ничек", "analysis": "ничек+PN"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": " ", "surface": "ул", "analysis": "ул+N+Sg+Nom"}
+{"prefix": " ", "surface": "–", "analysis": "Type2"}
+{"prefix": " ", "surface": "кебек", "analysis": "кебек+POST"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Бу", "analysis": "бу+PN"}
+{"prefix": " ", "surface": "бит", "analysis": "бит+N+Sg+Nom"}
+{"prefix": " ", "surface": "бишек", "analysis": "бишек+N+Sg+Nom"}
+{"prefix": " ", "surface": "җыры", "analysis": "җыр+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Аны", "analysis": "ул+PN+ACC(нЫ)"}
+{"prefix": " ", "surface": "бала", "analysis": "бала+N+Sg+Nom"}
+{"prefix": " ", "surface": "йокыга", "analysis": "йокы+N+Sg+DIR(ГА)"}
+{"prefix": " ", "surface": "киткәч", "analysis": "ки+V+CAUS(т)+ADVV_ANT(ГАч)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "тәмамлилар", "analysis": "NR"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Йокламаса", "analysis": "йокла+V+NEG(мА)+COND(сА)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "төне", "analysis": "төн+N+Sg+POSS_3(СЫ)+Nom"}
+{"prefix": " ", "surface": "буе", "analysis": "буе+POST"}
+{"prefix": " ", "surface": "җырлыйсын", "analysis": "NR"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ә", "analysis": "ә+INTRJ"}
+{"prefix": " ", "surface": "син", "analysis": "син+PN"}
+{"prefix": " ", "surface": "йокламыйсын", "analysis": "NR"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Ярар", "analysis": "яр+V+PCP_FUT(Ыр)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "әйдә", "analysis": "әйдә+INTRJ"}
+{"prefix": " ", "surface": "тагын", "analysis": "тагын+Adv"}
+{"prefix": " ", "surface": "җырла", "analysis": "җырла+V+IMP_SG()"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "мин", "analysis": "мин+PN"}
+{"prefix": " ", "surface": "тырышырмын", "analysis": "тырыш+V+FUT_INDF(Ыр)+1SG(мЫн)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "БАБАЙ", "analysis": "бабай+N+Sg+Nom"}
+{"prefix": " ", "surface": "җырлый", "analysis": "җырла+V+PRES(Й)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": " ", "surface": "йокыга", "analysis": "йокы+N+Sg+DIR(ГА)"}
+{"prefix": " ", "surface": "китә", "analysis": "ки+V+CAUS(т)+PRES(Й)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Капкага", "analysis": "капка+N+Sg+DIR(ГА)"}
+{"prefix": " ", "surface": "шакудан", "analysis": "шакы+V+VN_1(у/ү/в)+ABL(ДАн)"}
+{"prefix": " ", "surface": "уяна", "analysis": "уян+V+PRES(Й)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": " ", "surface": "–", "analysis": "Type2"}
+{"prefix": " ", "surface": "карт", "analysis": "карт+Adj"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "ИКЕНЧЕ", "analysis": "ике+Num+NUM_ORD(ЫнчЫ)"}
+{"prefix": " ", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": " ", "surface": "(", "analysis": "Type3"}
+{"prefix": "", "surface": "керә", "analysis": "кер+V+PRES(Й)"}
+{"prefix": "", "surface": ")", "analysis": "Type3"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Исәнмесез", "analysis": "исәнмесез+INTRJ"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "миңа", "analysis": "мин+PN+DIR(ГА)"}
+{"prefix": " ", "surface": "Галимҗан", "analysis": "галимҗан+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "карт", "analysis": "карт+Adj"}
+{"prefix": " ", "surface": "кирәк", "analysis": "кирәк+MOD"}
+{"prefix": " ", "surface": "иде", "analysis": "и+V+PST_DEF(ДЫ)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Мин", "analysis": "мин+PN"}
+{"prefix": " ", "surface": "Әлфия", "analysis": "әлфия+PROP+Sg+Nom"}
+{"prefix": " ", "surface": "карчык", "analysis": "карчык+N+Sg+Nom"}
+{"prefix": " ", "surface": "шул", "analysis": "шул+PART"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "ИКЕНЧЕ", "analysis": "ике+Num+NUM_ORD(ЫнчЫ)"}
+{"prefix": " ", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Мин", "analysis": "мин+PN"}
+{"prefix": " ", "surface": "борыңгы", "analysis": "NR"}
+{"prefix": " ", "surface": "җырлар", "analysis": "җыр+N+PL(ЛАр)+Nom"}
+{"prefix": " ", "surface": "яздырам", "analysis": "яз+V+CAUS(ДЫр)+PRES(Й)+1SG(м)"}
+{"prefix": "", "surface": ",", "analysis": "Type2"}
+{"prefix": " ", "surface": "сез", "analysis": "сез+PN"}
+{"prefix": " ", "surface": "андыйларны", "analysis": "андый+Adj+PL(ЛАр)+ACC(нЫ)"}
+{"prefix": " ", "surface": "җырлыйсызмы", "analysis": "җырла+V+PRES(Й)+2PL(сЫз)+INT(мЫ)"}
+{"prefix": "", "surface": "?", "analysis": "Type1"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "КЫЗ", "analysis": "кыз+N+Sg+Nom"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Җырламыйм", "analysis": "җырла+V+NEG(мА)+HOR_SG(Йм)"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Хәзер", "analysis": "хәзер+Adv"}
+{"prefix": " ", "surface": "җырламыйлар", "analysis": "җырла+V+NEG(мА)+PRES(Й)+3PL(ЛАр)"}
+{"prefix": " ", "surface": "инде", "analysis": "инде+MOD"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "Яздыралар", "analysis": "яз+V+CAUS(ДЫр)+PRES(Й)+3PL(ЛАр)"}
+{"prefix": " ", "surface": "гына", "analysis": "гына+PART"}
+{"prefix": "", "surface": ".", "analysis": "Type1"}
+{"prefix": " ", "surface": "\"", "analysis": "Type4"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}
+{"prefix": "", "surface": "\n", "analysis": "NL"}

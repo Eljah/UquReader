@@ -1,4 +1,4 @@
-package com.example.UquReader.reader;
+package com.example.ttreader.reader;
 
 import android.os.Handler;
 import android.text.Layout;
