@@ -24,6 +24,10 @@ jobs:
       - name: Set up Android SDK tools
         uses: android-actions/setup-android@v3
 
+      - name: Install Android platform tools
+        run: |
+          yes | sdkmanager --install "platforms;android-28" "build-tools;28.0.3"
+
       - name: Build with Maven Wrapper
         run: ./mvnw -B verify
 
