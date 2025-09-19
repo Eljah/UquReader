@@ -1,12 +1,12 @@
 package com.example.UquReader.model;
 
-import java.util.List;
-
 public class Token {
-    public String surface;
-    public String lemma;
-    public String pos;
-    public List<String> features;
-    public int start;
-    public int end;
+    public String prefix = "";
+    public String surface = "";
+    public String analysis;
+    public Morphology morphology;
+
+    public boolean hasMorphology() {
+        return morphology != null;
+    }
 }

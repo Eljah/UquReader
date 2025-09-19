@@ -4,16 +4,17 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.text.style.ReplacementSpan;
 
+import com.example.UquReader.model.Token;
+
 public class TokenSpan extends ReplacementSpan {
-    public final String surface;
-    public final String lemma;
-    public final String pos;
+    public final Token token;
     public final String featureKey;
 
     public float lastAlpha = 0f;
 
-    public TokenSpan(String surface, String lemma, String pos, String featureKey) {
-        this.surface = surface; this.lemma = lemma; this.pos = pos; this.featureKey = featureKey;
+    public TokenSpan(Token token) {
+        this.token = token;
+        this.featureKey = token != null && token.morphology != null ? token.morphology.featureKey : null;
     }
 
     @Override public int getSize(Paint paint, CharSequence text, int start, int end, Paint.FontMetricsInt fm) {

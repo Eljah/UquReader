@@ -1,12 +1,18 @@
 package com.example.UquReader.util;
 
 import android.content.Context;
+
 import com.example.UquReader.model.Token;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import java.io.*;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class JsonlParser {
     public static List<Token> readTokensFromAssets(Context ctx, String assetName) throws IOException {
@@ -19,15 +25,16 @@ public class JsonlParser {
             while ((line = br.readLine()) != null) {
                 JsonObject obj = gson.fromJson(line, JsonObject.class);
                 Token t = new Token();
-                t.surface = obj.get("surface").getAsString();
-                t.lemma = obj.get("lemma").getAsString();
-                t.pos = obj.get("pos").getAsString();
-                t.features = new ArrayList<>();
-                if (obj.has("features") && obj.get("features").isJsonArray()) {
-                    obj.get("features").getAsJsonArray().forEach(e -> t.features.add(e.getAsString()));
+                if (obj.has("prefix") && !obj.get("prefix").isJsonNull()) {
+                    t.prefix = obj.get("prefix").getAsString();
                 }
-                t.start = obj.has("start") ? obj.get("start").getAsInt() : -1;
-                t.end = obj.has("end") ? obj.get("end").getAsInt() : -1;
+                if (obj.has("surface") && !obj.get("surface").isJsonNull()) {
+                    t.surface = obj.get("surface").getAsString();
+                }
+                if (obj.has("analysis") && !obj.get("analysis").isJsonNull()) {
+                    t.analysis = obj.get("analysis").getAsString();
+                    t.morphology = MorphologyParser.parse(t.surface, t.analysis);
+                }
                 tokens.add(t);
             }
         }
