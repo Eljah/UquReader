@@ -23,7 +23,7 @@ CREATE INDEX tt_ru_tt_idx ON tt_ru(lemma_tt);
 ## Сборка
 Нужен Android SDK (`ANDROID_HOME`) и build-tools.
 
-Пример команд (скрипт `./mvnw` перед запуском Maven автоматически собирает вспомогательный `sun.misc.BASE64Encoder` shim и при необходимости создает debug-keystore для установки APK; существующий `~/.android/debug.keystore` переиспользуется, поэтому обновление установленного приложения не ломается. В GitHub Actions ключ сохраняется в кэше и повторно используется между сборками). По умолчанию используется платформа Android 28 и build-tools 28.0.3, их можно переопределить через `-Dandroid.platform` и `-Dandroid.build-tools`:
+Пример команд (скрипт `./mvnw` перед запуском Maven автоматически собирает вспомогательный `sun.misc.BASE64Encoder` shim и при необходимости создает debug-keystore для установки APK; существующий `~/.android/debug.keystore` переиспользуется, поэтому обновление установленного приложения не ломается. В GitHub Actions ключ сохраняется в кэше и повторно используется между сборками). По умолчанию используется платформа Android 28 и build-tools 33.0.2, их можно переопределить через `-Dandroid.platform` и `-Dandroid.build-tools`:
 ```bash
 ./mvnw -e clean install
 # при подключенном устройстве / эмуляторе:

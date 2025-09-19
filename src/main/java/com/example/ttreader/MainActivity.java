@@ -167,10 +167,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         RhvoiceAvailability.checkStatus(this, this::handleRhvoiceStatus);
     }
 
-    private void handleRhvoiceStatus(RhvoiceAvailability.Status status) {
-        if (status == null) return;
+    private void handleRhvoiceStatus(@RhvoiceAvailability.Status int status) {
         switch (status) {
-            case READY:
+            case RhvoiceAvailability.Status.READY:
                 if (!rhvoiceReady && ttsController != null) {
                     ttsController.startReading();
                 }
@@ -178,19 +177,21 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 rhvoiceEnginePromptShown = false;
                 rhvoiceVoicePromptShown = false;
                 break;
-            case ENGINE_MISSING:
+            case RhvoiceAvailability.Status.ENGINE_MISSING:
                 rhvoiceReady = false;
                 if (!rhvoiceEnginePromptShown) {
                     rhvoiceEnginePromptShown = true;
                     showRhvoiceInstallDialog();
                 }
                 break;
-            case VOICE_MISSING:
+            case RhvoiceAvailability.Status.VOICE_MISSING:
                 rhvoiceReady = false;
                 if (!rhvoiceVoicePromptShown) {
                     rhvoiceVoicePromptShown = true;
                     showRhvoiceVoiceDialog();
                 }
+                break;
+            default:
                 break;
         }
     }

@@ -39,7 +39,14 @@ public class TtsReaderController {
         List<String> getTranslations(TokenSpan span);
     }
 
-    private enum Mode { IDLE, READING, DETAIL, WAITING_RESUME }
+    private static final class Mode {
+        static final int IDLE = 0;
+        static final int READING = 1;
+        static final int DETAIL = 2;
+        static final int WAITING_RESUME = 3;
+
+        private Mode() {}
+    }
 
     private final Context context;
     private final TranslationProvider translationProvider;
@@ -52,7 +59,7 @@ public class TtsReaderController {
     private boolean initialized = false;
     private boolean pendingStart = false;
     private boolean isSpeaking = false;
-    private Mode mode = Mode.IDLE;
+    private int mode = Mode.IDLE;
     private int currentIndex = 0;
     private TokenSpan currentSpan;
     private boolean resumeAfterDetails = false;
@@ -67,33 +74,13 @@ public class TtsReaderController {
     private void initializeTextToSpeech() {
         if (context == null) return;
         tts = new TextToSpeech(context, this::handleTtsInit, RHVOICE_PACKAGE);
-        tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-            @Override public void onStart(String utteranceId) {
-                mainHandler.post(() -> isSpeaking = true);
-            }
-
-            @Override public void onDone(String utteranceId) {
-                mainHandler.post(() -> handleUtteranceFinished(utteranceId));
-            }
-
-            @Override public void onError(String utteranceId) {
-                mainHandler.post(() -> handleUtteranceFinished(utteranceId));
-            }
-        });
+        tts.setOnUtteranceProgressListener(new RhvoiceUtteranceListener(this));
     }
 
     private void initializeMediaSession() {
         if (context == null) return;
         mediaSession = new MediaSession(context, TAG);
-        mediaSession.setCallback(new MediaSession.Callback() {
-            @Override public void onPlay() {
-                resumeReading();
-            }
-
-            @Override public void onPause() {
-                handlePauseRequest();
-            }
-        });
+        mediaSession.setCallback(new ReaderMediaSessionCallback(this));
         mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
         mediaSession.setActive(true);
         updatePlaybackState();
@@ -309,14 +296,14 @@ public class TtsReaderController {
         if (mediaSession == null) return;
         int playbackState;
         switch (mode) {
-            case READING:
+            case Mode.READING:
                 playbackState = PlaybackState.STATE_PLAYING;
                 break;
-            case DETAIL:
-            case WAITING_RESUME:
+            case Mode.DETAIL:
+            case Mode.WAITING_RESUME:
                 playbackState = PlaybackState.STATE_PAUSED;
                 break;
-            case IDLE:
+            case Mode.IDLE:
             default:
                 playbackState = PlaybackState.STATE_STOPPED;
                 break;
@@ -349,5 +336,41 @@ public class TtsReaderController {
         pendingStart = false;
         isSpeaking = false;
         mode = Mode.IDLE;
+    }
+
+    private static final class RhvoiceUtteranceListener extends UtteranceProgressListener {
+        private final TtsReaderController controller;
+
+        RhvoiceUtteranceListener(TtsReaderController controller) {
+            this.controller = controller;
+        }
+
+        @Override public void onStart(String utteranceId) {
+            controller.mainHandler.post(() -> controller.isSpeaking = true);
+        }
+
+        @Override public void onDone(String utteranceId) {
+            controller.mainHandler.post(() -> controller.handleUtteranceFinished(utteranceId));
+        }
+
+        @Override public void onError(String utteranceId) {
+            controller.mainHandler.post(() -> controller.handleUtteranceFinished(utteranceId));
+        }
+    }
+
+    private static final class ReaderMediaSessionCallback extends MediaSession.Callback {
+        private final TtsReaderController controller;
+
+        ReaderMediaSessionCallback(TtsReaderController controller) {
+            this.controller = controller;
+        }
+
+        @Override public void onPlay() {
+            controller.resumeReading();
+        }
+
+        @Override public void onPause() {
+            controller.handlePauseRequest();
+        }
     }
 }

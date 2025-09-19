@@ -11,6 +11,10 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
 import android.text.TextUtils;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.Locale;
 import java.util.Set;
 
@@ -25,10 +29,16 @@ public final class RhvoiceAvailability {
     private static final Uri PROJECT_PAGE_URI = Uri.parse("https://github.com/RHVoice/RHVoice-android");
     private static final Uri VOICE_PAGE_URI = Uri.parse("https://github.com/RHVoice/RHVoice-android/releases");
 
-    public enum Status { READY, ENGINE_MISSING, VOICE_MISSING }
+    @Retention(RetentionPolicy.SOURCE)
+    @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD, ElementType.LOCAL_VARIABLE})
+    public @interface Status {
+        int READY = 0;
+        int ENGINE_MISSING = 1;
+        int VOICE_MISSING = 2;
+    }
 
     public interface StatusCallback {
-        void onStatus(Status status);
+        void onStatus(@Status int status);
     }
 
     private RhvoiceAvailability() {}
@@ -64,7 +74,7 @@ public final class RhvoiceAvailability {
                     postStatus(callback, Status.VOICE_MISSING);
                     return;
                 }
-                Status result = Status.VOICE_MISSING;
+                @Status int result = Status.VOICE_MISSING;
                 if (status == TextToSpeech.SUCCESS) {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
                         result = Status.READY;
@@ -119,7 +129,7 @@ public final class RhvoiceAvailability {
         return launch;
     }
 
-    private static void postStatus(StatusCallback callback, Status status) {
+    private static void postStatus(StatusCallback callback, @Status int status) {
         Handler handler = new Handler(Looper.getMainLooper());
         handler.post(() -> callback.onStatus(status));
     }
