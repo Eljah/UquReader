@@ -1,0 +1,57 @@
+name: Android Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK tools
+        uses: android-actions/setup-android@v3
+
+      - name: Build with Maven
+        run: mvn -B verify
+
+      - name: Run API 28 installation smoke test
+        shell: bash
+        env:
+          AVD_NAME: ci-android-28
+        run: |
+          set -euxo pipefail
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+
+          yes | sdkmanager --install "platforms;android-28" "system-images;android-28;google_apis;x86"
+
+          if avdmanager list avd | grep -q "${AVD_NAME}"; then
+            avdmanager delete avd -n "${AVD_NAME}"
+          fi
+
+          echo "no" | avdmanager create avd \
+            -n "${AVD_NAME}" \
+            -k "system-images;android-28;google_apis;x86" \
+            --device "pixel_3"
+
+          emulator -avd "${AVD_NAME}" -no-window -no-audio -no-boot-anim &
+          EMULATOR_PID=$!
+          trap 'kill "${EMULATOR_PID}" 2>/dev/null || true' EXIT
+
+          adb wait-for-device
+          adb shell 'while [ -z "$(getprop sys.boot_completed 2>/dev/null)" ]; do sleep 1; done'
+          adb shell input keyevent 82
+          adb emu kill
