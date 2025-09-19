@@ -77,6 +77,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             speechProgressHandler.post(MainActivity.this::startProgressUpdates);
         }
 
+        @Override public void onRangeStart(String utteranceId, int start, int end, int frame) {
+            speechProgressHandler.post(() -> handleUtteranceRange(start));
+        }
+
         @Override public void onDone(String utteranceId) {
             speechProgressHandler.post(MainActivity.this::handleUtteranceDone);
         }
@@ -414,6 +418,29 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         updateSpeechButtons();
     }
 
+    private void handleUtteranceRange(int rangeStart) {
+        if (!isSpeaking) return;
+        int sentenceStart = currentSentenceStart;
+        int sentenceEnd = currentSentenceEnd;
+        if (sentenceStart < 0 || sentenceEnd <= sentenceStart) return;
+        int sentenceLength = sentenceEnd - sentenceStart;
+        if (sentenceLength <= 0) return;
+        int safeStart = Math.max(0, Math.min(rangeStart, sentenceLength - 1));
+        int highlightIndex = sentenceStart + safeStart;
+        currentCharIndex = highlightIndex;
+        if (readerView != null) {
+            readerView.highlightLetter(highlightIndex);
+        }
+        if (estimatedUtteranceDurationMs > 0) {
+            long now = SystemClock.elapsedRealtime();
+            long elapsed = Math.max(0L, now - utteranceStartElapsed);
+            long targetElapsed = (long) ((safeStart / (float) sentenceLength) * estimatedUtteranceDurationMs);
+            if (targetElapsed < elapsed) {
+                utteranceStartElapsed = now - targetElapsed;
+            }
+        }
+    }
+
     private long estimateSentenceDurationMs(ReaderView.SentenceRange sentence) {
         if (sentence == null) return 0L;
         int length = Math.max(1, sentence.length());
@@ -472,86 +499,31 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             @Override public boolean onMediaButtonEvent(Intent mediaButtonIntent) {
                 if (mediaButtonIntent == null) return super.onMediaButtonEvent(mediaButtonIntent);
                 KeyEvent event = mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-                if (event != null && event.getAction() == KeyEvent.ACTION_DOWN &&
-                        isMediaKeyCode(event.getKeyCode())) {
-                    Toast.makeText(MainActivity.this,
-                            String.valueOf(event.getKeyCode()), Toast.LENGTH_SHORT).show();
-                    handleMediaButton(event);
+                if (event != null && event.getAction() == KeyEvent.ACTION_DOWN) {
+                    speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
                     return true;
                 }
                 return super.onMediaButtonEvent(mediaButtonIntent);
             }
+
+            @Override public void onSkipToNext() {
+                speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
+            }
+
+            @Override public void onSkipToPrevious() {
+                speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
+            }
         });
-        mediaSession.setActive(true);
-        updatePlaybackState(PlaybackState.STATE_STOPPED);
-    }
-
-    private void handleMediaButton(KeyEvent event) {
-        speechProgressHandler.post(this::performMediaButtonAction);
-    }
-
-    private boolean isMediaKeyCode(int keyCode) {
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_MEDIA_PLAY:
-            case KeyEvent.KEYCODE_MEDIA_PAUSE:
-            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
-            case KeyEvent.KEYCODE_MEDIA_STOP:
-            case KeyEvent.KEYCODE_MEDIA_NEXT:
-            case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
-            case KeyEvent.KEYCODE_MEDIA_REWIND:
-            case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD:
-            case KeyEvent.KEYCODE_MEDIA_CLOSE:
-            case KeyEvent.KEYCODE_MEDIA_EJECT:
-            case KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK:
-            case KeyEvent.KEYCODE_MEDIA_RECORD:
-            case KeyEvent.KEYCODE_MEDIA_STEP_FORWARD:
-            case KeyEvent.KEYCODE_MEDIA_STEP_BACKWARD:
-            case KeyEvent.KEYCODE_HEADSETHOOK:
-                return true;
-            default:
-                return false;
-        }
+        updatePlaybackState(false);
+        mediaSession.setActive(false);
     }
 
     private void performMediaButtonAction() {
-        if (readerView == null) return;
-        TokenSpan span = resolveTokenForCurrentPosition();
-        if (span == null) return;
-        int focusIndex = Math.max(0, span.getStartIndex());
-        readerView.post(() -> navigateToCharIndex(focusIndex, 0));
-        List<String> translations = readerView.getTranslations(span);
-        onTokenLongPress(span, translations);
-    }
-
-    private TokenSpan resolveTokenForCurrentPosition() {
-        if (readerView == null) return null;
-        int index = resolveFocusCharIndex();
-        if (index < 0) return null;
-        TokenSpan exact = readerView.findSpanForCharIndex(index);
-        if (exact != null) return exact;
-        List<TokenSpan> spans = readerView.getTokenSpans();
-        if (spans == null || spans.isEmpty()) return null;
-        TokenSpan closest = null;
-        int bestDistance = Integer.MAX_VALUE;
-        for (TokenSpan span : spans) {
-            if (span == null) continue;
-            int start = span.getStartIndex();
-            int end = span.getEndIndex();
-            if (start < 0 || end <= start) continue;
-            int distance;
-            if (index < start) {
-                distance = start - index;
-            } else if (index >= end) {
-                distance = index - end + 1;
-            } else {
-                return span;
-            }
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                closest = span;
-            }
+        if (isSpeaking) {
+            pauseSpeechFromHeadset();
+        } else {
+            startSpeech();
         }
-        return closest != null ? closest : spans.get(0);
     }
 
     private int resolveFocusCharIndex() {
@@ -578,16 +550,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void updatePlaybackState(int state) {
         if (mediaSession == null) return;
-        long actions = PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_STOP
-                | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SKIP_TO_NEXT
-                | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_FAST_FORWARD
-                | PlaybackState.ACTION_REWIND;
-        float speed = state == PlaybackState.STATE_PLAYING ? 1f : 0f;
-        PlaybackState playbackState = new PlaybackState.Builder()
-                .setActions(actions)
-                .setState(state, PlaybackState.PLAYBACK_POSITION_UNKNOWN, speed)
-                .build();
-        mediaSession.setPlaybackState(playbackState);
+        PlaybackState.Builder builder = new PlaybackState.Builder()
+                .setActions(PlaybackState.ACTION_PLAY
+                        | PlaybackState.ACTION_PAUSE
+                        | PlaybackState.ACTION_STOP
+                        | PlaybackState.ACTION_SKIP_TO_NEXT
+                        | PlaybackState.ACTION_SKIP_TO_PREVIOUS);
+        int playbackState = playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
+        builder.setState(playbackState, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f);
+        mediaSession.setPlaybackState(builder.build());
     }
 
     private void updateSpeechButtons() {
@@ -595,8 +566,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (toggleSpeechButton != null) {
             toggleSpeechButton.setEnabled(voiceAvailable);
             toggleSpeechButton.setImageResource(isSpeaking ? R.drawable.ic_pause : R.drawable.ic_voice);
-            toggleSpeechButton.setContentDescription(getString(isSpeaking ?
-                    R.string.speech_toggle_content_pause : R.string.speech_toggle_content_start));
+            int descriptionRes = isSpeaking
+                    ? R.string.speech_toggle_content_pause
+                    : R.string.speech_toggle_content_start;
+            toggleSpeechButton.setContentDescription(getString(descriptionRes));
             toggleSpeechButton.setAlpha(voiceAvailable ? 1f : 0.4f);
         }
         if (stopSpeechButton != null) {
