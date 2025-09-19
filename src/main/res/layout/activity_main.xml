@@ -4,12 +4,27 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <Button
-        android:id="@+id/btnStats"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/stats_button"
-        android:padding="12dp"/>
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnLanguageStats"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/stats_button_language"
+            android:padding="12dp"/>
+
+        <Button
+            android:id="@+id/btnWorkStats"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/stats_button_work"
+            android:padding="12dp"/>
+    </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"

@@ -18,10 +18,22 @@
         android:layout_height="wrap_content"
         android:paddingTop="4dp"/>
 
+    <com.example.ttreader.widget.UsageTimelineView
+        android:id="@+id/statsExposureTimeline"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:paddingTop="4dp"/>
+
     <TextView
         android:id="@+id/statsLookup"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:paddingTop="2dp"/>
+
+    <com.example.ttreader.widget.UsageTimelineView
+        android:id="@+id/statsLookupTimeline"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:paddingTop="4dp"/>
 
 </LinearLayout>

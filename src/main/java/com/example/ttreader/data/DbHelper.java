@@ -12,7 +12,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 2;
+    private static final int APP_DB_VERSION = 3;
 
     private final Context context;
 
@@ -31,28 +31,17 @@ public class DbHelper extends SQLiteOpenHelper {
                 " last_seen_ms INTEGER NOT NULL\n" +
                 ")");
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS memory_idx ON memory(lemma, IFNULL(feature_key,'~'))");
-        db.execSQL("CREATE TABLE IF NOT EXISTS usage_stats(\n" +
-                " lemma TEXT NOT NULL,\n" +
-                " pos TEXT NOT NULL,\n" +
-                " feature_code TEXT NOT NULL,\n" +
-                " event_type TEXT NOT NULL,\n" +
-                " count INTEGER NOT NULL DEFAULT 0,\n" +
-                " last_seen_ms INTEGER NOT NULL,\n" +
-                " PRIMARY KEY(lemma, pos, feature_code, event_type)\n" +
-                ")");
+        createUsageTables(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) {
-            db.execSQL("CREATE TABLE IF NOT EXISTS usage_stats(\n" +
-                    " lemma TEXT NOT NULL,\n" +
-                    " pos TEXT NOT NULL,\n" +
-                    " feature_code TEXT NOT NULL,\n" +
-                    " event_type TEXT NOT NULL,\n" +
-                    " count INTEGER NOT NULL DEFAULT 0,\n" +
-                    " last_seen_ms INTEGER NOT NULL,\n" +
-                    " PRIMARY KEY(lemma, pos, feature_code, event_type)\n" +
-                    ")");
+            createUsageStatsV1(db);
+        }
+        if (oldVersion < 3) {
+            db.execSQL("DROP TABLE IF EXISTS usage_stats");
+            db.execSQL("DROP TABLE IF EXISTS usage_event_log");
+            createUsageTables(db);
         }
     }
 
@@ -67,5 +56,46 @@ public class DbHelper extends SQLiteOpenHelper {
             }
         }
         return out;
+    }
+
+    private void createUsageTables(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS usage_stats(\n" +
+                " language_pair TEXT NOT NULL,\n" +
+                " work_id TEXT NOT NULL,\n" +
+                " lemma TEXT NOT NULL,\n" +
+                " pos TEXT NOT NULL,\n" +
+                " feature_code TEXT NOT NULL,\n" +
+                " event_type TEXT NOT NULL,\n" +
+                " count INTEGER NOT NULL DEFAULT 0,\n" +
+                " last_seen_ms INTEGER NOT NULL,\n" +
+                " last_position INTEGER NOT NULL DEFAULT -1,\n" +
+                " PRIMARY KEY(language_pair, work_id, lemma, pos, feature_code, event_type)\n" +
+                ")");
+        db.execSQL("CREATE TABLE IF NOT EXISTS usage_event_log(\n" +
+                " id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+                " language_pair TEXT NOT NULL,\n" +
+                " work_id TEXT NOT NULL,\n" +
+                " lemma TEXT NOT NULL,\n" +
+                " pos TEXT NOT NULL,\n" +
+                " feature_code TEXT NOT NULL,\n" +
+                " event_type TEXT NOT NULL,\n" +
+                " timestamp_ms INTEGER NOT NULL,\n" +
+                " char_index INTEGER NOT NULL DEFAULT -1\n" +
+                ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS usage_event_lookup_idx ON usage_event_log(\n" +
+                " language_pair, work_id, lemma, pos, event_type, timestamp_ms\n" +
+                ")");
+    }
+
+    private void createUsageStatsV1(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS usage_stats(\n" +
+                " lemma TEXT NOT NULL,\n" +
+                " pos TEXT NOT NULL,\n" +
+                " feature_code TEXT NOT NULL,\n" +
+                " event_type TEXT NOT NULL,\n" +
+                " count INTEGER NOT NULL DEFAULT 0,\n" +
+                " last_seen_ms INTEGER NOT NULL,\n" +
+                " PRIMARY KEY(lemma, pos, feature_code, event_type)\n" +
+                ")");
     }
 }

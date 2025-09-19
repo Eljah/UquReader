@@ -17,6 +17,10 @@ import com.example.ttreader.util.GrammarResources;
 import java.util.List;
 
 public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
+    private static final String LANGUAGE_PAIR_TT_RU = "tt-ru";
+    private static final String SAMPLE_ASSET = "sample_book.ttmorph.jsonl";
+    private static final String SAMPLE_WORK_ID = "sample_book.ttmorph";
+
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
     private UsageStatsDao usageStatsDao;
@@ -33,10 +37,25 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
         ReaderView reader = findViewById(R.id.readerView);
         reader.setup(dbHelper, memoryDao, usageStatsDao, this);
-        reader.loadFromJsonlAsset("sample_book.ttmorph.jsonl");
+        reader.setUsageContext(LANGUAGE_PAIR_TT_RU, SAMPLE_WORK_ID);
+        reader.loadFromJsonlAsset(SAMPLE_ASSET);
 
-        Button statsButton = findViewById(R.id.btnStats);
-        statsButton.setOnClickListener(v -> startActivity(new Intent(this, StatsActivity.class)));
+        Button languageStatsButton = findViewById(R.id.btnLanguageStats);
+        languageStatsButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, StatsActivity.class);
+            intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_LANGUAGE);
+            intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, LANGUAGE_PAIR_TT_RU);
+            startActivity(intent);
+        });
+
+        Button workStatsButton = findViewById(R.id.btnWorkStats);
+        workStatsButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, StatsActivity.class);
+            intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_WORK);
+            intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, LANGUAGE_PAIR_TT_RU);
+            intent.putExtra(StatsActivity.EXTRA_WORK_ID, SAMPLE_WORK_ID);
+            startActivity(intent);
+        });
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
@@ -44,6 +63,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         String ruCsv = ruLemmas.isEmpty()? "—" : String.join(", ", ruLemmas);
         TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, ruCsv);
         sheet.setUsageStatsDao(usageStatsDao);
+        sheet.setUsageContext(LANGUAGE_PAIR_TT_RU, SAMPLE_WORK_ID, span.getStartIndex());
         sheet.show(getFragmentManager(), "token-info");
     }
 }

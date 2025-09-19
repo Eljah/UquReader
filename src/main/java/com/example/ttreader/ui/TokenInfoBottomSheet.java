@@ -26,6 +26,9 @@ public class TokenInfoBottomSheet extends DialogFragment {
     private static final String ARG_RU = "ru";
 
     private UsageStatsDao usageStatsDao;
+    private String languagePair = "";
+    private String workId = "";
+    private int charIndex = -1;
 
     public static TokenInfoBottomSheet newInstance(String surface, String analysis, String ruCsv) {
         TokenInfoBottomSheet f = new TokenInfoBottomSheet();
@@ -39,6 +42,12 @@ public class TokenInfoBottomSheet extends DialogFragment {
 
     public void setUsageStatsDao(UsageStatsDao dao) {
         this.usageStatsDao = dao;
+    }
+
+    public void setUsageContext(String languagePair, String workId, int charIndex) {
+        this.languagePair = languagePair == null ? "" : languagePair;
+        this.workId = workId == null ? "" : workId;
+        this.charIndex = charIndex;
     }
 
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -150,8 +159,8 @@ public class TokenInfoBottomSheet extends DialogFragment {
                 .show();
 
         if (usageStatsDao != null) {
-            usageStatsDao.recordEvent(morphology.lemma, morphology.pos, feature.code,
-                    UsageStatsDao.EVENT_FEATURE, System.currentTimeMillis());
+            usageStatsDao.recordEvent(languagePair, workId, morphology.lemma, morphology.pos, feature.code,
+                    UsageStatsDao.EVENT_FEATURE, System.currentTimeMillis(), charIndex);
         }
     }
 }

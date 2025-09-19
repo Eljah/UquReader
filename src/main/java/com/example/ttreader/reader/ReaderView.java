@@ -26,6 +26,8 @@ public class ReaderView extends TextView {
     private UsageStatsDao usageDao;
     private DictionaryDao dictDao;
     private TokenInfoProvider provider;
+    private String languagePair = "";
+    private String workId = "";
 
     public ReaderView(Context context) { super(context); init(); }
     public ReaderView(Context context, AttributeSet attrs) { super(context, attrs); init(); }
@@ -49,6 +51,11 @@ public class ReaderView extends TextView {
         }
     }
 
+    public void setUsageContext(String languagePair, String workId) {
+        this.languagePair = languagePair == null ? "" : languagePair;
+        this.workId = workId == null ? "" : workId;
+    }
+
     public void loadFromJsonlAsset(String assetName) {
         try {
             List<Token> tokens = JsonlParser.readTokensFromAssets(getContext(), assetName);
@@ -65,12 +72,14 @@ public class ReaderView extends TextView {
                 if (t.hasMorphology() && t.surface != null && !t.surface.isEmpty()) {
                     Morphology morph = t.morphology;
                     TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
                     double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
                     double alpha = Math.max(0, 1.0 - Math.min(1.0, s/5.0));
                     span.lastAlpha = (float)alpha;
                     ssb.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                     if (usageDao != null) {
-                        usageDao.recordEvent(morph.lemma, morph.pos, null, UsageStatsDao.EVENT_EXPOSURE, now);
+                        usageDao.recordEvent(languagePair, workId, morph.lemma, morph.pos, null,
+                                UsageStatsDao.EVENT_EXPOSURE, now, start);
                     }
                 }
             }
@@ -82,7 +91,8 @@ public class ReaderView extends TextView {
                 List<String> ru = new ArrayList<>();
                 if (dictDao != null) dictDao.translateLemmaToRu(morph.lemma).forEach(p -> ru.add(p.first));
                 if (usageDao != null) {
-                    usageDao.recordEvent(morph.lemma, morph.pos, null, UsageStatsDao.EVENT_LOOKUP, System.currentTimeMillis());
+                    usageDao.recordEvent(languagePair, workId, morph.lemma, morph.pos, null,
+                            UsageStatsDao.EVENT_LOOKUP, System.currentTimeMillis(), span.getStartIndex());
                 }
                 if (provider != null) provider.onTokenLongPress(span, ru);
                 memoryDao.updateOnLookup(morph.lemma, span.featureKey, System.currentTimeMillis(), 1.0);
