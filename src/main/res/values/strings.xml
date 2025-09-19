@@ -26,6 +26,16 @@
     <string name="stats_lookup_label">Открыто в подсказке: %1$d (последний раз %2$s)</string>
     <string name="stats_feature_label">%1$s — %2$d (последний раз %3$s)</string>
     <string name="stats_time_never">никогда</string>
+    <string name="stats_filter_hint">Фильтр по слову</string>
+    <string name="stats_filter_empty">Совпадений не найдено</string>
+    <string name="stats_sort_alpha_asc">Сортировать по алфавиту</string>
+    <string name="stats_sort_alpha_desc">Сортировать по алфавиту (обратно)</string>
+    <string name="stats_sort_lookup_count_desc">Сортировать по частоте подглядывания (по убыванию)</string>
+    <string name="stats_sort_lookup_time_desc">Сортировать по последнему времени подглядывания</string>
+    <string name="stats_sort_lookup_time_asc">Сортировать по самому раннему времени подглядывания</string>
+    <string name="stats_sort_lookup_count_asc">Сортировать по частоте подглядывания (по возрастанию)</string>
+    <string name="stats_sort_exposure_count_desc">Сортировать по встречаемости слова (по убыванию)</string>
+    <string name="stats_sort_exposure_count_asc">Сортировать по встречаемости слова (по возрастанию)</string>
     <string name="stats_axis_time">Ось времени: от %1$s до %2$s</string>
     <string name="stats_axis_text">Ось текста: от начала до символа %1$d</string>
     <string name="speech_toggle_content_start">Начать озвучку</string>
