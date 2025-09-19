@@ -193,6 +193,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     @Override protected void onResume() {
         super.onResume();
         ensureRhvoiceReady();
+        setMediaSessionActive(true);
     }
 
     @Override protected void onNewIntent(Intent intent) {
@@ -201,14 +202,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         handleNavigationIntent(intent);
     }
 
-    @Override protected void onResume() {
-        super.onResume();
-        updateSentenceRanges();
-        updateRhVoiceState();
-    }
-
     @Override protected void onPause() {
         pauseSpeech();
+        setMediaSessionActive(false);
         super.onPause();
     }
 
@@ -302,9 +298,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         shouldContinueSpeech = true;
         isSpeaking = true;
-        if (mediaSession != null) {
-            mediaSession.setActive(true);
-        }
+        setMediaSessionActive(true);
         updatePlaybackState(true);
         updateSpeechButtons();
         speakCurrentSentence();
@@ -316,9 +310,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         stopProgressUpdates();
         if (textToSpeech != null) {
             textToSpeech.stop();
-        }
-        if (mediaSession != null) {
-            mediaSession.setActive(false);
         }
         updatePlaybackState(false);
         updateSpeechButtons();
@@ -338,9 +329,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         estimatedUtteranceDurationMs = 0L;
         if (readerView != null) {
             readerView.clearSpeechHighlights();
-        }
-        if (mediaSession != null) {
-            mediaSession.setActive(false);
         }
         updatePlaybackState(false);
         updateSpeechButtons();
@@ -441,6 +429,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         sentenceRanges.addAll(readerView.getSentenceRanges());
     }
 
+    private void ensureRhvoiceReady() {
+        updateSentenceRanges();
+        updateRhVoiceState();
+    }
+
     private void initTextToSpeech() {
         if (textToSpeech != null) {
             textToSpeech.shutdown();
@@ -481,22 +474,73 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         mediaSession = new MediaSession(this, "TalgatReaderSession");
         mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
         mediaSession.setCallback(new MediaSession.Callback() {
+            @Override public void onPlay() {
+                showMediaSessionEventToast("onPlay");
+            }
+
+            @Override public void onPause() {
+                showMediaSessionEventToast("onPause");
+                handleHeadsetSignal();
+            }
+
+            @Override public void onStop() {
+                showMediaSessionEventToast("onStop");
+                handleHeadsetSignal();
+            }
+
             @Override public boolean onMediaButtonEvent(Intent mediaButtonIntent) {
                 if (mediaButtonIntent == null) return super.onMediaButtonEvent(mediaButtonIntent);
                 KeyEvent event = mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-                if (event != null && event.getAction() == KeyEvent.ACTION_DOWN) {
-                    handleHeadsetSignal();
-                    return true;
+                if (event != null) {
+                    showMediaButtonEventToast(mediaButtonIntent, event);
+                    if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                        handleHeadsetSignal();
+                        return true;
+                    }
                 }
                 return super.onMediaButtonEvent(mediaButtonIntent);
             }
         });
         updatePlaybackState(false);
-        mediaSession.setActive(false);
+        setMediaSessionActive(true);
     }
 
     private void handleHeadsetSignal() {
         speechProgressHandler.post(this::pauseSpeechFromHeadset);
+    }
+
+    private void setMediaSessionActive(boolean active) {
+        if (mediaSession == null) return;
+        mediaSession.setActive(active);
+    }
+
+    private void showMediaButtonEventToast(Intent intent, KeyEvent event) {
+        if (event == null) return;
+        String intentAction = intent == null ? null : intent.getAction();
+        String keyName = KeyEvent.keyCodeToString(event.getKeyCode());
+        String actionName = describeKeyAction(event.getAction());
+        String prefix = intentAction == null ? "MEDIA_BUTTON" : intentAction;
+        String message = prefix + ": " + keyName + " (" + actionName + ")";
+        runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+    }
+
+    private void showMediaSessionEventToast(String eventName) {
+        if (eventName == null) return;
+        String message = "MediaSession: " + eventName;
+        runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+    }
+
+    private static String describeKeyAction(int action) {
+        switch (action) {
+            case KeyEvent.ACTION_DOWN:
+                return "ACTION_DOWN";
+            case KeyEvent.ACTION_UP:
+                return "ACTION_UP";
+            case KeyEvent.ACTION_MULTIPLE:
+                return "ACTION_MULTIPLE";
+            default:
+                return "ACTION_" + action;
+        }
     }
 
     private void pauseSpeechFromHeadset() {
