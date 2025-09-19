@@ -192,7 +192,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     @Override protected void onResume() {
         super.onResume();
-        ensureRhvoiceReady();
+        updateSentenceRanges();
+        updateRhVoiceState();
+        setMediaSessionActive(true);
     }
 
     @Override protected void onNewIntent(Intent intent) {
@@ -201,14 +203,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         handleNavigationIntent(intent);
     }
 
-    @Override protected void onResume() {
-        super.onResume();
-        updateSentenceRanges();
-        updateRhVoiceState();
-    }
-
     @Override protected void onPause() {
         pauseSpeech();
+        setMediaSessionActive(false);
         super.onPause();
     }
 
@@ -302,9 +299,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         shouldContinueSpeech = true;
         isSpeaking = true;
-        if (mediaSession != null) {
-            mediaSession.setActive(true);
-        }
+        setMediaSessionActive(true);
         updatePlaybackState(true);
         updateSpeechButtons();
         speakCurrentSentence();
@@ -316,9 +311,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         stopProgressUpdates();
         if (textToSpeech != null) {
             textToSpeech.stop();
-        }
-        if (mediaSession != null) {
-            mediaSession.setActive(false);
         }
         updatePlaybackState(false);
         updateSpeechButtons();
@@ -338,9 +330,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         estimatedUtteranceDurationMs = 0L;
         if (readerView != null) {
             readerView.clearSpeechHighlights();
-        }
-        if (mediaSession != null) {
-            mediaSession.setActive(false);
         }
         updatePlaybackState(false);
         updateSpeechButtons();
@@ -481,30 +470,107 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         mediaSession = new MediaSession(this, "TalgatReaderSession");
         mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
         mediaSession.setCallback(new MediaSession.Callback() {
+            @Override public void onPlay() {
+                showMediaSessionEventToast("onPlay");
+            }
+
+            @Override public void onPause() {
+                showMediaSessionEventToast("onPause");
+                handleHeadsetSignal();
+            }
+
+            @Override public void onStop() {
+                showMediaSessionEventToast("onStop");
+                handleHeadsetSignal();
+            }
+
             @Override public boolean onMediaButtonEvent(Intent mediaButtonIntent) {
                 if (mediaButtonIntent == null) return super.onMediaButtonEvent(mediaButtonIntent);
                 KeyEvent event = mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-                if (event != null && event.getAction() == KeyEvent.ACTION_DOWN) {
-                    handleHeadsetSignal();
-                    return true;
+                if (event != null) {
+                    showMediaButtonEventToast(mediaButtonIntent, event);
+                    if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                        handleHeadsetSignal();
+                        return true;
+                    }
                 }
                 return super.onMediaButtonEvent(mediaButtonIntent);
             }
         });
         updatePlaybackState(false);
-        mediaSession.setActive(false);
+        setMediaSessionActive(true);
     }
 
     private void handleHeadsetSignal() {
         speechProgressHandler.post(this::pauseSpeechFromHeadset);
     }
 
+    private void setMediaSessionActive(boolean active) {
+        if (mediaSession == null) return;
+        mediaSession.setActive(active);
+    }
+
+    private void showMediaButtonEventToast(Intent intent, KeyEvent event) {
+        if (event == null) return;
+        String intentAction = intent == null ? null : intent.getAction();
+        String keyName = KeyEvent.keyCodeToString(event.getKeyCode());
+        String actionName = describeKeyAction(event.getAction());
+        String prefix = intentAction == null ? "MEDIA_BUTTON" : intentAction;
+        String message = prefix + ": " + keyName + " (" + actionName + ")";
+        runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+    }
+
+    private void showMediaSessionEventToast(String eventName) {
+        if (eventName == null) return;
+        String message = "MediaSession: " + eventName;
+        runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+    }
+
+    private static String describeKeyAction(int action) {
+        switch (action) {
+            case KeyEvent.ACTION_DOWN:
+                return "ACTION_DOWN";
+            case KeyEvent.ACTION_UP:
+                return "ACTION_UP";
+            case KeyEvent.ACTION_MULTIPLE:
+                return "ACTION_MULTIPLE";
+            default:
+                return "ACTION_" + action;
+        }
+    }
+
     private void pauseSpeechFromHeadset() {
         if (!isSpeaking) return;
+        int focusIndex = estimateCurrentSpeechCharIndex();
+        if (focusIndex < 0) {
+            focusIndex = currentCharIndex >= 0 ? currentCharIndex : currentSentenceStart;
+        }
         pauseSpeech();
-        int focusIndex = currentCharIndex >= 0 ? currentCharIndex : currentSentenceStart;
         if (focusIndex < 0 || readerView == null) return;
-        readerView.post(() -> navigateToCharIndex(focusIndex, 0));
+        currentCharIndex = focusIndex;
+        int targetIndex = focusIndex;
+        readerView.post(() -> navigateToCharIndex(targetIndex, 0));
+    }
+
+    private int estimateCurrentSpeechCharIndex() {
+        if (currentSentenceStart < 0 || currentSentenceEnd <= currentSentenceStart) {
+            return currentCharIndex;
+        }
+        int length = currentSentenceEnd - currentSentenceStart;
+        if (length <= 0) {
+            return currentCharIndex;
+        }
+        long duration = estimatedUtteranceDurationMs;
+        if (duration <= 0) {
+            return currentCharIndex >= currentSentenceStart ? currentCharIndex : currentSentenceStart;
+        }
+        long elapsed = SystemClock.elapsedRealtime() - utteranceStartElapsed;
+        if (elapsed < 0) {
+            elapsed = 0;
+        }
+        float progress = Math.min(1f, (float) elapsed / (float) duration);
+        int offset = Math.min(length - 1, Math.max(0, (int) (progress * length)));
+        return currentSentenceStart + offset;
     }
 
     private void updatePlaybackState(boolean playing) {
