@@ -545,10 +545,36 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void pauseSpeechFromHeadset() {
         if (!isSpeaking) return;
+        int focusIndex = estimateCurrentSpeechCharIndex();
+        if (focusIndex < 0) {
+            focusIndex = currentCharIndex >= 0 ? currentCharIndex : currentSentenceStart;
+        }
         pauseSpeech();
-        int focusIndex = currentCharIndex >= 0 ? currentCharIndex : currentSentenceStart;
         if (focusIndex < 0 || readerView == null) return;
-        readerView.post(() -> navigateToCharIndex(focusIndex, 0));
+        currentCharIndex = focusIndex;
+        int targetIndex = focusIndex;
+        readerView.post(() -> navigateToCharIndex(targetIndex, 0));
+    }
+
+    private int estimateCurrentSpeechCharIndex() {
+        if (currentSentenceStart < 0 || currentSentenceEnd <= currentSentenceStart) {
+            return currentCharIndex;
+        }
+        int length = currentSentenceEnd - currentSentenceStart;
+        if (length <= 0) {
+            return currentCharIndex;
+        }
+        long duration = estimatedUtteranceDurationMs;
+        if (duration <= 0) {
+            return currentCharIndex >= currentSentenceStart ? currentCharIndex : currentSentenceStart;
+        }
+        long elapsed = SystemClock.elapsedRealtime() - utteranceStartElapsed;
+        if (elapsed < 0) {
+            elapsed = 0;
+        }
+        float progress = Math.min(1f, (float) elapsed / (float) duration);
+        int offset = Math.min(length - 1, Math.max(0, (int) (progress * length)));
+        return currentSentenceStart + offset;
     }
 
     private void updatePlaybackState(boolean playing) {
