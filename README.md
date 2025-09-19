@@ -30,5 +30,11 @@ CREATE INDEX tt_ru_tt_idx ON tt_ru(lemma_tt);
 ./mvnw android:deploy android:run
 ```
 
+### Codex container
+
+* В контейнере Codex Android SDK уже установлен в `/usr/lib/android-sdk`. Если переменные окружения `ANDROID_SDK_ROOT` и `ANDROID_HOME` не заданы, скрипт `./mvnw` автоматически подставит этот путь и добавит в `PATH` каталоги `cmdline-tools`, `platform-tools` и `emulator`.
+* Перед коммитом запускайте `./mvnw -e clean install`, чтобы проверить сборку и статическую упаковку APK.
+* Для регрессионного тестирования запуска можно создать AVD с образом `system-images;android-28;google_apis;x86` и запустить его командой `emulator -avd codex-avd-api28 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect`. На хостах без аппаратной виртуализации эмулятор завершится с сообщением о недоступности `/dev/kvm` — это ограничение окружения.
+
 ## Поведение памяти и подсветки
 Экспоненциальное «забывание» по half-life (по умолчанию 7 дней). Чем слабее память пары (лемма, признаки), тем заметнее фон.
