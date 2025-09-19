@@ -26,6 +26,48 @@
             android:padding="12dp"/>
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/voiceControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp">
+
+        <ImageButton
+            android:id="@+id/btnToggleSpeech"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackgroundBorderless"
+            android:contentDescription="@string/speech_toggle_content_start"
+            android:padding="8dp"
+            android:src="@drawable/ic_voice"
+            android:tint="@color/reader_sentence_outline" />
+
+        <ImageButton
+            android:id="@+id/btnStopSpeech"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="?android:selectableItemBackgroundBorderless"
+            android:contentDescription="@string/speech_stop_content"
+            android:padding="8dp"
+            android:src="@drawable/ic_stop"
+            android:tint="@color/reader_sentence_outline" />
+
+        <Button
+            android:id="@+id/btnInstallTalgat"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:padding="12dp"
+            android:text="@string/speech_install_talgat" />
+    </LinearLayout>
+
     <ScrollView
         android:id="@+id/readerScrollView"
         android:layout_width="match_parent"

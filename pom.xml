@@ -10,9 +10,9 @@
   <name>UquReader</name>
 
   <properties>
-    <android.sdk.location>${project.basedir}/android-sdk</android.sdk.location>
+    <android.sdk.location>${env.ANDROID_HOME}</android.sdk.location>
     <android.platform>28</android.platform>
-    <android.build-tools>28.0.3</android.build-tools>
+    <android.build-tools>33.0.2</android.build-tools>
     <java.version>1.8</java.version>
     <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
     <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>
@@ -165,6 +165,7 @@ fi
         <configuration>
           <source>${java.version}</source>
           <target>${java.version}</target>
+          <parameters>true</parameters>
         </configuration>
       </plugin>
     </plugins>
@@ -203,6 +204,12 @@ fi
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.11.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.errorprone</groupId>
+          <artifactId>error_prone_annotations</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 </project>

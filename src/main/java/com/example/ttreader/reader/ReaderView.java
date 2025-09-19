@@ -1,9 +1,12 @@
 package com.example.ttreader.reader;
 
 import android.content.Context;
+import android.os.Build;
 import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.widget.TextView;
 
@@ -16,9 +19,12 @@ import com.example.ttreader.model.Token;
 import com.example.ttreader.util.JsonlParser;
 
 import java.io.File;
+import java.text.BreakIterator;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class ReaderView extends TextView {
@@ -33,8 +39,15 @@ public class ReaderView extends TextView {
     private String workId = "";
     private final List<TokenSpan> tokenSpans = new ArrayList<>();
     private final Set<TokenSpan> loggedExposures = new HashSet<>();
+    private final List<SentenceRange> sentenceRanges = new ArrayList<>();
     private int lastViewportScroll = 0;
     private int lastViewportHeight = 0;
+    private SentenceOutlineSpan activeSentenceSpan;
+    private ForegroundColorSpan activeLetterSpan;
+    private int sentenceOutlineColor;
+    private int letterHighlightColor;
+    private float sentenceOutlineStrokeWidth;
+    private float sentenceOutlineCornerRadius;
 
     public ReaderView(Context context) { super(context); init(); }
     public ReaderView(Context context, AttributeSet attrs) { super(context, attrs); init(); }
@@ -43,6 +56,11 @@ public class ReaderView extends TextView {
     private void init() {
         setTextIsSelectable(false);
         setLineSpacing(1.2f, 1.2f);
+        sentenceOutlineColor = resolveColorResource(com.example.ttreader.R.color.reader_sentence_outline);
+        letterHighlightColor = resolveColorResource(com.example.ttreader.R.color.reader_letter_highlight);
+        float density = getResources().getDisplayMetrics().density;
+        sentenceOutlineStrokeWidth = 2f * density;
+        sentenceOutlineCornerRadius = 6f * density;
     }
 
     public void setup(DbHelper helper, MemoryDao memoryDao, UsageStatsDao usageDao, TokenInfoProvider provider) {
@@ -72,6 +90,7 @@ public class ReaderView extends TextView {
 
             tokenSpans.clear();
             loggedExposures.clear();
+            sentenceRanges.clear();
             for (Token t : tokens) {
                 if (t.prefix != null && !t.prefix.isEmpty()) ssb.append(t.prefix);
                 int start = ssb.length();
@@ -89,9 +108,9 @@ public class ReaderView extends TextView {
                     tokenSpans.add(span);
                 }
             }
-
             setText(ssb);
             setMovementMethod(new LongPressMovementMethod(this::handleTokenSelection));
+            computeSentenceRanges(ssb);
         } catch (Exception e) { throw new RuntimeException(e); }
     }
 
@@ -117,6 +136,59 @@ public class ReaderView extends TextView {
 
     public void showTokenInfo(TokenSpan span) {
         handleTokenSelection(span);
+    }
+
+    public List<SentenceRange> getSentenceRanges() {
+        return Collections.unmodifiableList(sentenceRanges);
+    }
+
+    public SentenceRange findSentenceForCharIndex(int charIndex) {
+        if (charIndex < 0) return null;
+        for (SentenceRange range : sentenceRanges) {
+            if (range == null) continue;
+            if (charIndex >= range.start && charIndex < range.end) {
+                return range;
+            }
+        }
+        return null;
+    }
+
+    public void highlightSentenceRange(int start, int end) {
+        Spannable text = getSpannableText();
+        if (text == null) return;
+        if (activeSentenceSpan != null) {
+            text.removeSpan(activeSentenceSpan);
+            activeSentenceSpan = null;
+        }
+        if (start < 0 || end <= start) {
+            invalidate();
+            return;
+        }
+        activeSentenceSpan = new SentenceOutlineSpan(sentenceOutlineColor, sentenceOutlineStrokeWidth, sentenceOutlineCornerRadius);
+        text.setSpan(activeSentenceSpan, start, Math.min(end, text.length()), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        invalidate();
+    }
+
+    public void highlightLetter(int charIndex) {
+        Spannable text = getSpannableText();
+        if (text == null) return;
+        if (activeLetterSpan != null) {
+            text.removeSpan(activeLetterSpan);
+            activeLetterSpan = null;
+        }
+        if (charIndex < 0 || charIndex >= text.length()) {
+            invalidate();
+            return;
+        }
+        int end = Math.min(charIndex + 1, text.length());
+        activeLetterSpan = new ForegroundColorSpan(letterHighlightColor);
+        text.setSpan(activeLetterSpan, charIndex, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        invalidate();
+    }
+
+    public void clearSpeechHighlights() {
+        highlightSentenceRange(-1, -1);
+        highlightLetter(-1);
     }
 
     public List<String> getTranslations(TokenSpan span) {
@@ -184,5 +256,75 @@ public class ReaderView extends TextView {
         Morphology morph = span.token.morphology;
         usageDao.recordEvent(languagePair, workId, morph.lemma, morph.pos, null,
                 UsageStatsDao.EVENT_EXPOSURE, timestamp, span.getStartIndex());
+    }
+
+    private void computeSentenceRanges(CharSequence text) {
+        sentenceRanges.clear();
+        if (text == null) return;
+        String content = text.toString();
+        if (content.isEmpty()) return;
+        BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.getDefault());
+        iterator.setText(content);
+        int start = iterator.first();
+        int end = iterator.next();
+        while (end != BreakIterator.DONE) {
+            int trimmedStart = trimLeadingWhitespace(content, start, end);
+            int trimmedEnd = trimTrailingWhitespace(content, trimmedStart, end);
+            if (trimmedStart < trimmedEnd) {
+                sentenceRanges.add(new SentenceRange(trimmedStart, trimmedEnd, content.substring(trimmedStart, trimmedEnd)));
+            }
+            start = end;
+            end = iterator.next();
+        }
+    }
+
+    private int trimLeadingWhitespace(String content, int start, int end) {
+        int result = Math.max(0, start);
+        int limit = Math.min(content.length(), end);
+        while (result < limit && Character.isWhitespace(content.charAt(result))) {
+            result++;
+        }
+        return result;
+    }
+
+    private int trimTrailingWhitespace(String content, int start, int end) {
+        int result = Math.min(content.length(), end);
+        int limit = Math.max(start, 0);
+        while (result > limit && Character.isWhitespace(content.charAt(result - 1))) {
+            result--;
+        }
+        return Math.max(result, limit);
+    }
+
+    private Spannable getSpannableText() {
+        CharSequence text = getText();
+        if (text instanceof Spannable) {
+            return (Spannable) text;
+        }
+        return null;
+    }
+
+    private int resolveColorResource(int resId) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return getResources().getColor(resId, getContext().getTheme());
+        }
+        //noinspection deprecation
+        return getResources().getColor(resId);
+    }
+
+    public static class SentenceRange {
+        public final int start;
+        public final int end;
+        public final String text;
+
+        SentenceRange(int start, int end, String text) {
+            this.start = start;
+            this.end = end;
+            this.text = text == null ? "" : text;
+        }
+
+        public int length() {
+            return Math.max(0, end - start);
+        }
     }
 }
