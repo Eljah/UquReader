@@ -190,6 +190,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         return true;
     }
 
+    @Override public boolean onPrepareOptionsMenu(Menu menu) {
+        setOverflowMenuIconsVisible(menu);
+        return super.onPrepareOptionsMenu(menu);
+    }
+
     @Override public boolean onOptionsItemSelected(MenuItem item) {
         if (item == null) return super.onOptionsItemSelected(item);
         int id = item.getItemId();
@@ -358,6 +363,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 setForceShowIcon.setAccessible(true);
                 setForceShowIcon.invoke(helper, true);
             }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void setOverflowMenuIconsVisible(Menu menu) {
+        if (menu == null) return;
+        try {
+            Method setOptionalIconsVisible = menu.getClass()
+                    .getDeclaredMethod("setOptionalIconsVisible", boolean.class);
+            setOptionalIconsVisible.setAccessible(true);
+            setOptionalIconsVisible.invoke(menu, true);
         } catch (Exception ignored) {
         }
     }
