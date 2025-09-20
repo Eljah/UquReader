@@ -7,20 +7,24 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.media.MediaMetadataRetriever;
+import android.media.MediaPlayer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.graphics.drawable.Drawable;
+import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.InputDevice;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
@@ -28,25 +32,33 @@ import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.Toast;
 import android.widget.Toolbar;
+import android.util.Log;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
+import com.example.ttreader.model.Morphology;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
-import com.example.ttreader.reader.TtsReaderController;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
 import com.example.ttreader.util.GrammarResources;
 import com.example.ttreader.tts.RhvoiceAvailability;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
+    private static final String TAG = "MainActivity";
     private static final String LANGUAGE_PAIR_TT_RU = "tt-ru";
     private static final String SAMPLE_ASSET = "sample_book.ttmorph.jsonl";
     private static final String SAMPLE_WORK_ID = "sample_book.ttmorph";
@@ -55,6 +67,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final float BASE_CHARS_PER_SECOND = 14f;
     private static final float DEFAULT_SPEECH_RATE = 1f;
     private static final int MENU_LANGUAGE_PAIR_TT_RU = 1;
+    private static final int REQUEST_TYPE_SENTENCE = 1;
+    private static final int REQUEST_TYPE_DETAIL = 2;
+    private static final int PREFETCH_SENTENCE_COUNT = 2;
 
     public static final String EXTRA_TARGET_CHAR_INDEX = "com.example.ttreader.TARGET_CHAR_INDEX";
 
@@ -68,60 +83,84 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private MenuItem toggleSpeechMenuItem;
     private MenuItem stopSpeechMenuItem;
     private MenuItem installTalgatMenuItem;
-    private TtsReaderController ttsController;
     private AlertDialog rhvoiceDialog;
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
     private boolean languagePairInitialized = false;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
-    private final UtteranceProgressListener utteranceListener = new UtteranceProgressListener() {
-        @Override public void onStart(String utteranceId) {
-            utteranceStartElapsed = SystemClock.elapsedRealtime();
-            isSpeaking = true;
-            speechProgressHandler.post(() -> {
-                if (readerView != null) {
-                    readerView.highlightSentenceRange(currentSentenceStart, currentSentenceEnd);
-                    readerView.highlightLetter(currentSentenceStart);
-                }
-                updateSpeechButtons();
-                updatePlaybackState(PlaybackState.STATE_PLAYING);
-            });
-            speechProgressHandler.post(MainActivity.this::startProgressUpdates);
-        }
+    private final Map<String, SpeechRequest> pendingRequests = new HashMap<>();
+    private final Map<Integer, SpeechRequest> preparedSentenceRequests = new HashMap<>();
+    private final Set<Integer> pendingSentenceIndices = new HashSet<>();
 
-        @Override public void onRangeStart(String utteranceId, int start, int end, int frame) {
-            speechProgressHandler.post(() -> handleUtteranceRange(start));
+    private SpeechRequest currentSentenceRequest;
+    private SpeechRequest pendingDetailRequest;
+    private SpeechRequest activeDetailRequest;
+    private MediaPlayer sentencePlayer;
+    private MediaPlayer detailPlayer;
+    private int utteranceSequence = 0;
+    private int pendingPlaybackSentenceIndex = -1;
+    private boolean awaitingResumeAfterDetail = false;
+    private boolean detailAutoResume = false;
+    private long currentLetterIntervalMs = 0L;
+
+    private final UtteranceProgressListener synthesisListener = new UtteranceProgressListener() {
+        @Override public void onStart(String utteranceId) {
         }
 
         @Override public void onDone(String utteranceId) {
-            speechProgressHandler.post(MainActivity.this::handleUtteranceDone);
+            speechProgressHandler.post(() -> handleSynthesisFinished(utteranceId, false));
         }
 
         @Override public void onError(String utteranceId) {
-            speechProgressHandler.post(MainActivity.this::handleUtteranceError);
+            speechProgressHandler.post(() -> handleSynthesisFinished(utteranceId, true));
         }
     };
+
     private final Runnable speechProgressRunnable = new Runnable() {
         @Override public void run() {
             if (!isSpeaking) return;
-            if (estimatedUtteranceDurationMs <= 0) return;
-            int length = Math.max(0, currentSentenceEnd - currentSentenceStart);
-            if (length == 0) return;
-            long elapsed = SystemClock.elapsedRealtime() - utteranceStartElapsed;
-            if (elapsed < 0) elapsed = 0;
-            float progress = Math.min(1f, (float) elapsed / (float) estimatedUtteranceDurationMs);
-            int offset = Math.min(length - 1, (int) (progress * length));
-            int highlightIndex = currentSentenceStart + offset;
-            currentCharIndex = highlightIndex;
-            if (readerView != null) {
-                readerView.highlightLetter(highlightIndex);
-            }
-            if (progress < 1f && shouldContinueSpeech) {
-                speechProgressHandler.postDelayed(this, 50);
-            }
+            if (sentencePlayer == null) return;
+            if (currentSentenceRequest == null || currentSentenceRequest.sentenceRange == null) return;
+            long duration = estimatedUtteranceDurationMs > 0
+                    ? estimatedUtteranceDurationMs
+                    : sentencePlayer.getDuration();
+            if (duration <= 0) return;
+            long elapsed = Math.max(0, sentencePlayer.getCurrentPosition());
+            updateLetterHighlightForElapsed(elapsed, duration);
+            long interval = currentLetterIntervalMs > 0 ? currentLetterIntervalMs : 50L;
+            speechProgressHandler.postDelayed(this, Math.max(25L, interval / 2L));
         }
     };
+
+    private static final class SpeechRequest {
+        final int type;
+        final int sentenceIndex;
+        final ReaderView.SentenceRange sentenceRange;
+        final TokenSpan tokenSpan;
+        final File file;
+        final String utteranceId;
+        final boolean resumeAfterPlayback;
+        long durationMs;
+
+        SpeechRequest(int type, int sentenceIndex, ReaderView.SentenceRange sentenceRange,
+                TokenSpan tokenSpan, File file, String utteranceId, boolean resumeAfterPlayback) {
+            this.type = type;
+            this.sentenceIndex = sentenceIndex;
+            this.sentenceRange = sentenceRange;
+            this.tokenSpan = tokenSpan;
+            this.file = file;
+            this.utteranceId = utteranceId;
+            this.resumeAfterPlayback = resumeAfterPlayback;
+        }
+
+        void deleteFile() {
+            if (file != null && file.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                file.delete();
+            }
+        }
+    }
 
     private TextToSpeech textToSpeech;
     private Voice talgatVoice;
@@ -134,7 +173,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int currentSentenceEnd = -1;
     private int currentCharIndex = -1;
     private long estimatedUtteranceDurationMs = 0L;
-    private long utteranceStartElapsed = 0L;
     private MediaSession mediaSession;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -164,8 +202,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerScrollView = findViewById(R.id.readerScrollView);
         readerView = findViewById(R.id.readerView);
         readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
-
-        ttsController = new TtsReaderController(this, readerView::getTranslations);
 
         if (readerScrollView != null) {
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
@@ -262,10 +298,97 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
-        if (ttsController != null) {
-            ttsController.speakTokenDetails(span, ruLemmas, true);
-        }
+        speakTokenDetails(span, ruLemmas, true);
         showTokenSheet(span, ruLemmas);
+    }
+
+    private void speakTokenDetails(TokenSpan span, List<String> translations, boolean resumeAfter) {
+        if (!ttsReady || textToSpeech == null || talgatVoice == null) return;
+        if (span == null || span.token == null) return;
+        List<String> safeTranslations = translations == null ? new ArrayList<>() : new ArrayList<>(translations);
+        String detailText = buildDetailSpeech(span, safeTranslations);
+        if (TextUtils.isEmpty(detailText)) {
+            return;
+        }
+        pauseSpeechForDetail();
+        shouldContinueSpeech = resumeAfter;
+        awaitingResumeAfterDetail = !resumeAfter;
+        detailAutoResume = resumeAfter;
+        stopDetailPlayback();
+        if (pendingDetailRequest != null) {
+            Iterator<Map.Entry<String, SpeechRequest>> iterator = pendingRequests.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, SpeechRequest> entry = iterator.next();
+                if (entry.getValue() == pendingDetailRequest) {
+                    iterator.remove();
+                    break;
+                }
+            }
+            pendingDetailRequest.deleteFile();
+            pendingDetailRequest = null;
+        }
+        try {
+            File file = File.createTempFile("detail_" + Math.max(0, span.getStartIndex()) + "_", ".wav", getCacheDir());
+            String utteranceId = "detail_" + (utteranceSequence++);
+            SpeechRequest request = new SpeechRequest(REQUEST_TYPE_DETAIL, -1, null, span, file, utteranceId, resumeAfter);
+            pendingDetailRequest = request;
+            pendingRequests.put(utteranceId, request);
+            textToSpeech.setVoice(talgatVoice);
+            Bundle params = new Bundle();
+            params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1f);
+            int result = textToSpeech.synthesizeToFile(detailText, params, file, utteranceId);
+            if (result != TextToSpeech.SUCCESS) {
+                pendingRequests.remove(utteranceId);
+                pendingDetailRequest = null;
+                request.deleteFile();
+                awaitingResumeAfterDetail = !resumeAfter;
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to synthesize detail audio", e);
+            awaitingResumeAfterDetail = !resumeAfter;
+        }
+    }
+
+    private String buildDetailSpeech(TokenSpan span, List<String> translations) {
+        if (span == null || span.token == null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        String surface = span.token.surface;
+        if (!TextUtils.isEmpty(surface)) {
+            builder.append(surface);
+        }
+        Morphology morph = span.token.morphology;
+        if (morph != null) {
+            if (!TextUtils.isEmpty(morph.lemma)) {
+                appendSpeechSentence(builder, "Лемма: " + morph.lemma);
+            }
+            if (!TextUtils.isEmpty(morph.pos)) {
+                appendSpeechSentence(builder, "Часть речи: " + GrammarResources.formatPos(morph.pos));
+            }
+            String segments = morph.getSegmentedSurface();
+            if (!TextUtils.isEmpty(segments)) {
+                appendSpeechSentence(builder, "Сегменты: " + segments);
+            }
+            List<String> codes = morph.getFeatureCodes();
+            if (!codes.isEmpty()) {
+                appendSpeechSentence(builder, "Грамматические признаки: " + TextUtils.join(", ", codes));
+            }
+        }
+        if (translations != null && !translations.isEmpty()) {
+            appendSpeechSentence(builder, "Перевод: " + TextUtils.join(", ", translations));
+        } else {
+            appendSpeechSentence(builder, "Перевод не найден");
+        }
+        return builder.toString();
+    }
+
+    private void appendSpeechSentence(StringBuilder builder, String sentence) {
+        if (TextUtils.isEmpty(sentence)) return;
+        if (builder.length() > 0) {
+            builder.append('.').append(' ');
+        }
+        builder.append(sentence);
     }
 
     private void handleNavigationIntent(Intent intent) {
@@ -400,12 +523,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView != null) {
             readerView.setUsageContext(currentLanguagePair, SAMPLE_WORK_ID);
             readerView.loadFromJsonlAsset(SAMPLE_ASSET);
-            readerView.post(() -> {
-                updateSentenceRanges();
-                if (ttsController != null) {
-                    ttsController.setTokenSequence(readerView.getTokenSpans());
-                }
-            });
+            readerView.post(this::updateSentenceRanges);
         }
         updateLanguagePairDisplay();
     }
@@ -501,12 +619,24 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (currentSentenceIndex < 0 || currentSentenceIndex >= sentenceRanges.size()) {
             currentSentenceIndex = 0;
         }
+        awaitingResumeAfterDetail = false;
         shouldContinueSpeech = true;
-        isSpeaking = true;
         if (mediaSession != null) {
             mediaSession.setActive(true);
         }
-        updatePlaybackState(PlaybackState.STATE_PLAYING);
+        if (sentencePlayer != null && currentSentenceRequest != null) {
+            try {
+                sentencePlayer.start();
+                isSpeaking = true;
+                updatePlaybackState(PlaybackState.STATE_PLAYING);
+                updateSpeechButtons();
+                startProgressUpdates();
+                prefetchUpcomingSentences(currentSentenceIndex + 1);
+                return;
+            } catch (IllegalStateException ignored) {
+                releaseSentencePlayer();
+            }
+        }
         updateSpeechButtons();
         speakCurrentSentence();
     }
@@ -515,8 +645,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         shouldContinueSpeech = false;
         isSpeaking = false;
         stopProgressUpdates();
-        if (textToSpeech != null) {
-            textToSpeech.stop();
+        if (sentencePlayer != null) {
+            try {
+                if (sentencePlayer.isPlaying()) {
+                    sentencePlayer.pause();
+                }
+            } catch (IllegalStateException ignored) {
+                releaseSentencePlayer();
+            }
         }
         updatePlaybackState(PlaybackState.STATE_PAUSED);
         updateSpeechButtons();
@@ -525,15 +661,27 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void stopSpeech() {
         shouldContinueSpeech = false;
         isSpeaking = false;
+        awaitingResumeAfterDetail = false;
         stopProgressUpdates();
         if (textToSpeech != null) {
             textToSpeech.stop();
         }
+        stopDetailPlayback();
+        pendingDetailRequest = null;
+        activeDetailRequest = null;
+        detailAutoResume = false;
+        releaseSentencePlayer();
+        if (currentSentenceRequest != null) {
+            currentSentenceRequest.deleteFile();
+            currentSentenceRequest = null;
+        }
+        clearPreparedAudio();
         currentSentenceIndex = 0;
         currentSentenceStart = -1;
         currentSentenceEnd = -1;
         currentCharIndex = -1;
         estimatedUtteranceDurationMs = 0L;
+        pendingPlaybackSentenceIndex = -1;
         if (readerView != null) {
             readerView.clearSpeechHighlights();
         }
@@ -542,7 +690,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void speakCurrentSentence() {
-        if (!shouldContinueSpeech || textToSpeech == null) return;
+        if (!shouldContinueSpeech || textToSpeech == null || talgatVoice == null) return;
         if (currentSentenceIndex < 0 || currentSentenceIndex >= sentenceRanges.size()) {
             stopSpeech();
             return;
@@ -556,15 +704,37 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         currentSentenceStart = sentence.start;
         currentSentenceEnd = sentence.end;
         currentCharIndex = sentence.start;
-        estimatedUtteranceDurationMs = estimateSentenceDurationMs(sentence);
         if (readerView != null) {
             readerView.highlightSentenceRange(sentence.start, sentence.end);
             readerView.highlightLetter(sentence.start);
         }
         scrollSentenceIntoView(sentence);
-        String utteranceId = "talgat_sentence_" + currentSentenceIndex;
-        textToSpeech.setVoice(talgatVoice);
-        textToSpeech.speak(sentence.text, TextToSpeech.QUEUE_FLUSH, new Bundle(), utteranceId);
+
+        if (currentSentenceRequest != null
+                && currentSentenceRequest.sentenceIndex == currentSentenceIndex
+                && sentencePlayer != null) {
+            try {
+                sentencePlayer.start();
+                isSpeaking = true;
+                updatePlaybackState(PlaybackState.STATE_PLAYING);
+                updateSpeechButtons();
+                startProgressUpdates();
+                return;
+            } catch (IllegalStateException ignored) {
+                releaseSentencePlayer();
+                currentSentenceRequest = null;
+            }
+        }
+
+        SpeechRequest prepared = preparedSentenceRequests.remove(currentSentenceIndex);
+        if (prepared != null) {
+            playSentenceRequest(prepared);
+            return;
+        }
+
+        pendingPlaybackSentenceIndex = currentSentenceIndex;
+        prepareSentenceAudio(currentSentenceIndex, sentence);
+        prefetchUpcomingSentences(currentSentenceIndex + 1);
     }
 
     private void scrollSentenceIntoView(ReaderView.SentenceRange sentence) {
@@ -594,12 +764,19 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         speechProgressHandler.removeCallbacks(speechProgressRunnable);
     }
 
-    private void handleUtteranceDone() {
+    private void handleSentencePlaybackComplete() {
         stopProgressUpdates();
+        isSpeaking = false;
+        if (readerView != null) {
+            readerView.highlightLetter(-1);
+        }
+        SpeechRequest finished = currentSentenceRequest;
+        if (finished != null) {
+            finished.deleteFile();
+        }
+        currentSentenceRequest = null;
+        releaseSentencePlayer();
         if (shouldContinueSpeech) {
-            if (readerView != null) {
-                readerView.highlightLetter(-1);
-            }
             currentSentenceIndex++;
             if (currentSentenceIndex >= sentenceRanges.size()) {
                 stopSpeech();
@@ -607,49 +784,28 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 speakCurrentSentence();
             }
         } else {
-            isSpeaking = false;
             updatePlaybackState(PlaybackState.STATE_PAUSED);
             updateSpeechButtons();
         }
     }
 
-    private void handleUtteranceError() {
+    private void handleSentencePlaybackError() {
         stopProgressUpdates();
         isSpeaking = false;
-        shouldContinueSpeech = false;
+        releaseSentencePlayer();
+        SpeechRequest failed = currentSentenceRequest;
+        if (failed != null) {
+            failed.deleteFile();
+            currentSentenceRequest = null;
+        }
         updatePlaybackState(PlaybackState.STATE_PAUSED);
         updateSpeechButtons();
-    }
-
-    private void handleUtteranceRange(int rangeStart) {
-        if (!isSpeaking) return;
-        int sentenceStart = currentSentenceStart;
-        int sentenceEnd = currentSentenceEnd;
-        if (sentenceStart < 0 || sentenceEnd <= sentenceStart) return;
-        int sentenceLength = sentenceEnd - sentenceStart;
-        if (sentenceLength <= 0) return;
-        int safeStart = Math.max(0, Math.min(rangeStart, sentenceLength - 1));
-        int highlightIndex = sentenceStart + safeStart;
-        currentCharIndex = highlightIndex;
-        if (readerView != null) {
-            readerView.highlightLetter(highlightIndex);
-        }
-        if (estimatedUtteranceDurationMs > 0) {
-            long now = SystemClock.elapsedRealtime();
-            long elapsed = Math.max(0L, now - utteranceStartElapsed);
-            long targetElapsed = (long) ((safeStart / (float) sentenceLength) * estimatedUtteranceDurationMs);
-            if (targetElapsed < elapsed) {
-                utteranceStartElapsed = now - targetElapsed;
-            }
-        }
     }
 
     private long estimateSentenceDurationMs(ReaderView.SentenceRange sentence) {
         if (sentence == null) return 0L;
         int length = Math.max(1, sentence.length());
-        float speechRate = DEFAULT_SPEECH_RATE;
-        float effectiveRate = Math.max(0.1f, speechRate);
-        float durationSeconds = length / (BASE_CHARS_PER_SECOND * effectiveRate);
+        float durationSeconds = length / (BASE_CHARS_PER_SECOND * Math.max(0.1f, DEFAULT_SPEECH_RATE));
         return (long) Math.max(500, durationSeconds * 1000f);
     }
 
@@ -663,11 +819,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (textToSpeech != null) {
             textToSpeech.shutdown();
         }
+        stopDetailPlayback();
+        clearPreparedAudio();
+        releaseSentencePlayer();
         String engine = rhVoiceInstalled ? RHVOICE_PACKAGE : null;
         textToSpeech = new TextToSpeech(this, status -> {
             ttsReady = status == TextToSpeech.SUCCESS;
             if (ttsReady) {
-                textToSpeech.setOnUtteranceProgressListener(utteranceListener);
+                textToSpeech.setOnUtteranceProgressListener(synthesisListener);
                 locateTalgatVoice();
             } else {
                 talgatVoice = null;
@@ -693,6 +852,208 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (talgatVoice != null) {
             textToSpeech.setVoice(talgatVoice);
         }
+    }
+
+    private void handleSynthesisFinished(String utteranceId, boolean error) {
+        if (utteranceId == null) return;
+        SpeechRequest request = pendingRequests.remove(utteranceId);
+        if (request == null) return;
+        if (request.type == REQUEST_TYPE_SENTENCE) {
+            pendingSentenceIndices.remove(request.sentenceIndex);
+        } else {
+            pendingDetailRequest = null;
+        }
+        if (error) {
+            request.deleteFile();
+            if (request.type == REQUEST_TYPE_SENTENCE && request.sentenceIndex == pendingPlaybackSentenceIndex) {
+                pendingPlaybackSentenceIndex = -1;
+            }
+            if (request.type == REQUEST_TYPE_DETAIL) {
+                awaitingResumeAfterDetail = true;
+            }
+            return;
+        }
+        request.durationMs = resolveAudioDuration(request.file);
+        if (request.type == REQUEST_TYPE_SENTENCE) {
+            if (pendingPlaybackSentenceIndex == request.sentenceIndex) {
+                pendingPlaybackSentenceIndex = -1;
+                if (shouldContinueSpeech) {
+                    playSentenceRequest(request);
+                } else {
+                    preparedSentenceRequests.put(request.sentenceIndex, request);
+                }
+            } else {
+                preparedSentenceRequests.put(request.sentenceIndex, request);
+            }
+            prefetchUpcomingSentences(request.sentenceIndex + 1);
+        } else {
+            playDetailRequest(request);
+        }
+    }
+
+    private void prepareSentenceAudio(int index, ReaderView.SentenceRange sentence) {
+        if (sentence == null) return;
+        if (!ttsReady || textToSpeech == null || talgatVoice == null) return;
+        if (pendingSentenceIndices.contains(index)) return;
+        if (preparedSentenceRequests.containsKey(index)) return;
+        try {
+            File file = File.createTempFile("sentence_" + index + "_", ".wav", getCacheDir());
+            String utteranceId = "sentence_" + (utteranceSequence++);
+            SpeechRequest request = new SpeechRequest(REQUEST_TYPE_SENTENCE, index, sentence, null, file, utteranceId, false);
+            pendingRequests.put(utteranceId, request);
+            pendingSentenceIndices.add(index);
+            textToSpeech.setVoice(talgatVoice);
+            Bundle params = new Bundle();
+            params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1f);
+            int result = textToSpeech.synthesizeToFile(sentence.text, params, file, utteranceId);
+            if (result != TextToSpeech.SUCCESS) {
+                pendingRequests.remove(utteranceId);
+                pendingSentenceIndices.remove(index);
+                request.deleteFile();
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to create audio file for sentence " + index, e);
+        }
+    }
+
+    private void prefetchUpcomingSentences(int fromIndex) {
+        if (sentenceRanges.isEmpty()) return;
+        for (int offset = 0; offset < PREFETCH_SENTENCE_COUNT; offset++) {
+            int index = fromIndex + offset;
+            if (index < 0 || index >= sentenceRanges.size()) {
+                break;
+            }
+            if (currentSentenceRequest != null && currentSentenceRequest.sentenceIndex == index) {
+                continue;
+            }
+            if (pendingSentenceIndices.contains(index)) {
+                continue;
+            }
+            if (preparedSentenceRequests.containsKey(index)) {
+                continue;
+            }
+            ReaderView.SentenceRange sentence = sentenceRanges.get(index);
+            if (sentence != null && sentence.length() > 0) {
+                prepareSentenceAudio(index, sentence);
+            }
+        }
+    }
+
+    private void playSentenceRequest(SpeechRequest request) {
+        currentSentenceRequest = request;
+        estimatedUtteranceDurationMs = request.durationMs > 0
+                ? request.durationMs
+                : estimateSentenceDurationMs(request.sentenceRange);
+        currentLetterIntervalMs = computeLetterInterval(request.sentenceRange, estimatedUtteranceDurationMs);
+        setupSentencePlayer(request);
+        prefetchUpcomingSentences(request.sentenceIndex + 1);
+    }
+
+    private void setupSentencePlayer(SpeechRequest request) {
+        releaseSentencePlayer();
+        sentencePlayer = new MediaPlayer();
+        try {
+            sentencePlayer.setDataSource(request.file.getAbsolutePath());
+            sentencePlayer.setOnPreparedListener(mp -> {
+                long duration = request.durationMs > 0 ? request.durationMs : mp.getDuration();
+                if (duration <= 0) {
+                    duration = estimateSentenceDurationMs(request.sentenceRange);
+                }
+                estimatedUtteranceDurationMs = duration;
+                currentLetterIntervalMs = computeLetterInterval(request.sentenceRange, duration);
+                mp.start();
+                isSpeaking = true;
+                shouldContinueSpeech = true;
+                updatePlaybackState(PlaybackState.STATE_PLAYING);
+                updateSpeechButtons();
+                startProgressUpdates();
+            });
+            sentencePlayer.setOnCompletionListener(mp -> handleSentencePlaybackComplete());
+            sentencePlayer.setOnErrorListener((mp, what, extra) -> {
+                handleSentencePlaybackError();
+                return true;
+            });
+            sentencePlayer.prepareAsync();
+        } catch (IOException | IllegalStateException e) {
+            Log.e(TAG, "Failed to prepare sentence audio", e);
+            handleSentencePlaybackError();
+        }
+    }
+
+    private long resolveAudioDuration(File file) {
+        if (file == null) return 0L;
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(file.getAbsolutePath());
+            String duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+            if (duration != null) {
+                return Long.parseLong(duration);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to resolve audio duration", e);
+        } finally {
+            try {
+                retriever.release();
+            } catch (RuntimeException ignored) {
+            }
+        }
+        return 0L;
+    }
+
+    private void updateLetterHighlightForElapsed(long elapsed, long duration) {
+        if (currentSentenceRequest == null || currentSentenceRequest.sentenceRange == null) return;
+        ReaderView.SentenceRange sentence = currentSentenceRequest.sentenceRange;
+        int length = Math.max(1, sentence.length());
+        long clampedDuration = Math.max(1L, duration);
+        int offset = (int) Math.min(length - 1, (elapsed * length) / clampedDuration);
+        if (elapsed >= clampedDuration) {
+            offset = length - 1;
+        }
+        int highlightIndex = sentence.start + offset;
+        currentCharIndex = highlightIndex;
+        if (readerView != null) {
+            readerView.highlightLetter(highlightIndex);
+        }
+    }
+
+    private long computeLetterInterval(ReaderView.SentenceRange sentence, long durationMs) {
+        if (sentence == null || durationMs <= 0) {
+            return 0L;
+        }
+        int length = Math.max(1, sentence.length());
+        return Math.max(10L, durationMs / length);
+    }
+
+    private void releaseSentencePlayer() {
+        if (sentencePlayer == null) return;
+        try {
+            sentencePlayer.stop();
+        } catch (IllegalStateException ignored) {
+        }
+        sentencePlayer.release();
+        sentencePlayer = null;
+    }
+
+    private void clearPreparedAudio() {
+        for (SpeechRequest request : preparedSentenceRequests.values()) {
+            if (request != null) {
+                request.deleteFile();
+            }
+        }
+        preparedSentenceRequests.clear();
+        for (SpeechRequest request : pendingRequests.values()) {
+            if (request != null) {
+                request.deleteFile();
+            }
+        }
+        pendingRequests.clear();
+        pendingSentenceIndices.clear();
+        pendingPlaybackSentenceIndex = -1;
+        if (pendingDetailRequest != null) {
+            pendingDetailRequest.deleteFile();
+            pendingDetailRequest = null;
+        }
+        activeDetailRequest = null;
     }
 
     private void initMediaSession() {
@@ -731,6 +1092,114 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void pauseSpeechFromHeadset() {
         pauseSpeech();
+    }
+
+    private void pauseSpeechForDetail() {
+        stopProgressUpdates();
+        if (sentencePlayer != null) {
+            try {
+                if (sentencePlayer.isPlaying()) {
+                    sentencePlayer.pause();
+                }
+            } catch (IllegalStateException ignored) {
+                releaseSentencePlayer();
+            }
+        }
+        isSpeaking = false;
+        updatePlaybackState(PlaybackState.STATE_PAUSED);
+        updateSpeechButtons();
+    }
+
+    private void resumeSentenceAfterDetail() {
+        detailAutoResume = false;
+        awaitingResumeAfterDetail = false;
+        if (sentencePlayer != null) {
+            try {
+                sentencePlayer.start();
+                isSpeaking = true;
+                shouldContinueSpeech = true;
+                updatePlaybackState(PlaybackState.STATE_PLAYING);
+                updateSpeechButtons();
+                startProgressUpdates();
+                return;
+            } catch (IllegalStateException ignored) {
+                releaseSentencePlayer();
+            }
+        }
+        shouldContinueSpeech = true;
+        speakCurrentSentence();
+    }
+
+    private void stopDetailPlayback() {
+        if (detailPlayer != null) {
+            try {
+                detailPlayer.stop();
+            } catch (IllegalStateException ignored) {
+            }
+            detailPlayer.release();
+            detailPlayer = null;
+        }
+        if (activeDetailRequest != null) {
+            activeDetailRequest.deleteFile();
+            activeDetailRequest = null;
+        }
+    }
+
+    private boolean detailPlaybackActive() {
+        if (detailPlayer == null) return false;
+        try {
+            return detailPlayer.isPlaying();
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    private void playDetailRequest(SpeechRequest request) {
+        if (request == null) return;
+        stopDetailPlayback();
+        activeDetailRequest = request;
+        detailAutoResume = request.resumeAfterPlayback;
+        awaitingResumeAfterDetail = !detailAutoResume;
+        detailPlayer = new MediaPlayer();
+        try {
+            detailPlayer.setDataSource(request.file.getAbsolutePath());
+            detailPlayer.setOnPreparedListener(mp -> {
+                mp.start();
+                updatePlaybackState(PlaybackState.STATE_PLAYING);
+            });
+            detailPlayer.setOnCompletionListener(mp -> handleDetailPlaybackComplete());
+            detailPlayer.setOnErrorListener((mp, what, extra) -> {
+                handleDetailPlaybackComplete();
+                return true;
+            });
+            detailPlayer.prepareAsync();
+        } catch (IOException | IllegalStateException e) {
+            Log.e(TAG, "Failed to play detail audio", e);
+            handleDetailPlaybackComplete();
+        }
+    }
+
+    private void handleDetailPlaybackComplete() {
+        if (detailPlayer != null) {
+            try {
+                detailPlayer.stop();
+            } catch (IllegalStateException ignored) {
+            }
+            detailPlayer.release();
+            detailPlayer = null;
+        }
+        if (activeDetailRequest != null) {
+            activeDetailRequest.deleteFile();
+            activeDetailRequest = null;
+        }
+        if (detailAutoResume) {
+            resumeSentenceAfterDetail();
+        } else {
+            awaitingResumeAfterDetail = true;
+            updatePlaybackState(PlaybackState.STATE_PAUSED);
+            updateSpeechButtons();
+        }
+        detailAutoResume = false;
     }
 
     private int resolveFocusCharIndex() {
@@ -798,6 +1267,93 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 stopSpeechMenuItem.setIcon(stopIcon);
             }
         }
+    }
+
+    @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if (handleExternalKeyEvent(event)) {
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    private boolean handleExternalKeyEvent(KeyEvent event) {
+        if (event == null) return false;
+        if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+        InputDevice device = event.getDevice();
+        if (!isExternalInputDevice(device)) return false;
+        int sources = device.getSources();
+        if ((sources & InputDevice.SOURCE_KEYBOARD) == 0
+                && (sources & InputDevice.SOURCE_CLASS_BUTTON) == 0) {
+            return false;
+        }
+        int keyCode = event.getKeyCode();
+        if (detailPlaybackActive()) {
+            return true;
+        }
+        if (awaitingResumeAfterDetail) {
+            if (isPlayPauseKey(keyCode)) {
+                resumeSentenceAfterDetail();
+            } else {
+                handleKeyboardDetailRequest();
+            }
+            return true;
+        }
+        if (isSpeaking) {
+            handleKeyboardDetailRequest();
+            return true;
+        }
+        if (isPlayPauseKey(keyCode)) {
+            startSpeech();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isExternalInputDevice(InputDevice device) {
+        if (device == null) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= 29) {
+            try {
+                Method method = InputDevice.class.getMethod("isExternal");
+                Object result = method.invoke(device);
+                if (result instanceof Boolean && (Boolean) result) {
+                    return true;
+                }
+            } catch (ReflectiveOperationException ignore) {
+            }
+        }
+        if (device.isVirtual()) {
+            return false;
+        }
+        int sources = device.getSources();
+        if ((sources & InputDevice.SOURCE_CLASS_BUTTON) != 0) {
+            return true;
+        }
+        if ((sources & InputDevice.SOURCE_KEYBOARD) != 0
+                && device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC) {
+            return true;
+        }
+        return device.getVendorId() != 0 || device.getProductId() != 0;
+    }
+
+    private void handleKeyboardDetailRequest() {
+        if (readerView == null) return;
+        int focusIndex = resolveFocusCharIndex();
+        if (focusIndex < 0) return;
+        TokenSpan span = readerView.findSpanForCharIndex(focusIndex);
+        if (span == null) return;
+        readerView.ensureExposureLogged(span);
+        List<String> translations = readerView.getTranslations(span);
+        speakTokenDetails(span, translations, false);
+        showTokenSheet(span, translations);
+    }
+
+    private boolean isPlayPauseKey(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
+                || keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE
+                || keyCode == KeyEvent.KEYCODE_HEADSETHOOK;
     }
 
     private void updateInstallButtonVisibility() {
