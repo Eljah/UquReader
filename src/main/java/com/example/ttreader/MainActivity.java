@@ -16,6 +16,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
@@ -70,6 +71,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final int REQUEST_TYPE_SENTENCE = 1;
     private static final int REQUEST_TYPE_DETAIL = 2;
     private static final int PREFETCH_SENTENCE_COUNT = 2;
+    private static final long SKIP_BACK_DOUBLE_PRESS_WINDOW_MS = 1500L;
+    private static final long SKIP_BACK_RESTART_THRESHOLD_MS = 1200L;
 
     public static final String EXTRA_TARGET_CHAR_INDEX = "com.example.ttreader.TARGET_CHAR_INDEX";
 
@@ -103,6 +106,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean awaitingResumeAfterDetail = false;
     private boolean detailAutoResume = false;
     private long currentLetterIntervalMs = 0L;
+    private boolean promptModeActive = false;
+    private int promptTokenIndex = -1;
+    private int promptBaseCharIndex = -1;
+    private long lastSkipBackEventTime = 0L;
 
     private final UtteranceProgressListener synthesisListener = new UtteranceProgressListener() {
         @Override public void onStart(String utteranceId) {
@@ -298,7 +305,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
-        speakTokenDetails(span, ruLemmas, true);
+        boolean resumeAfter = isSpeaking || shouldContinueSpeech;
+        speakTokenDetails(span, ruLemmas, resumeAfter);
         showTokenSheet(span, ruLemmas);
     }
 
@@ -614,6 +622,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void startSpeech() {
         if (!ttsReady || talgatVoice == null) return;
+        exitPromptMode();
+        lastSkipBackEventTime = 0L;
         updateSentenceRanges();
         if (sentenceRanges.isEmpty()) return;
         if (currentSentenceIndex < 0 || currentSentenceIndex >= sentenceRanges.size()) {
@@ -645,6 +655,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         shouldContinueSpeech = false;
         isSpeaking = false;
         stopProgressUpdates();
+        lastSkipBackEventTime = 0L;
+        preparePromptSelection();
         if (sentencePlayer != null) {
             try {
                 if (sentencePlayer.isPlaying()) {
@@ -663,6 +675,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         isSpeaking = false;
         awaitingResumeAfterDetail = false;
         stopProgressUpdates();
+        exitPromptMode();
+        lastSkipBackEventTime = 0L;
         if (textToSpeech != null) {
             textToSpeech.stop();
         }
@@ -691,6 +705,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void speakCurrentSentence() {
         if (!shouldContinueSpeech || textToSpeech == null || talgatVoice == null) return;
+        exitPromptMode();
         if (currentSentenceIndex < 0 || currentSentenceIndex >= sentenceRanges.size()) {
             stopSpeech();
             return;
@@ -767,6 +782,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void handleSentencePlaybackComplete() {
         stopProgressUpdates();
         isSpeaking = false;
+        lastSkipBackEventTime = 0L;
         if (readerView != null) {
             readerView.highlightLetter(-1);
         }
@@ -792,6 +808,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void handleSentencePlaybackError() {
         stopProgressUpdates();
         isSpeaking = false;
+        lastSkipBackEventTime = 0L;
         releaseSentencePlayer();
         SpeechRequest failed = currentSentenceRequest;
         if (failed != null) {
@@ -1064,18 +1081,27 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 if (mediaButtonIntent == null) return super.onMediaButtonEvent(mediaButtonIntent);
                 KeyEvent event = mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
                 if (event != null && event.getAction() == KeyEvent.ACTION_DOWN) {
-                    speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
-                    return true;
+                    int keyCode = event.getKeyCode();
+                    if (isPlayPauseKey(keyCode)) {
+                        speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
+                        return true;
+                    } else if (isSkipForwardKey(keyCode)) {
+                        speechProgressHandler.post(() -> handleMediaSkip(true));
+                        return true;
+                    } else if (isSkipBackwardKey(keyCode)) {
+                        speechProgressHandler.post(() -> handleMediaSkip(false));
+                        return true;
+                    }
                 }
                 return super.onMediaButtonEvent(mediaButtonIntent);
             }
 
             @Override public void onSkipToNext() {
-                speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
+                speechProgressHandler.post(() -> handleMediaSkip(true));
             }
 
             @Override public void onSkipToPrevious() {
-                speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
+                speechProgressHandler.post(() -> handleMediaSkip(false));
             }
         });
         updatePlaybackState(PlaybackState.STATE_STOPPED);
@@ -1090,12 +1116,256 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
+    private void handleMediaSkip(boolean forward) {
+        if (detailPlaybackActive() || awaitingResumeAfterDetail) {
+            return;
+        }
+        if (isSpeaking) {
+            handleSkipWhileSpeaking(forward);
+        } else {
+            handlePromptSkip(forward);
+        }
+    }
+
+    private void handleSkipWhileSpeaking(boolean forward) {
+        if (sentenceRanges.isEmpty()) {
+            return;
+        }
+        if (forward) {
+            lastSkipBackEventTime = 0L;
+            if (currentSentenceIndex < sentenceRanges.size() - 1) {
+                skipToSentence(currentSentenceIndex + 1);
+            }
+            return;
+        }
+        long now = SystemClock.uptimeMillis();
+        long position = getCurrentSentencePosition();
+        boolean nearStart = position <= SKIP_BACK_RESTART_THRESHOLD_MS;
+        boolean goPrevious = false;
+        if (nearStart && (now - lastSkipBackEventTime) <= SKIP_BACK_DOUBLE_PRESS_WINDOW_MS) {
+            goPrevious = true;
+        }
+        lastSkipBackEventTime = now;
+        if (goPrevious && currentSentenceIndex > 0) {
+            skipToSentence(currentSentenceIndex - 1);
+        } else {
+            restartCurrentSentence();
+        }
+    }
+
+    private void restartCurrentSentence() {
+        if (currentSentenceIndex < 0 || currentSentenceIndex >= sentenceRanges.size()) {
+            return;
+        }
+        exitPromptMode();
+        if (sentencePlayer != null) {
+            try {
+                sentencePlayer.seekTo(0);
+                sentencePlayer.start();
+                isSpeaking = true;
+                shouldContinueSpeech = true;
+                long duration = estimatedUtteranceDurationMs > 0
+                        ? estimatedUtteranceDurationMs
+                        : sentencePlayer.getDuration();
+                updateLetterHighlightForElapsed(0, Math.max(1L, duration));
+                if (readerView != null && currentSentenceStart >= 0) {
+                    readerView.highlightLetter(currentSentenceStart);
+                }
+                currentCharIndex = currentSentenceStart;
+                startProgressUpdates();
+                return;
+            } catch (IllegalStateException e) {
+                releaseSentencePlayer();
+            }
+        }
+        skipToSentence(currentSentenceIndex);
+    }
+
+    private void skipToSentence(int index) {
+        if (sentenceRanges.isEmpty()) {
+            return;
+        }
+        int clampedIndex = Math.max(0, Math.min(index, sentenceRanges.size() - 1));
+        exitPromptMode();
+        lastSkipBackEventTime = 0L;
+        discardCurrentSentencePlayback();
+        currentSentenceIndex = clampedIndex;
+        currentSentenceStart = -1;
+        currentSentenceEnd = -1;
+        currentCharIndex = -1;
+        shouldContinueSpeech = true;
+        speakCurrentSentence();
+    }
+
+    private void discardCurrentSentencePlayback() {
+        stopProgressUpdates();
+        if (sentencePlayer != null) {
+            try {
+                sentencePlayer.stop();
+            } catch (IllegalStateException ignored) {
+            }
+            sentencePlayer.release();
+            sentencePlayer = null;
+        }
+        if (currentSentenceRequest != null) {
+            currentSentenceRequest.deleteFile();
+            currentSentenceRequest = null;
+        }
+        isSpeaking = false;
+        estimatedUtteranceDurationMs = 0L;
+        currentLetterIntervalMs = 0L;
+        pendingPlaybackSentenceIndex = -1;
+    }
+
+    private long getCurrentSentencePosition() {
+        if (sentencePlayer == null) {
+            return 0L;
+        }
+        try {
+            return sentencePlayer.getCurrentPosition();
+        } catch (IllegalStateException e) {
+            return 0L;
+        }
+    }
+
+    private void handlePromptSkip(boolean forward) {
+        if (readerView == null) {
+            return;
+        }
+        List<TokenSpan> spans = readerView.getTokenSpans();
+        if (spans.isEmpty()) {
+            return;
+        }
+        if (!promptModeActive) {
+            int focusIndex = promptBaseCharIndex >= 0 ? promptBaseCharIndex : resolveFocusCharIndex();
+            if (focusIndex < 0) {
+                return;
+            }
+            int index = findClosestTokenIndex(spans, focusIndex);
+            if (index < 0) {
+                return;
+            }
+            promptTokenIndex = index;
+            promptModeActive = true;
+        } else {
+            int nextIndex = forward
+                    ? findNextTokenIndex(spans, promptTokenIndex)
+                    : findPreviousTokenIndex(spans, promptTokenIndex);
+            if (nextIndex < 0) {
+                nextIndex = promptTokenIndex;
+            }
+            promptTokenIndex = nextIndex;
+        }
+        if (promptTokenIndex < 0 || promptTokenIndex >= spans.size()) {
+            return;
+        }
+        TokenSpan span = spans.get(promptTokenIndex);
+        if (span == null || span.token == null) {
+            return;
+        }
+        showPromptForSpan(span, spans);
+    }
+
+    private int findClosestTokenIndex(List<TokenSpan> spans, int charIndex) {
+        if (spans == null || spans.isEmpty()) {
+            return -1;
+        }
+        int previousValid = -1;
+        for (int i = 0; i < spans.size(); i++) {
+            TokenSpan span = spans.get(i);
+            if (span == null) {
+                continue;
+            }
+            int start = span.getStartIndex();
+            int end = span.getEndIndex();
+            if (start < 0 || end <= start) {
+                continue;
+            }
+            if (charIndex >= start && charIndex < end) {
+                return i;
+            }
+            if (end <= charIndex) {
+                previousValid = i;
+                continue;
+            }
+            return previousValid >= 0 ? previousValid : i;
+        }
+        return previousValid >= 0 ? previousValid : spans.size() - 1;
+    }
+
+    private int findNextTokenIndex(List<TokenSpan> spans, int fromIndex) {
+        if (spans == null || spans.isEmpty()) {
+            return -1;
+        }
+        for (int i = Math.max(0, fromIndex + 1); i < spans.size(); i++) {
+            TokenSpan span = spans.get(i);
+            if (span != null && span.token != null && !TextUtils.isEmpty(span.token.surface)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private int findPreviousTokenIndex(List<TokenSpan> spans, int fromIndex) {
+        if (spans == null || spans.isEmpty()) {
+            return -1;
+        }
+        for (int i = Math.min(fromIndex - 1, spans.size() - 1); i >= 0; i--) {
+            TokenSpan span = spans.get(i);
+            if (span != null && span.token != null && !TextUtils.isEmpty(span.token.surface)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void showPromptForSpan(TokenSpan span, List<TokenSpan> spans) {
+        if (readerView == null || span == null || span.token == null) {
+            return;
+        }
+        int restoreIndex = promptTokenIndex;
+        int restoreBaseIndex = span.getStartIndex();
+        readerView.showTokenInfo(span);
+        promptModeActive = true;
+        if (spans != null && !spans.isEmpty()) {
+            if (restoreIndex >= 0 && restoreIndex < spans.size()) {
+                promptTokenIndex = restoreIndex;
+            } else {
+                int located = spans.indexOf(span);
+                if (located >= 0) {
+                    promptTokenIndex = located;
+                }
+            }
+            if (promptTokenIndex < 0 && restoreIndex >= 0) {
+                promptTokenIndex = Math.min(spans.size() - 1, restoreIndex);
+            }
+        } else {
+            promptTokenIndex = restoreIndex;
+        }
+        if (restoreBaseIndex >= 0) {
+            promptBaseCharIndex = restoreBaseIndex;
+        }
+    }
+
+    private void preparePromptSelection() {
+        promptModeActive = false;
+        promptTokenIndex = -1;
+        promptBaseCharIndex = resolveFocusCharIndex();
+    }
+
+    private void exitPromptMode() {
+        promptModeActive = false;
+        promptTokenIndex = -1;
+        promptBaseCharIndex = -1;
+    }
+
     private void pauseSpeechFromHeadset() {
         pauseSpeech();
     }
 
     private void pauseSpeechForDetail() {
         stopProgressUpdates();
+        exitPromptMode();
         if (sentencePlayer != null) {
             try {
                 if (sentencePlayer.isPlaying()) {
@@ -1298,6 +1568,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
             return true;
         }
+        if (isSkipForwardKey(keyCode)) {
+            handleMediaSkip(true);
+            return true;
+        }
+        if (isSkipBackwardKey(keyCode)) {
+            handleMediaSkip(false);
+            return true;
+        }
         if (isSpeaking) {
             handleKeyboardDetailRequest();
             return true;
@@ -1354,6 +1632,20 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
                 || keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE
                 || keyCode == KeyEvent.KEYCODE_HEADSETHOOK;
+    }
+
+    private boolean isSkipForwardKey(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_MEDIA_NEXT
+                || keyCode == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
+                || keyCode == KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD
+                || keyCode == KeyEvent.KEYCODE_MEDIA_STEP_FORWARD;
+    }
+
+    private boolean isSkipBackwardKey(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS
+                || keyCode == KeyEvent.KEYCODE_MEDIA_REWIND
+                || keyCode == KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD
+                || keyCode == KeyEvent.KEYCODE_MEDIA_STEP_BACKWARD;
     }
 
     private void updateInstallButtonVisibility() {
