@@ -12,6 +12,7 @@ import android.media.MediaPlayer;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -31,6 +32,7 @@ import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.Toast;
 import android.widget.Toolbar;
+import android.util.Log;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.MemoryDao;
@@ -56,6 +58,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
+    private static final String TAG = "MainActivity";
     private static final String LANGUAGE_PAIR_TT_RU = "tt-ru";
     private static final String SAMPLE_ASSET = "sample_book.ttmorph.jsonl";
     private static final String SAMPLE_WORK_ID = "sample_book.ttmorph";
@@ -1277,7 +1280,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (event == null) return false;
         if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
         InputDevice device = event.getDevice();
-        if (device == null || !device.isExternal()) return false;
+        if (!isExternalInputDevice(device)) return false;
         int sources = device.getSources();
         if ((sources & InputDevice.SOURCE_KEYBOARD) == 0
                 && (sources & InputDevice.SOURCE_CLASS_BUTTON) == 0) {
@@ -1304,6 +1307,34 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return true;
         }
         return false;
+    }
+
+    private boolean isExternalInputDevice(InputDevice device) {
+        if (device == null) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= 29) {
+            try {
+                Method method = InputDevice.class.getMethod("isExternal");
+                Object result = method.invoke(device);
+                if (result instanceof Boolean && (Boolean) result) {
+                    return true;
+                }
+            } catch (ReflectiveOperationException ignore) {
+            }
+        }
+        if (device.isVirtual()) {
+            return false;
+        }
+        int sources = device.getSources();
+        if ((sources & InputDevice.SOURCE_CLASS_BUTTON) != 0) {
+            return true;
+        }
+        if ((sources & InputDevice.SOURCE_KEYBOARD) != 0
+                && device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC) {
+            return true;
+        }
+        return device.getVendorId() != 0 || device.getProductId() != 0;
     }
 
     private void handleKeyboardDetailRequest() {
