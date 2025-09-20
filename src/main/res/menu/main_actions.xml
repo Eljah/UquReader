@@ -12,9 +12,10 @@
         android:showAsAction="always" />
     <item
         android:id="@+id/action_language_pair"
-        android:icon="@drawable/ic_language_menu"
+        android:actionLayout="@layout/menu_action_language_pair"
+        android:icon="@drawable/ic_language_pair_tt_ru"
         android:title="@string/language_pair_button_unset"
-        android:showAsAction="ifRoom" />
+        android:showAsAction="always" />
     <item
         android:id="@+id/action_language_stats"
         android:icon="@drawable/ic_stats_language"

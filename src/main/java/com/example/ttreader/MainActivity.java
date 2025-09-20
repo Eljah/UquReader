@@ -22,6 +22,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.Toast;
@@ -37,6 +38,8 @@ import com.example.ttreader.ui.TokenInfoBottomSheet;
 import com.example.ttreader.util.GrammarResources;
 import com.example.ttreader.tts.RhvoiceAvailability;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -180,6 +183,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         toggleSpeechMenuItem = menu.findItem(R.id.action_toggle_speech);
         stopSpeechMenuItem = menu.findItem(R.id.action_stop_speech);
         installTalgatMenuItem = menu.findItem(R.id.action_install_talgat);
+        setupLanguagePairActionView();
         updateLanguagePairDisplay();
         updateSpeechButtons();
         updateInstallButtonVisibility();
@@ -190,7 +194,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (item == null) return super.onOptionsItemSelected(item);
         int id = item.getItemId();
         if (id == R.id.action_language_pair) {
-            showLanguagePairMenu(toolbar);
+            showLanguagePairMenu(getLanguagePairAnchor());
             return true;
         } else if (id == R.id.action_language_stats) {
             openLanguageStats();
@@ -275,14 +279,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void showLanguagePairMenu(View anchor) {
-        View safeAnchor = anchor != null ? anchor : toolbar;
-        if (safeAnchor == null) {
-            safeAnchor = readerView;
-        }
+        View safeAnchor = anchor != null ? anchor : getLanguagePairAnchor();
         if (safeAnchor == null) return;
         PopupMenu menu = new PopupMenu(this, safeAnchor);
-        menu.getMenu().add(Menu.NONE, MENU_LANGUAGE_PAIR_TT_RU, Menu.NONE,
+        MenuItem ttRuItem = menu.getMenu().add(Menu.NONE, MENU_LANGUAGE_PAIR_TT_RU, Menu.NONE,
                 getLanguagePairDisplayName(LANGUAGE_PAIR_TT_RU));
+        ttRuItem.setIcon(R.drawable.ic_language_pair_tt_ru);
+        ttRuItem.setCheckable(true);
+        ttRuItem.setChecked(LANGUAGE_PAIR_TT_RU.equals(currentLanguagePair));
         menu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == MENU_LANGUAGE_PAIR_TT_RU) {
                 applyLanguagePair(LANGUAGE_PAIR_TT_RU);
@@ -290,7 +294,72 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
             return false;
         });
+        forceShowMenuIcons(menu);
         menu.show();
+    }
+
+    private View getLanguagePairAnchor() {
+        if (languagePairMenuItem != null) {
+            View actionView = languagePairMenuItem.getActionView();
+            if (actionView != null) {
+                return actionView;
+            }
+        }
+        if (toolbar != null) {
+            return toolbar;
+        }
+        if (readerView != null) {
+            return readerView;
+        }
+        return getWindow() != null ? getWindow().getDecorView() : null;
+    }
+
+    private void setupLanguagePairActionView() {
+        if (languagePairMenuItem == null) return;
+        View actionView = languagePairMenuItem.getActionView();
+        if (actionView != null) {
+            actionView.setOnClickListener(v -> showLanguagePairMenu(v));
+            actionView.setOnLongClickListener(v -> {
+                showLanguagePairMenu(v);
+                return true;
+            });
+            actionView.setFocusable(true);
+            actionView.setContentDescription(languagePairMenuItem.getTitle());
+        }
+        languagePairMenuItem.setOnMenuItemClickListener(item -> {
+            showLanguagePairMenu(getLanguagePairAnchor());
+            return true;
+        });
+        updateLanguagePairIcon();
+    }
+
+    private void updateLanguagePairIcon() {
+        if (languagePairMenuItem == null) return;
+        int iconRes = LANGUAGE_PAIR_TT_RU.equals(currentLanguagePair)
+                ? R.drawable.ic_language_pair_tt_ru
+                : R.drawable.ic_language_menu;
+        languagePairMenuItem.setIcon(iconRes);
+        View actionView = languagePairMenuItem.getActionView();
+        if (actionView == null) return;
+        ImageView iconView = actionView.findViewById(R.id.languagePairIcon);
+        if (iconView != null) {
+            iconView.setImageResource(iconRes);
+        }
+    }
+
+    private void forceShowMenuIcons(PopupMenu menu) {
+        try {
+            Field popupField = PopupMenu.class.getDeclaredField("mPopup");
+            popupField.setAccessible(true);
+            Object helper = popupField.get(menu);
+            if (helper != null) {
+                Method setForceShowIcon = helper.getClass()
+                        .getDeclaredMethod("setForceShowIcon", boolean.class);
+                setForceShowIcon.setAccessible(true);
+                setForceShowIcon.invoke(helper, true);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private void applyLanguagePair(String languagePair) {
@@ -334,10 +403,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (languagePairMenuItem != null) {
             languagePairMenuItem.setTitle(menuTitle);
             languagePairMenuItem.setTitleCondensed(subtitle);
+            View actionView = languagePairMenuItem.getActionView();
+            if (actionView != null) {
+                actionView.setContentDescription(menuTitle);
+            }
         }
         if (toolbar != null) {
             toolbar.setSubtitle(subtitle);
         }
+        updateLanguagePairIcon();
     }
 
     private String getLanguagePairDisplayName(String languagePair) {
