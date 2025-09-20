@@ -17,9 +17,12 @@ import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.Toast;
 
@@ -46,6 +49,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final String TALGAT_NAME_KEYWORD = "talgat";
     private static final float BASE_CHARS_PER_SECOND = 14f;
     private static final float DEFAULT_SPEECH_RATE = 1f;
+    private static final int MENU_LANGUAGE_PAIR_TT_RU = 1;
 
     public static final String EXTRA_TARGET_CHAR_INDEX = "com.example.ttreader.TARGET_CHAR_INDEX";
 
@@ -54,11 +58,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private UsageStatsDao usageStatsDao;
     private ScrollView readerScrollView;
     private ReaderView readerView;
+    private Button languagePairButton;
     private ImageButton toggleSpeechButton;
     private ImageButton stopSpeechButton;
     private Button installTalgatButton;
     private TtsReaderController ttsController;
     private AlertDialog rhvoiceDialog;
+    private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
+    private boolean languagePairInitialized = false;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
@@ -134,29 +141,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         memoryDao = new MemoryDao(db);
         usageStatsDao = new UsageStatsDao(db);
 
-        readerScrollView = findViewById(R.id.readerScrollView);
-        readerView = findViewById(R.id.readerView);
-        readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
-        readerView.setUsageContext(LANGUAGE_PAIR_TT_RU, SAMPLE_WORK_ID);
-        readerView.loadFromJsonlAsset(SAMPLE_ASSET);
-        readerView.post(this::updateSentenceRanges);
-
-        ttsController = new TtsReaderController(this, readerView::getTranslations);
-        ttsController.setTokenSequence(readerView.getTokenSpans());
-
-        if (readerScrollView != null) {
-            ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
-            observer.addOnScrollChangedListener(() ->
-                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
-            readerScrollView.post(() ->
-                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
+        languagePairButton = findViewById(R.id.btnLanguagePair);
+        if (languagePairButton != null) {
+            languagePairButton.setOnClickListener(this::showLanguagePairMenu);
         }
 
         Button languageStatsButton = findViewById(R.id.btnLanguageStats);
         languageStatsButton.setOnClickListener(v -> {
             Intent intent = new Intent(this, StatsActivity.class);
             intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_LANGUAGE);
-            intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, LANGUAGE_PAIR_TT_RU);
+            intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, currentLanguagePair);
             startActivity(intent);
         });
 
@@ -164,7 +158,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         workStatsButton.setOnClickListener(v -> {
             Intent intent = new Intent(this, StatsActivity.class);
             intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_WORK);
-            intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, LANGUAGE_PAIR_TT_RU);
+            intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, currentLanguagePair);
             intent.putExtra(StatsActivity.EXTRA_WORK_ID, SAMPLE_WORK_ID);
             startActivity(intent);
         });
@@ -182,6 +176,22 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (installTalgatButton != null) {
             installTalgatButton.setOnClickListener(v -> openTalgatInstall());
         }
+
+        readerScrollView = findViewById(R.id.readerScrollView);
+        readerView = findViewById(R.id.readerView);
+        readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
+
+        ttsController = new TtsReaderController(this, readerView::getTranslations);
+
+        if (readerScrollView != null) {
+            ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
+            observer.addOnScrollChangedListener(() ->
+                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
+            readerScrollView.post(() ->
+                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
+        }
+
+        applyLanguagePair(LANGUAGE_PAIR_TT_RU);
 
         rhVoiceInstalled = isRhVoiceInstalled();
         initMediaSession();
@@ -240,6 +250,63 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerView.post(() -> navigateToCharIndex(targetIndex, 0));
     }
 
+    private void showLanguagePairMenu(View anchor) {
+        PopupMenu menu = new PopupMenu(this, anchor);
+        menu.getMenu().add(Menu.NONE, MENU_LANGUAGE_PAIR_TT_RU, Menu.NONE,
+                getLanguagePairDisplayName(LANGUAGE_PAIR_TT_RU));
+        menu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == MENU_LANGUAGE_PAIR_TT_RU) {
+                applyLanguagePair(LANGUAGE_PAIR_TT_RU);
+                return true;
+            }
+            return false;
+        });
+        menu.show();
+    }
+
+    private void applyLanguagePair(String languagePair) {
+        if (languagePair == null) {
+            updateLanguagePairButton();
+            return;
+        }
+        if (languagePairInitialized && languagePair.equals(currentLanguagePair)) {
+            updateLanguagePairButton();
+            return;
+        }
+        languagePairInitialized = true;
+        stopSpeech();
+        currentLanguagePair = languagePair;
+        if (readerView != null) {
+            readerView.setUsageContext(currentLanguagePair, SAMPLE_WORK_ID);
+            readerView.loadFromJsonlAsset(SAMPLE_ASSET);
+            readerView.post(() -> {
+                updateSentenceRanges();
+                if (ttsController != null) {
+                    ttsController.setTokenSequence(readerView.getTokenSpans());
+                }
+            });
+        }
+        updateLanguagePairButton();
+    }
+
+    private void updateLanguagePairButton() {
+        if (languagePairButton == null) return;
+        String displayName = getLanguagePairDisplayName(currentLanguagePair);
+        if (displayName == null || displayName.isEmpty()) {
+            languagePairButton.setText(R.string.language_pair_button_unset);
+        } else {
+            languagePairButton.setText(getString(R.string.language_pair_button_format, displayName));
+        }
+    }
+
+    private String getLanguagePairDisplayName(String languagePair) {
+        if (languagePair == null) return "";
+        if (LANGUAGE_PAIR_TT_RU.equals(languagePair)) {
+            return getString(R.string.language_pair_tt_ru);
+        }
+        return languagePair;
+    }
+
     private void navigateToCharIndex(int charIndex, int attempt) {
         if (readerView == null) return;
         TokenSpan span = readerView.findSpanForCharIndex(charIndex);
@@ -279,7 +346,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         String ruCsv = safeRu.isEmpty()? "—" : String.join(", ", safeRu);
         TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, ruCsv);
         sheet.setUsageStatsDao(usageStatsDao);
-        sheet.setUsageContext(LANGUAGE_PAIR_TT_RU, SAMPLE_WORK_ID, span.getStartIndex());
+        String languagePair = currentLanguagePair != null ? currentLanguagePair : LANGUAGE_PAIR_TT_RU;
+        sheet.setUsageContext(languagePair, SAMPLE_WORK_ID, span.getStartIndex());
         sheet.show(getFragmentManager(), "token-info");
     }
 
@@ -514,7 +582,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
             }
         });
-        updatePlaybackState(false);
+        updatePlaybackState(PlaybackState.STATE_STOPPED);
         mediaSession.setActive(false);
     }
 
@@ -524,6 +592,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } else {
             startSpeech();
         }
+    }
+
+    private void pauseSpeechFromHeadset() {
+        pauseSpeech();
     }
 
     private int resolveFocusCharIndex() {
@@ -556,8 +628,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                         | PlaybackState.ACTION_STOP
                         | PlaybackState.ACTION_SKIP_TO_NEXT
                         | PlaybackState.ACTION_SKIP_TO_PREVIOUS);
-        int playbackState = playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
-        builder.setState(playbackState, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f);
+        int playbackState = state;
+        if (playbackState != PlaybackState.STATE_PLAYING
+                && playbackState != PlaybackState.STATE_PAUSED
+                && playbackState != PlaybackState.STATE_STOPPED) {
+            playbackState = isSpeaking ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED;
+        }
+        float playbackSpeed = playbackState == PlaybackState.STATE_PLAYING ? 1f : 0f;
+        builder.setState(playbackState, PlaybackState.PLAYBACK_POSITION_UNKNOWN, playbackSpeed);
         mediaSession.setPlaybackState(builder.build());
     }
 

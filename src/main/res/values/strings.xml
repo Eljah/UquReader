@@ -2,6 +2,9 @@
     <string name="app_name">UquReader</string>
     <string name="stats_button_language">Статистика языка</string>
     <string name="stats_button_work">Статистика произведения</string>
+    <string name="language_pair_button_format">Пара языков: %1$s</string>
+    <string name="language_pair_button_unset">Выбрать пару языков</string>
+    <string name="language_pair_tt_ru">tt-ru</string>
     <string name="lemma_format">лемма: %1$s</string>
     <string name="pos_format">часть речи: %1$s</string>
     <string name="segments_format">морфемы: %1$s</string>
