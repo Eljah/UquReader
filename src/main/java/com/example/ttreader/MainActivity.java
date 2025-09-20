@@ -16,15 +16,17 @@ import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
+import android.graphics.drawable.Drawable;
 import android.view.KeyEvent;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
-import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.Toolbar;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.MemoryDao;
@@ -58,10 +60,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private UsageStatsDao usageStatsDao;
     private ScrollView readerScrollView;
     private ReaderView readerView;
-    private Button languagePairButton;
-    private ImageButton toggleSpeechButton;
-    private ImageButton stopSpeechButton;
-    private Button installTalgatButton;
+    private Toolbar toolbar;
+    private TextView languagePairView;
+    private MenuItem languagePairMenuItem;
+    private MenuItem toggleSpeechMenuItem;
+    private MenuItem stopSpeechMenuItem;
+    private MenuItem installTalgatMenuItem;
     private TtsReaderController ttsController;
     private AlertDialog rhvoiceDialog;
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
@@ -141,40 +145,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         memoryDao = new MemoryDao(db);
         usageStatsDao = new UsageStatsDao(db);
 
-        languagePairButton = findViewById(R.id.btnLanguagePair);
-        if (languagePairButton != null) {
-            languagePairButton.setOnClickListener(this::showLanguagePairMenu);
+        toolbar = findViewById(R.id.topToolbar);
+        if (toolbar != null) {
+            setActionBar(toolbar);
+            toolbar.setTitle(R.string.app_name);
         }
 
-        Button languageStatsButton = findViewById(R.id.btnLanguageStats);
-        languageStatsButton.setOnClickListener(v -> {
-            Intent intent = new Intent(this, StatsActivity.class);
-            intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_LANGUAGE);
-            intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, currentLanguagePair);
-            startActivity(intent);
-        });
-
-        Button workStatsButton = findViewById(R.id.btnWorkStats);
-        workStatsButton.setOnClickListener(v -> {
-            Intent intent = new Intent(this, StatsActivity.class);
-            intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_WORK);
-            intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, currentLanguagePair);
-            intent.putExtra(StatsActivity.EXTRA_WORK_ID, SAMPLE_WORK_ID);
-            startActivity(intent);
-        });
-
-        toggleSpeechButton = findViewById(R.id.btnToggleSpeech);
-        stopSpeechButton = findViewById(R.id.btnStopSpeech);
-        installTalgatButton = findViewById(R.id.btnInstallTalgat);
-
-        if (toggleSpeechButton != null) {
-            toggleSpeechButton.setOnClickListener(v -> toggleSpeech());
-        }
-        if (stopSpeechButton != null) {
-            stopSpeechButton.setOnClickListener(v -> stopSpeech());
-        }
-        if (installTalgatButton != null) {
-            installTalgatButton.setOnClickListener(v -> openTalgatInstall());
+        languagePairView = findViewById(R.id.languagePairLabel);
+        if (languagePairView != null) {
+            languagePairView.setOnClickListener(this::showLanguagePairMenu);
         }
 
         readerScrollView = findViewById(R.id.readerScrollView);
@@ -200,6 +179,43 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         updateSpeechButtons();
 
         handleNavigationIntent(getIntent());
+    }
+
+    @Override public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_actions, menu);
+        languagePairMenuItem = menu.findItem(R.id.action_language_pair);
+        toggleSpeechMenuItem = menu.findItem(R.id.action_toggle_speech);
+        stopSpeechMenuItem = menu.findItem(R.id.action_stop_speech);
+        installTalgatMenuItem = menu.findItem(R.id.action_install_talgat);
+        updateLanguagePairDisplay();
+        updateSpeechButtons();
+        updateInstallButtonVisibility();
+        return true;
+    }
+
+    @Override public boolean onOptionsItemSelected(MenuItem item) {
+        if (item == null) return super.onOptionsItemSelected(item);
+        int id = item.getItemId();
+        if (id == R.id.action_language_pair) {
+            showLanguagePairMenu(languagePairView);
+            return true;
+        } else if (id == R.id.action_language_stats) {
+            openLanguageStats();
+            return true;
+        } else if (id == R.id.action_work_stats) {
+            openWorkStats();
+            return true;
+        } else if (id == R.id.action_toggle_speech) {
+            toggleSpeech();
+            return true;
+        } else if (id == R.id.action_stop_speech) {
+            stopSpeech();
+            return true;
+        } else if (id == R.id.action_install_talgat) {
+            openTalgatInstall();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override protected void onNewIntent(Intent intent) {
@@ -250,8 +266,28 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerView.post(() -> navigateToCharIndex(targetIndex, 0));
     }
 
+    private void openLanguageStats() {
+        Intent intent = new Intent(this, StatsActivity.class);
+        intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_LANGUAGE);
+        intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, currentLanguagePair);
+        startActivity(intent);
+    }
+
+    private void openWorkStats() {
+        Intent intent = new Intent(this, StatsActivity.class);
+        intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_WORK);
+        intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, currentLanguagePair);
+        intent.putExtra(StatsActivity.EXTRA_WORK_ID, SAMPLE_WORK_ID);
+        startActivity(intent);
+    }
+
     private void showLanguagePairMenu(View anchor) {
-        PopupMenu menu = new PopupMenu(this, anchor);
+        View safeAnchor = anchor != null ? anchor : toolbar;
+        if (safeAnchor == null) {
+            safeAnchor = readerView;
+        }
+        if (safeAnchor == null) return;
+        PopupMenu menu = new PopupMenu(this, safeAnchor);
         menu.getMenu().add(Menu.NONE, MENU_LANGUAGE_PAIR_TT_RU, Menu.NONE,
                 getLanguagePairDisplayName(LANGUAGE_PAIR_TT_RU));
         menu.setOnMenuItemClickListener(item -> {
@@ -266,11 +302,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void applyLanguagePair(String languagePair) {
         if (languagePair == null) {
-            updateLanguagePairButton();
+            updateLanguagePairDisplay();
             return;
         }
         if (languagePairInitialized && languagePair.equals(currentLanguagePair)) {
-            updateLanguagePairButton();
+            updateLanguagePairDisplay();
             return;
         }
         languagePairInitialized = true;
@@ -286,16 +322,25 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 }
             });
         }
-        updateLanguagePairButton();
+        updateLanguagePairDisplay();
     }
 
-    private void updateLanguagePairButton() {
-        if (languagePairButton == null) return;
+    private void updateLanguagePairDisplay() {
         String displayName = getLanguagePairDisplayName(currentLanguagePair);
         if (displayName == null || displayName.isEmpty()) {
-            languagePairButton.setText(R.string.language_pair_button_unset);
+            setLanguagePairText(getString(R.string.language_pair_button_unset));
         } else {
-            languagePairButton.setText(getString(R.string.language_pair_button_format, displayName));
+            setLanguagePairText(getString(R.string.language_pair_button_format, displayName));
+        }
+    }
+
+    private void setLanguagePairText(String text) {
+        if (languagePairView != null) {
+            languagePairView.setText(text);
+            languagePairView.setContentDescription(text);
+        }
+        if (languagePairMenuItem != null) {
+            languagePairMenuItem.setTitle(text);
         }
     }
 
@@ -641,25 +686,35 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void updateSpeechButtons() {
         boolean voiceAvailable = ttsReady && talgatVoice != null;
-        if (toggleSpeechButton != null) {
-            toggleSpeechButton.setEnabled(voiceAvailable);
-            toggleSpeechButton.setImageResource(isSpeaking ? R.drawable.ic_pause : R.drawable.ic_voice);
+        if (toggleSpeechMenuItem != null) {
+            toggleSpeechMenuItem.setEnabled(voiceAvailable);
             int descriptionRes = isSpeaking
                     ? R.string.speech_toggle_content_pause
                     : R.string.speech_toggle_content_start;
-            toggleSpeechButton.setContentDescription(getString(descriptionRes));
-            toggleSpeechButton.setAlpha(voiceAvailable ? 1f : 0.4f);
+            Drawable toggleIcon = getDrawable(isSpeaking ? R.drawable.ic_pause : R.drawable.ic_voice);
+            if (toggleIcon != null) {
+                toggleIcon = toggleIcon.mutate();
+                toggleIcon.setAlpha(voiceAvailable ? 255 : 100);
+                toggleSpeechMenuItem.setIcon(toggleIcon);
+            }
+            toggleSpeechMenuItem.setTitle(getString(descriptionRes));
         }
-        if (stopSpeechButton != null) {
-            stopSpeechButton.setEnabled(voiceAvailable);
-            stopSpeechButton.setAlpha(voiceAvailable ? 1f : 0.4f);
+        if (stopSpeechMenuItem != null) {
+            stopSpeechMenuItem.setEnabled(voiceAvailable);
+            Drawable stopIcon = getDrawable(R.drawable.ic_stop);
+            if (stopIcon != null) {
+                stopIcon = stopIcon.mutate();
+                stopIcon.setAlpha(voiceAvailable ? 255 : 100);
+                stopSpeechMenuItem.setIcon(stopIcon);
+            }
         }
     }
 
     private void updateInstallButtonVisibility() {
-        if (installTalgatButton == null) return;
+        if (installTalgatMenuItem == null) return;
         boolean show = rhVoiceInstalled && (talgatVoice == null);
-        installTalgatButton.setVisibility(show ? android.view.View.VISIBLE : android.view.View.GONE);
+        installTalgatMenuItem.setVisible(show);
+        installTalgatMenuItem.setEnabled(show);
     }
 
     private void updateRhVoiceState() {

@@ -4,91 +4,45 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <LinearLayout
+    <android.widget.Toolbar
+        android:id="@+id/topToolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="4dp">
-
-        <Button
-            android:id="@+id/btnLanguagePair"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:text="@string/language_pair_button_unset" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/btnLanguageStats"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/stats_button_language"
-            android:padding="12dp"/>
-
-        <Button
-            android:id="@+id/btnWorkStats"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/stats_button_work"
-            android:padding="12dp"/>
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/voiceControls"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_height="?android:attr/actionBarSize"
+        android:background="?android:colorBackground"
+        android:elevation="4dp"
         android:gravity="center_vertical"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="4dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:popupTheme="@android:style/ThemeOverlay.Material.Light"
+        android:title="@string/app_name">
 
-        <ImageButton
-            android:id="@+id/btnToggleSpeech"
+        <TextView
+            android:id="@+id/languagePairLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="?android:selectableItemBackgroundBorderless"
-            android:contentDescription="@string/speech_toggle_content_start"
-            android:padding="8dp"
-            android:src="@drawable/ic_voice"
-            android:tint="@color/reader_sentence_outline" />
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginStart="16dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:drawableEnd="@android:drawable/arrow_down_float"
+            android:drawablePadding="8dp"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:minHeight="0dp"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="6dp"
+            android:text="@string/language_pair_button_unset"
+            android:textAppearance="@android:style/TextAppearance.Material.Medium" />
+    </android.widget.Toolbar>
 
-        <ImageButton
-            android:id="@+id/btnStopSpeech"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:background="?android:selectableItemBackgroundBorderless"
-            android:contentDescription="@string/speech_stop_content"
-            android:padding="8dp"
-            android:src="@drawable/ic_stop"
-            android:tint="@color/reader_sentence_outline" />
-
-        <Button
-            android:id="@+id/btnInstallTalgat"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_weight="1"
-            android:padding="12dp"
-            android:text="@string/speech_install_talgat" />
-    </LinearLayout>
     <ScrollView
         android:id="@+id/readerScrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+
         <com.example.ttreader.reader.ReaderView
             android:id="@+id/readerView"
             android:layout_width="match_parent"
