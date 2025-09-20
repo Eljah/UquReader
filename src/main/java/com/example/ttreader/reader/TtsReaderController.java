@@ -2,8 +2,8 @@ package com.example.ttreader.reader;
 
 import android.content.Context;
 import android.media.AudioAttributes;
-import android.media.session.MediaSession;
-import android.media.session.PlaybackState;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -49,13 +49,13 @@ public class TtsReaderController {
     }
 
     private final Context context;
-    private final TranslationProvider translationProvider;
+    private TranslationProvider translationProvider;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AtomicInteger utteranceCounter = new AtomicInteger();
     private final List<TokenSpan> sequence = new ArrayList<>();
 
     private TextToSpeech tts;
-    private MediaSession mediaSession;
+    private MediaSessionCompat mediaSession;
     private boolean initialized = false;
     private boolean pendingStart = false;
     private boolean isSpeaking = false;
@@ -71,6 +71,14 @@ public class TtsReaderController {
         initializeMediaSession();
     }
 
+    public void setTranslationProvider(TranslationProvider provider) {
+        this.translationProvider = provider;
+    }
+
+    public MediaSessionCompat getMediaSession() {
+        return mediaSession;
+    }
+
     private void initializeTextToSpeech() {
         if (context == null) return;
         tts = new TextToSpeech(context, this::handleTtsInit, RHVOICE_PACKAGE);
@@ -79,9 +87,9 @@ public class TtsReaderController {
 
     private void initializeMediaSession() {
         if (context == null) return;
-        mediaSession = new MediaSession(context, TAG);
+        mediaSession = new MediaSessionCompat(context, TAG);
         mediaSession.setCallback(new ReaderMediaSessionCallback(this));
-        mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
         mediaSession.setActive(true);
         updatePlaybackState();
     }
@@ -297,23 +305,23 @@ public class TtsReaderController {
         int playbackState;
         switch (mode) {
             case Mode.READING:
-                playbackState = PlaybackState.STATE_PLAYING;
+                playbackState = PlaybackStateCompat.STATE_PLAYING;
                 break;
             case Mode.DETAIL:
             case Mode.WAITING_RESUME:
-                playbackState = PlaybackState.STATE_PAUSED;
+                playbackState = PlaybackStateCompat.STATE_PAUSED;
                 break;
             case Mode.IDLE:
             default:
-                playbackState = PlaybackState.STATE_STOPPED;
+                playbackState = PlaybackStateCompat.STATE_STOPPED;
                 break;
         }
-        PlaybackState.Builder builder = new PlaybackState.Builder()
-                .setActions(PlaybackState.ACTION_PLAY
-                        | PlaybackState.ACTION_PAUSE
-                        | PlaybackState.ACTION_PLAY_PAUSE
-                        | PlaybackState.ACTION_STOP)
-                .setState(playbackState, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1.0f);
+        PlaybackStateCompat.Builder builder = new PlaybackStateCompat.Builder()
+                .setActions(PlaybackStateCompat.ACTION_PLAY
+                        | PlaybackStateCompat.ACTION_PAUSE
+                        | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                        | PlaybackStateCompat.ACTION_STOP)
+                .setState(playbackState, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f);
         mediaSession.setPlaybackState(builder.build());
     }
 
@@ -358,7 +366,7 @@ public class TtsReaderController {
         }
     }
 
-    private static final class ReaderMediaSessionCallback extends MediaSession.Callback {
+    private static final class ReaderMediaSessionCallback extends MediaSessionCompat.Callback {
         private final TtsReaderController controller;
 
         ReaderMediaSessionCallback(TtsReaderController controller) {

@@ -361,5 +361,10 @@ fi
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>androidx.media</groupId>
+      <artifactId>media</artifactId>
+      <version>1.7.0</version>
+    </dependency>
   </dependencies>
 </project>

@@ -3,7 +3,10 @@ package com.example.ttreader;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.app.AlertDialog;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.media.session.MediaSession;
@@ -13,6 +16,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.os.IBinder;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
@@ -26,9 +30,9 @@ import android.widget.Toast;
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
+import com.example.ttreader.reader.ReaderTtsService;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
-import com.example.ttreader.reader.TtsReaderController;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
 import com.example.ttreader.util.GrammarResources;
 import com.example.ttreader.tts.RhvoiceAvailability;
@@ -57,8 +61,23 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ImageButton toggleSpeechButton;
     private ImageButton stopSpeechButton;
     private Button installTalgatButton;
-    private TtsReaderController ttsController;
+    private ReaderTtsService readerTtsService;
+    private boolean readerTtsBound = false;
     private AlertDialog rhvoiceDialog;
+
+    private final ServiceConnection readerTtsConnection = new ServiceConnection() {
+        @Override public void onServiceConnected(ComponentName name, IBinder service) {
+            ReaderTtsService.LocalBinder binder = (ReaderTtsService.LocalBinder) service;
+            readerTtsService = binder.getService();
+            readerTtsBound = true;
+            configureReaderTtsService();
+        }
+
+        @Override public void onServiceDisconnected(ComponentName name) {
+            readerTtsBound = false;
+            readerTtsService = null;
+        }
+    };
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
@@ -140,9 +159,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerView.setUsageContext(LANGUAGE_PAIR_TT_RU, SAMPLE_WORK_ID);
         readerView.loadFromJsonlAsset(SAMPLE_ASSET);
         readerView.post(this::updateSentenceRanges);
+        readerView.post(this::configureReaderTtsService);
 
-        ttsController = new TtsReaderController(this, readerView::getTranslations);
-        ttsController.setTokenSequence(readerView.getTokenSpans());
+        bindReaderTtsService();
 
         if (readerScrollView != null) {
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
@@ -201,6 +220,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     @Override protected void onResume() {
         super.onResume();
         updateSentenceRanges();
+        configureReaderTtsService();
         updateRhVoiceState();
         ensureRhvoiceReady();
     }
@@ -219,14 +239,22 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             mediaSession.release();
             mediaSession = null;
         }
+        if (readerTtsBound) {
+            if (readerTtsService != null) {
+                readerTtsService.releaseController();
+            }
+            unbindService(readerTtsConnection);
+            readerTtsBound = false;
+            readerTtsService = null;
+        }
         dismissRhvoiceDialog();
         speechProgressHandler.removeCallbacksAndMessages(null);
         super.onDestroy();
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
-        if (ttsController != null) {
-            ttsController.speakTokenDetails(span, ruLemmas, true);
+        if (readerTtsService != null) {
+            readerTtsService.speakTokenDetails(span, ruLemmas, true);
         }
         showTokenSheet(span, ruLemmas);
     }
@@ -700,6 +728,19 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } catch (ActivityNotFoundException e) {
             return false;
         }
+    }
+
+    private void bindReaderTtsService() {
+        Intent intent = new Intent(this, ReaderTtsService.class);
+        bindService(intent, readerTtsConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    private void configureReaderTtsService() {
+        if (!readerTtsBound || readerTtsService == null || readerView == null) {
+            return;
+        }
+        readerTtsService.setTranslationProvider(readerView::getTranslations);
+        readerTtsService.setTokenSequence(readerView.getTokenSpans());
     }
 
     private void dismissRhvoiceDialog() {
