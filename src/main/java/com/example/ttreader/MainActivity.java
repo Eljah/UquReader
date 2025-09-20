@@ -105,6 +105,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int pendingPlaybackSentenceIndex = -1;
     private boolean awaitingResumeAfterDetail = false;
     private boolean detailAutoResume = false;
+    private TokenSpan lastDetailSpan;
+    private boolean lastDetailResumeAfter = false;
     private long currentLetterIntervalMs = 0L;
     private boolean promptModeActive = false;
     private int promptTokenIndex = -1;
@@ -318,6 +320,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (TextUtils.isEmpty(detailText)) {
             return;
         }
+        lastDetailSpan = span;
+        lastDetailResumeAfter = resumeAfter;
         pauseSpeechForDetail();
         shouldContinueSpeech = resumeAfter;
         awaitingResumeAfterDetail = !resumeAfter;
@@ -601,8 +605,22 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
     }
 
+    private void dismissTokenSheet(boolean restoreFocus) {
+        android.app.FragmentManager manager = getFragmentManager();
+        android.app.Fragment existing = manager != null
+                ? manager.findFragmentByTag("token-info")
+                : null;
+        if (existing instanceof TokenInfoBottomSheet) {
+            ((TokenInfoBottomSheet) existing).dismissAllowingStateLoss();
+        }
+        if (restoreFocus && readerView != null) {
+            readerView.post(() -> readerView.requestFocus());
+        }
+    }
+
     private void showTokenSheet(TokenSpan span, List<String> ruLemmas) {
         if (span == null || span.token == null || span.token.analysis == null) return;
+        dismissTokenSheet(false);
         List<String> safeRu = ruLemmas == null ? new java.util.ArrayList<>() : ruLemmas;
         String ruCsv = safeRu.isEmpty()? "—" : String.join(", ", safeRu);
         TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, ruCsv);
@@ -622,6 +640,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void startSpeech() {
         if (!ttsReady || talgatVoice == null) return;
+        dismissTokenSheet(true);
         exitPromptMode();
         lastSkipBackEventTime = 0L;
         updateSentenceRanges();
@@ -1117,7 +1136,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void handleMediaSkip(boolean forward) {
-        if (detailPlaybackActive() || awaitingResumeAfterDetail) {
+        if (detailPlaybackActive() || pendingDetailRequest != null || awaitingResumeAfterDetail) {
+            handleDetailSkip(forward);
             return;
         }
         if (isSpeaking) {
@@ -1125,6 +1145,60 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } else {
             handlePromptSkip(forward);
         }
+    }
+
+    private void handleDetailSkip(boolean forward) {
+        if (readerView == null) {
+            return;
+        }
+        List<TokenSpan> spans = readerView.getTokenSpans();
+        if (spans.isEmpty()) {
+            return;
+        }
+        TokenSpan current = resolveCurrentDetailSpan();
+        if (current == null) {
+            return;
+        }
+        int index = spans.indexOf(current);
+        if (index < 0 && current.getStartIndex() >= 0) {
+            index = findClosestTokenIndex(spans, current.getStartIndex());
+        }
+        if (index < 0) {
+            return;
+        }
+        int targetIndex = forward ? findNextTokenIndex(spans, index) : findPreviousTokenIndex(spans, index);
+        if (targetIndex < 0 || targetIndex >= spans.size()) {
+            return;
+        }
+        TokenSpan target = spans.get(targetIndex);
+        if (target == null || target.token == null) {
+            return;
+        }
+        readerView.ensureExposureLogged(target);
+        List<String> translations = readerView.getTranslations(target);
+        boolean resumeAfter = resolveDetailResumePreference();
+        speakTokenDetails(target, translations, resumeAfter);
+        showTokenSheet(target, translations);
+    }
+
+    private TokenSpan resolveCurrentDetailSpan() {
+        if (activeDetailRequest != null && activeDetailRequest.tokenSpan != null) {
+            return activeDetailRequest.tokenSpan;
+        }
+        if (pendingDetailRequest != null && pendingDetailRequest.tokenSpan != null) {
+            return pendingDetailRequest.tokenSpan;
+        }
+        return lastDetailSpan;
+    }
+
+    private boolean resolveDetailResumePreference() {
+        if (activeDetailRequest != null) {
+            return activeDetailRequest.resumeAfterPlayback;
+        }
+        if (pendingDetailRequest != null) {
+            return pendingDetailRequest.resumeAfterPlayback;
+        }
+        return lastDetailResumeAfter;
     }
 
     private void handleSkipWhileSpeaking(boolean forward) {
@@ -1383,6 +1457,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void resumeSentenceAfterDetail() {
         detailAutoResume = false;
         awaitingResumeAfterDetail = false;
+        dismissTokenSheet(true);
         if (sentencePlayer != null) {
             try {
                 sentencePlayer.start();
@@ -1430,6 +1505,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         activeDetailRequest = request;
         detailAutoResume = request.resumeAfterPlayback;
         awaitingResumeAfterDetail = !detailAutoResume;
+        if (request.tokenSpan != null) {
+            lastDetailSpan = request.tokenSpan;
+        }
+        lastDetailResumeAfter = request.resumeAfterPlayback;
         detailPlayer = new MediaPlayer();
         try {
             detailPlayer.setDataSource(request.file.getAbsolutePath());
@@ -1557,12 +1636,21 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return false;
         }
         int keyCode = event.getKeyCode();
-        if (detailPlaybackActive()) {
+        if (detailPlaybackActive() || pendingDetailRequest != null) {
+            if (isSkipForwardKey(keyCode)) {
+                handleDetailSkip(true);
+            } else if (isSkipBackwardKey(keyCode)) {
+                handleDetailSkip(false);
+            }
             return true;
         }
         if (awaitingResumeAfterDetail) {
             if (isPlayPauseKey(keyCode)) {
                 resumeSentenceAfterDetail();
+            } else if (isSkipForwardKey(keyCode)) {
+                handleDetailSkip(true);
+            } else if (isSkipBackwardKey(keyCode)) {
+                handleDetailSkip(false);
             } else {
                 handleKeyboardDetailRequest();
             }

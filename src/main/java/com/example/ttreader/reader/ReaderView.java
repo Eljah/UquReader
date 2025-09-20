@@ -194,7 +194,8 @@ public class ReaderView extends TextView {
             return;
         }
         activeLetterSpan = new ForegroundColorSpan(letterHighlightColor);
-        text.setSpan(activeLetterSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        int flags = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE | (1 << Spanned.SPAN_PRIORITY_SHIFT);
+        text.setSpan(activeLetterSpan, start, end, flags);
         invalidate();
     }
 
