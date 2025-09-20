@@ -1,5 +1,6 @@
 package com.example.ttreader;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.app.AlertDialog;
@@ -148,8 +149,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
         toolbar = findViewById(R.id.topToolbar);
         if (toolbar != null) {
+            toolbar.setTitle(null);
+            toolbar.setSubtitle(null);
             setActionBar(toolbar);
-            toolbar.setTitle(R.string.app_name);
+            ActionBar actionBar = getActionBar();
+            if (actionBar != null) {
+                actionBar.setDisplayShowTitleEnabled(false);
+                actionBar.setDisplayUseLogoEnabled(true);
+                actionBar.setDisplayShowHomeEnabled(true);
+                actionBar.setLogo(R.mipmap.ic_launcher);
+            }
         }
 
         readerScrollView = findViewById(R.id.readerScrollView);
@@ -335,9 +344,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void updateLanguagePairIcon() {
         if (languagePairMenuItem == null) return;
-        int iconRes = LANGUAGE_PAIR_TT_RU.equals(currentLanguagePair)
-                ? R.drawable.ic_language_pair_tt_ru
-                : R.drawable.ic_language_menu;
+        int iconRes = R.drawable.ic_language_menu;
         languagePairMenuItem.setIcon(iconRes);
         View actionView = languagePairMenuItem.getActionView();
         if (actionView == null) return;
@@ -407,9 +414,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (actionView != null) {
                 actionView.setContentDescription(menuTitle);
             }
-        }
-        if (toolbar != null) {
-            toolbar.setSubtitle(subtitle);
         }
         updateLanguagePairIcon();
     }

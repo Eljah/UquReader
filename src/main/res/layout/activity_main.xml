@@ -11,10 +11,12 @@
         android:background="?android:colorBackground"
         android:elevation="4dp"
         android:gravity="center_vertical"
+        android:logo="@mipmap/ic_launcher"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:popupTheme="@android:style/ThemeOverlay.Material.Light"
-        android:title="@string/app_name" />
+        android:title="@null"
+        android:subtitle="@null" />
 
     <ScrollView
         android:id="@+id/readerScrollView"

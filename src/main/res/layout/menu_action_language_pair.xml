@@ -16,5 +16,5 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:contentDescription="@null"
-        android:src="@drawable/ic_language_pair_tt_ru" />
+        android:src="@drawable/ic_language_menu" />
 </FrameLayout>
