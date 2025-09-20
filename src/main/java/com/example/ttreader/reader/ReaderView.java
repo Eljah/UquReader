@@ -44,6 +44,7 @@ public class ReaderView extends TextView {
     private int lastViewportHeight = 0;
     private SentenceOutlineSpan activeSentenceSpan;
     private ForegroundColorSpan activeLetterSpan;
+    private int activeSentenceStart = -1;
     private int sentenceOutlineColor;
     private int letterHighlightColor;
     private float sentenceOutlineStrokeWidth;
@@ -161,11 +162,13 @@ public class ReaderView extends TextView {
             activeSentenceSpan = null;
         }
         if (start < 0 || end <= start) {
+            activeSentenceStart = -1;
             invalidate();
             return;
         }
         activeSentenceSpan = new SentenceOutlineSpan(sentenceOutlineColor, sentenceOutlineStrokeWidth, sentenceOutlineCornerRadius);
         text.setSpan(activeSentenceSpan, start, Math.min(end, text.length()), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        activeSentenceStart = start;
         invalidate();
     }
 
@@ -176,13 +179,22 @@ public class ReaderView extends TextView {
             text.removeSpan(activeLetterSpan);
             activeLetterSpan = null;
         }
-        if (charIndex < 0 || charIndex >= text.length()) {
+        if (charIndex < 0 || text.length() == 0) {
             invalidate();
             return;
         }
-        int end = Math.min(charIndex + 1, text.length());
+        int clampedIndex = Math.max(0, Math.min(charIndex, text.length() - 1));
+        int start = clampedIndex;
+        if (activeSentenceStart >= 0 && activeSentenceStart <= clampedIndex) {
+            start = activeSentenceStart;
+        }
+        int end = Math.min(clampedIndex + 1, text.length());
+        if (end <= start) {
+            invalidate();
+            return;
+        }
         activeLetterSpan = new ForegroundColorSpan(letterHighlightColor);
-        text.setSpan(activeLetterSpan, charIndex, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(activeLetterSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         invalidate();
     }
 

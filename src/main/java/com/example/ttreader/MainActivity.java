@@ -50,7 +50,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -110,7 +109,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean promptModeActive = false;
     private int promptTokenIndex = -1;
     private int promptBaseCharIndex = -1;
-    private Toast promptToast;
     private long lastSkipBackEventTime = 0L;
 
     private final UtteranceProgressListener synthesisListener = new UtteranceProgressListener() {
@@ -307,7 +305,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
-        speakTokenDetails(span, ruLemmas, true);
+        boolean resumeAfter = isSpeaking || shouldContinueSpeech;
+        speakTokenDetails(span, ruLemmas, resumeAfter);
         showTokenSheet(span, ruLemmas);
     }
 
@@ -1230,9 +1229,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void handlePromptSkip(boolean forward) {
-        if (!ttsReady || textToSpeech == null || talgatVoice == null) {
-            return;
-        }
         if (readerView == null) {
             return;
         }
@@ -1267,7 +1263,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (span == null || span.token == null) {
             return;
         }
-        showPromptForSpan(span);
+        showPromptForSpan(span, spans);
     }
 
     private int findClosestTokenIndex(List<TokenSpan> spans, int charIndex) {
@@ -1323,63 +1319,35 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         return -1;
     }
 
-    private void showPromptForSpan(TokenSpan span) {
-        if (span == null || span.token == null) {
+    private void showPromptForSpan(TokenSpan span, List<TokenSpan> spans) {
+        if (readerView == null || span == null || span.token == null) {
             return;
         }
-        List<String> translations = readerView != null
-                ? readerView.getTranslations(span)
-                : Collections.<String>emptyList();
-        if (translations == null) {
-            translations = Collections.emptyList();
-        }
-        cancelPromptToast();
-        String surface = span.token.surface;
-        StringBuilder builder = new StringBuilder();
-        if (!TextUtils.isEmpty(surface)) {
-            builder.append(surface);
-        }
-        if (!translations.isEmpty()) {
-            if (builder.length() > 0) {
-                builder.append(" — ");
+        int restoreIndex = promptTokenIndex;
+        int restoreBaseIndex = span.getStartIndex();
+        readerView.showTokenInfo(span);
+        promptModeActive = true;
+        if (spans != null && !spans.isEmpty()) {
+            if (restoreIndex >= 0 && restoreIndex < spans.size()) {
+                promptTokenIndex = restoreIndex;
+            } else {
+                int located = spans.indexOf(span);
+                if (located >= 0) {
+                    promptTokenIndex = located;
+                }
             }
-            builder.append(TextUtils.join(", ", translations));
-        }
-        if (builder.length() == 0) {
-            return;
-        }
-        promptToast = Toast.makeText(this, builder.toString(), Toast.LENGTH_SHORT);
-        promptToast.show();
-        speakPrompt(span, translations);
-    }
-
-    private void speakPrompt(TokenSpan span, List<String> translations) {
-        if (!ttsReady || textToSpeech == null || talgatVoice == null || span == null || span.token == null) {
-            return;
-        }
-        String surface = span.token.surface;
-        StringBuilder builder = new StringBuilder();
-        if (!TextUtils.isEmpty(surface)) {
-            builder.append(surface);
-        }
-        if (translations != null && !translations.isEmpty()) {
-            if (builder.length() > 0) {
-                builder.append(". ");
+            if (promptTokenIndex < 0 && restoreIndex >= 0) {
+                promptTokenIndex = Math.min(spans.size() - 1, restoreIndex);
             }
-            builder.append(TextUtils.join(", ", translations));
+        } else {
+            promptTokenIndex = restoreIndex;
         }
-        if (builder.length() == 0) {
-            return;
+        if (restoreBaseIndex >= 0) {
+            promptBaseCharIndex = restoreBaseIndex;
         }
-        textToSpeech.setVoice(talgatVoice);
-        Bundle params = new Bundle();
-        params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1f);
-        String utteranceId = "prompt_" + (utteranceSequence++);
-        textToSpeech.speak(builder.toString(), TextToSpeech.QUEUE_FLUSH, params, utteranceId);
     }
 
     private void preparePromptSelection() {
-        cancelPromptToast();
         promptModeActive = false;
         promptTokenIndex = -1;
         promptBaseCharIndex = resolveFocusCharIndex();
@@ -1389,14 +1357,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         promptModeActive = false;
         promptTokenIndex = -1;
         promptBaseCharIndex = -1;
-        cancelPromptToast();
-    }
-
-    private void cancelPromptToast() {
-        if (promptToast != null) {
-            promptToast.cancel();
-            promptToast = null;
-        }
     }
 
     private void pauseSpeechFromHeadset() {
