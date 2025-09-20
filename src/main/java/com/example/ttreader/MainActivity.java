@@ -24,7 +24,6 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
@@ -61,7 +60,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ScrollView readerScrollView;
     private ReaderView readerView;
     private Toolbar toolbar;
-    private TextView languagePairView;
     private MenuItem languagePairMenuItem;
     private MenuItem toggleSpeechMenuItem;
     private MenuItem stopSpeechMenuItem;
@@ -151,11 +149,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             toolbar.setTitle(R.string.app_name);
         }
 
-        languagePairView = findViewById(R.id.languagePairLabel);
-        if (languagePairView != null) {
-            languagePairView.setOnClickListener(this::showLanguagePairMenu);
-        }
-
         readerScrollView = findViewById(R.id.readerScrollView);
         readerView = findViewById(R.id.readerView);
         readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
@@ -197,7 +190,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (item == null) return super.onOptionsItemSelected(item);
         int id = item.getItemId();
         if (id == R.id.action_language_pair) {
-            showLanguagePairMenu(languagePairView);
+            showLanguagePairMenu(toolbar);
             return true;
         } else if (id == R.id.action_language_stats) {
             openLanguageStats();
@@ -328,19 +321,22 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void updateLanguagePairDisplay() {
         String displayName = getLanguagePairDisplayName(currentLanguagePair);
         if (displayName == null || displayName.isEmpty()) {
-            setLanguagePairText(getString(R.string.language_pair_button_unset));
+            String unset = getString(R.string.language_pair_button_unset);
+            setLanguagePairText(unset, unset);
         } else {
-            setLanguagePairText(getString(R.string.language_pair_button_format, displayName));
+            setLanguagePairText(
+                    getString(R.string.language_pair_button_format, displayName),
+                    displayName);
         }
     }
 
-    private void setLanguagePairText(String text) {
-        if (languagePairView != null) {
-            languagePairView.setText(text);
-            languagePairView.setContentDescription(text);
-        }
+    private void setLanguagePairText(String menuTitle, String subtitle) {
         if (languagePairMenuItem != null) {
-            languagePairMenuItem.setTitle(text);
+            languagePairMenuItem.setTitle(menuTitle);
+            languagePairMenuItem.setTitleCondensed(subtitle);
+        }
+        if (toolbar != null) {
+            toolbar.setSubtitle(subtitle);
         }
     }
 
