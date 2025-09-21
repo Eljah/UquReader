@@ -12,6 +12,8 @@
     <string name="work_name_kubyzkabyz_short">Кубыз кабыз</string>
     <string name="work_name_berenche_teatr_full">«Беренче Театр». Г. Камал</string>
     <string name="work_name_berenche_teatr_short">Беренче Театр</string>
+    <string name="work_name_yazgy_jillar_full">«Язгы җилләр». К. Нәҗми</string>
+    <string name="work_name_yazgy_jillar_short">Язгы җилләр</string>
     <string name="lemma_format">лемма: %1$s</string>
     <string name="pos_format">часть речи: %1$s</string>
     <string name="segments_format">морфемы: %1$s</string>
