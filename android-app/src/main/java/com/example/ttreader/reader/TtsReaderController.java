@@ -14,9 +14,8 @@ import android.speech.tts.Voice;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.example.ttreader.model.Morphology;
 import com.example.ttreader.tts.RhvoiceAvailability;
-import com.example.ttreader.util.GrammarResources;
+import com.example.ttreader.util.DetailSpeechFormatter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -187,7 +186,7 @@ public class TtsReaderController {
 
     public void speakTokenDetails(TokenSpan span, List<String> translations, boolean resumeAfter) {
         if (!initialized || span == null || span.token == null) return;
-        List<String> safeTranslations = translations == null ? Collections.emptyList() : new ArrayList<>(translations);
+        List<String> safeTranslations = DetailSpeechFormatter.sanitizeTranslations(translations);
         resumeAfterDetails = resumeAfter && mode == Mode.READING;
         mode = Mode.DETAIL;
         updatePlaybackState();
@@ -195,46 +194,8 @@ public class TtsReaderController {
             tts.stop();
         }
         isSpeaking = false;
-        String detailText = buildDetailSpeech(span, safeTranslations);
+        String detailText = DetailSpeechFormatter.buildDetailSpeech(span, safeTranslations, true);
         speakText(detailText, UTTERANCE_PREFIX_DETAIL + utteranceCounter.incrementAndGet(), TextToSpeech.QUEUE_FLUSH);
-    }
-
-    private String buildDetailSpeech(TokenSpan span, List<String> translations) {
-        StringBuilder builder = new StringBuilder();
-        String surface = span.token.surface;
-        if (!TextUtils.isEmpty(surface)) {
-            builder.append(surface);
-        }
-        Morphology morph = span.token.morphology;
-        if (morph != null) {
-            if (!TextUtils.isEmpty(morph.lemma)) {
-                appendSentence(builder, "Лемма: " + morph.lemma);
-            }
-            if (!TextUtils.isEmpty(morph.pos)) {
-                appendSentence(builder, "Часть речи: " + GrammarResources.formatPos(morph.pos));
-            }
-            String segments = morph.getSegmentedSurface();
-            if (!TextUtils.isEmpty(segments)) {
-                appendSentence(builder, "Сегменты: " + segments);
-            }
-            List<String> codes = morph.getFeatureCodes();
-            if (!codes.isEmpty()) {
-                appendSentence(builder, "Грамматические признаки: " + TextUtils.join(", ", codes));
-            }
-        }
-        if (!translations.isEmpty()) {
-            appendSentence(builder, "Перевод: " + TextUtils.join(", ", translations));
-        } else {
-            appendSentence(builder, "Перевод не найден");
-        }
-        return builder.toString();
-    }
-
-    private void appendSentence(StringBuilder builder, String sentence) {
-        if (builder.length() > 0) {
-            builder.append('.').append(' ');
-        }
-        builder.append(sentence);
     }
 
     private void handlePauseRequest() {
@@ -242,7 +203,7 @@ public class TtsReaderController {
         if (mode == Mode.READING && currentSpan != null) {
             List<String> translations = translationProvider == null
                     ? Collections.emptyList()
-                    : safeTranslations(translationProvider.getTranslations(currentSpan));
+                    : translationProvider.getTranslations(currentSpan);
             speakTokenDetails(currentSpan, translations, false);
         } else if (mode == Mode.WAITING_RESUME) {
             resumeReading();
@@ -252,13 +213,6 @@ public class TtsReaderController {
             mode = Mode.WAITING_RESUME;
             updatePlaybackState();
         }
-    }
-
-    private List<String> safeTranslations(List<String> source) {
-        if (source == null || source.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return new ArrayList<>(source);
     }
 
     private void speakText(String text, String utteranceId, int queueMode) {

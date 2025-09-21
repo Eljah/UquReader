@@ -37,10 +37,10 @@ import android.widget.Toolbar;
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
-import com.example.ttreader.model.Morphology;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
+import com.example.ttreader.util.DetailSpeechFormatter;
 import com.example.ttreader.util.GrammarResources;
 import com.example.ttreader.tts.RhvoiceAvailability;
 
@@ -50,6 +50,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -355,8 +356,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void speakTokenDetails(TokenSpan span, List<String> translations, boolean resumeAfter) {
         if (!ttsReady || textToSpeech == null || talgatVoice == null) return;
         if (span == null || span.token == null) return;
-        List<String> safeTranslations = translations == null ? new ArrayList<>() : new ArrayList<>(translations);
-        String detailText = buildDetailSpeech(span, safeTranslations);
+        List<String> safeTranslations = DetailSpeechFormatter.sanitizeTranslations(translations);
+        String detailText = DetailSpeechFormatter.buildDetailSpeech(span, safeTranslations, true);
         if (TextUtils.isEmpty(detailText)) {
             return;
         }
@@ -399,48 +400,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             Log.e(TAG, "Failed to synthesize detail audio", e);
             awaitingResumeAfterDetail = !resumeAfter;
         }
-    }
-
-    private String buildDetailSpeech(TokenSpan span, List<String> translations) {
-        if (span == null || span.token == null) {
-            return "";
-        }
-        StringBuilder builder = new StringBuilder();
-        String surface = span.token.surface;
-        if (!TextUtils.isEmpty(surface)) {
-            builder.append(surface);
-        }
-        Morphology morph = span.token.morphology;
-        if (morph != null) {
-            if (!TextUtils.isEmpty(morph.lemma)) {
-                appendSpeechSentence(builder, "Лемма: " + morph.lemma);
-            }
-            if (!TextUtils.isEmpty(morph.pos)) {
-                appendSpeechSentence(builder, "Часть речи: " + GrammarResources.formatPos(morph.pos));
-            }
-            String segments = morph.getSegmentedSurface();
-            if (!TextUtils.isEmpty(segments)) {
-                appendSpeechSentence(builder, "Сегменты: " + segments);
-            }
-            List<String> codes = morph.getFeatureCodes();
-            if (!codes.isEmpty()) {
-                appendSpeechSentence(builder, "Грамматические признаки: " + TextUtils.join(", ", codes));
-            }
-        }
-        if (translations != null && !translations.isEmpty()) {
-            appendSpeechSentence(builder, "Перевод: " + TextUtils.join(", ", translations));
-        } else {
-            appendSpeechSentence(builder, "Перевод не найден");
-        }
-        return builder.toString();
-    }
-
-    private void appendSpeechSentence(StringBuilder builder, String sentence) {
-        if (TextUtils.isEmpty(sentence)) return;
-        if (builder.length() > 0) {
-            builder.append('.').append(' ');
-        }
-        builder.append(sentence);
     }
 
     private void handleNavigationIntent(Intent intent) {
