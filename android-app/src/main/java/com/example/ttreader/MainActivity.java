@@ -17,7 +17,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
@@ -99,8 +98,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final int REQUEST_TYPE_SENTENCE = 1;
     private static final int REQUEST_TYPE_DETAIL = 2;
     private static final int PREFETCH_SENTENCE_COUNT = 2;
-    private static final long SKIP_BACK_DOUBLE_PRESS_WINDOW_MS = 1500L;
-    private static final long SKIP_BACK_RESTART_THRESHOLD_MS = 1200L;
+    private static final long SKIP_BACK_RESET_PROGRESS_MS = 5000L;
 
     public static final String EXTRA_TARGET_CHAR_INDEX = "com.example.ttreader.TARGET_CHAR_INDEX";
 
@@ -141,7 +139,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean promptModeActive = false;
     private int promptTokenIndex = -1;
     private int promptBaseCharIndex = -1;
-    private long lastSkipBackEventTime = 0L;
+    private boolean skipBackGoPrevious = false;
+    private boolean skipBackRestartArmed = false;
 
     private final UtteranceProgressListener synthesisListener = new UtteranceProgressListener() {
         @Override public void onStart(String utteranceId) {
@@ -167,6 +166,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (duration <= 0) return;
             long elapsed = Math.max(0, sentencePlayer.getCurrentPosition());
             updateLetterHighlightForElapsed(elapsed, duration);
+            if ((skipBackGoPrevious || skipBackRestartArmed)
+                    && elapsed >= SKIP_BACK_RESET_PROGRESS_MS) {
+                clearSkipBackBehavior();
+            }
             long interval = currentLetterIntervalMs > 0 ? currentLetterIntervalMs : 50L;
             speechProgressHandler.postDelayed(this, Math.max(25L, interval / 2L));
         }
@@ -794,7 +797,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (!ttsReady || talgatVoice == null) return;
         dismissTokenSheet(true);
         exitPromptMode();
-        lastSkipBackEventTime = 0L;
         updateSentenceRanges();
         if (sentenceRanges.isEmpty()) return;
         if (currentSentenceIndex < 0 || currentSentenceIndex >= sentenceRanges.size()) {
@@ -826,7 +828,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         shouldContinueSpeech = false;
         isSpeaking = false;
         stopProgressUpdates();
-        lastSkipBackEventTime = 0L;
         preparePromptSelection();
         if (sentencePlayer != null) {
             try {
@@ -847,7 +848,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         awaitingResumeAfterDetail = false;
         stopProgressUpdates();
         exitPromptMode();
-        lastSkipBackEventTime = 0L;
+        clearSkipBackBehavior();
         if (textToSpeech != null) {
             textToSpeech.stop();
         }
@@ -950,10 +951,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         speechProgressHandler.removeCallbacks(speechProgressRunnable);
     }
 
+    private void clearSkipBackBehavior() {
+        skipBackGoPrevious = false;
+        skipBackRestartArmed = false;
+    }
+
     private void handleSentencePlaybackComplete() {
         stopProgressUpdates();
         isSpeaking = false;
-        lastSkipBackEventTime = 0L;
+        clearSkipBackBehavior();
         if (readerView != null) {
             readerView.highlightLetter(-1);
         }
@@ -979,7 +985,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void handleSentencePlaybackError() {
         stopProgressUpdates();
         isSpeaking = false;
-        lastSkipBackEventTime = 0L;
+        clearSkipBackBehavior();
         releaseSentencePlayer();
         SpeechRequest failed = currentSentenceRequest;
         if (failed != null) {
@@ -1358,25 +1364,34 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return;
         }
         if (forward) {
-            lastSkipBackEventTime = 0L;
+            skipBackRestartArmed = false;
             if (currentSentenceIndex < sentenceRanges.size() - 1) {
                 skipToSentence(currentSentenceIndex + 1);
             }
             return;
         }
-        long now = SystemClock.uptimeMillis();
-        long position = getCurrentSentencePosition();
-        boolean nearStart = position <= SKIP_BACK_RESTART_THRESHOLD_MS;
-        boolean goPrevious = false;
-        if (nearStart && (now - lastSkipBackEventTime) <= SKIP_BACK_DOUBLE_PRESS_WINDOW_MS) {
-            goPrevious = true;
+        if (skipBackGoPrevious) {
+            if (currentSentenceIndex > 0) {
+                skipBackRestartArmed = false;
+                skipToSentence(currentSentenceIndex - 1);
+            } else {
+                restartCurrentSentence();
+            }
+            return;
         }
-        lastSkipBackEventTime = now;
-        if (goPrevious && currentSentenceIndex > 0) {
-            skipToSentence(currentSentenceIndex - 1);
-        } else {
-            restartCurrentSentence();
+        if (skipBackRestartArmed) {
+            if (currentSentenceIndex > 0) {
+                skipBackGoPrevious = true;
+                skipBackRestartArmed = false;
+                skipToSentence(currentSentenceIndex - 1);
+            } else {
+                restartCurrentSentence();
+            }
+            return;
         }
+        restartCurrentSentence();
+        skipBackRestartArmed = true;
+        skipBackGoPrevious = false;
     }
 
     private void restartCurrentSentence() {
@@ -1413,9 +1428,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         int clampedIndex = Math.max(0, Math.min(index, sentenceRanges.size() - 1));
         exitPromptMode();
-        lastSkipBackEventTime = 0L;
+        int previousIndex = currentSentenceIndex;
         discardCurrentSentencePlayback();
         currentSentenceIndex = clampedIndex;
+        if (clampedIndex != previousIndex) {
+            skipBackRestartArmed = false;
+        }
         currentSentenceStart = -1;
         currentSentenceEnd = -1;
         currentCharIndex = -1;
