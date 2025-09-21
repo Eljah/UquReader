@@ -7,6 +7,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
@@ -20,12 +21,12 @@ import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
-import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
+import android.util.Log;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.InputDevice;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
@@ -33,7 +34,6 @@ import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.Toast;
 import android.widget.Toolbar;
-import android.util.Log;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.MemoryDao;
@@ -50,6 +50,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -61,8 +62,35 @@ import java.util.Set;
 public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
     private static final String TAG = "MainActivity";
     private static final String LANGUAGE_PAIR_TT_RU = "tt-ru";
-    private static final String SAMPLE_ASSET = "sample_book.ttmorph.jsonl";
-    private static final String SAMPLE_WORK_ID = "sample_book.ttmorph";
+    private static final int MENU_WORK_ID_BASE = 100;
+    private static final class WorkInfo {
+        final String id;
+        final String asset;
+        final int fullNameRes;
+        final int shortNameRes;
+
+        WorkInfo(String id, String asset, int fullNameRes, int shortNameRes) {
+            this.id = id;
+            this.asset = asset;
+            this.fullNameRes = fullNameRes;
+            this.shortNameRes = shortNameRes;
+        }
+
+        String getFullName(Activity activity) {
+            return activity.getString(fullNameRes);
+        }
+
+        String getShortName(Activity activity) {
+            return activity.getString(shortNameRes);
+        }
+    }
+
+    private final List<WorkInfo> availableWorks = Arrays.asList(
+            new WorkInfo("sample_book.ttmorph", "sample_book.ttmorph.jsonl",
+                    R.string.work_name_kubyzkabyz_full, R.string.work_name_kubyzkabyz_short),
+            new WorkInfo("berenche_teatr.ttmorph", "berenche_teatr.ttmorph.jsonl",
+                    R.string.work_name_berenche_teatr_full, R.string.work_name_berenche_teatr_short)
+    );
     private static final String RHVOICE_PACKAGE = "com.github.olga_yakovleva.rhvoice.android";
     private static final String TALGAT_NAME_KEYWORD = "talgat";
     private static final float BASE_CHARS_PER_SECOND = 14f;
@@ -83,12 +111,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ReaderView readerView;
     private Toolbar toolbar;
     private MenuItem languagePairMenuItem;
+    private MenuItem workMenuItem;
     private MenuItem toggleSpeechMenuItem;
     private MenuItem stopSpeechMenuItem;
     private MenuItem installTalgatMenuItem;
     private AlertDialog rhvoiceDialog;
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
     private boolean languagePairInitialized = false;
+    private WorkInfo currentWork;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
@@ -220,6 +250,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
         }
 
+        ensureDefaultWork();
         applyLanguagePair(LANGUAGE_PAIR_TT_RU);
 
         rhVoiceInstalled = isRhVoiceInstalled();
@@ -234,11 +265,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     @Override public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_actions, menu);
         languagePairMenuItem = menu.findItem(R.id.action_language_pair);
+        workMenuItem = menu.findItem(R.id.action_select_work);
         toggleSpeechMenuItem = menu.findItem(R.id.action_toggle_speech);
         stopSpeechMenuItem = menu.findItem(R.id.action_stop_speech);
         installTalgatMenuItem = menu.findItem(R.id.action_install_talgat);
         setupLanguagePairActionView();
+        setupWorkMenuItem();
         updateLanguagePairDisplay();
+        updateWorkMenuDisplay();
         updateSpeechButtons();
         updateInstallButtonVisibility();
         return true;
@@ -254,6 +288,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int id = item.getItemId();
         if (id == R.id.action_language_pair) {
             showLanguagePairMenu(getLanguagePairAnchor());
+            return true;
+        } else if (id == R.id.action_select_work) {
+            showWorkMenu(getWorkAnchor());
             return true;
         } else if (id == R.id.action_language_stats) {
             openLanguageStats();
@@ -420,10 +457,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void openWorkStats() {
+        WorkInfo work = getCurrentWork();
+        if (work == null) {
+            Toast.makeText(this, R.string.work_menu_button_unset, Toast.LENGTH_SHORT).show();
+            return;
+        }
         Intent intent = new Intent(this, StatsActivity.class);
         intent.putExtra(StatsActivity.EXTRA_MODE, StatsActivity.MODE_WORK);
         intent.putExtra(StatsActivity.EXTRA_LANGUAGE_PAIR, currentLanguagePair);
-        intent.putExtra(StatsActivity.EXTRA_WORK_ID, SAMPLE_WORK_ID);
+        intent.putExtra(StatsActivity.EXTRA_WORK_ID, work.id);
         startActivity(intent);
     }
 
@@ -482,6 +524,59 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         updateLanguagePairIcon();
     }
 
+    private void setupWorkMenuItem() {
+        if (workMenuItem == null) return;
+        workMenuItem.setOnMenuItemClickListener(item -> {
+            showWorkMenu(getWorkAnchor());
+            return true;
+        });
+        updateWorkMenuDisplay();
+    }
+
+    private void updateWorkMenuDisplay() {
+        if (workMenuItem == null) return;
+        WorkInfo work = getCurrentWork();
+        if (work == null) {
+            String title = getString(R.string.work_menu_button_unset);
+            workMenuItem.setTitle(title);
+            workMenuItem.setTitleCondensed(title);
+            return;
+        }
+        String shortName = work.getShortName(this);
+        String fullName = work.getFullName(this);
+        String menuTitle = getString(R.string.work_menu_button_format, shortName);
+        workMenuItem.setTitle(menuTitle);
+        workMenuItem.setTitleCondensed(shortName);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            workMenuItem.setContentDescription(fullName);
+        }
+    }
+
+    private void showWorkMenu(View anchor) {
+        View safeAnchor = anchor != null ? anchor : getWorkAnchor();
+        if (safeAnchor == null) return;
+        PopupMenu menu = new PopupMenu(this, safeAnchor);
+        WorkInfo current = getCurrentWork();
+        for (int i = 0; i < availableWorks.size(); i++) {
+            WorkInfo work = availableWorks.get(i);
+            MenuItem item = menu.getMenu().add(Menu.NONE, MENU_WORK_ID_BASE + i, Menu.NONE,
+                    work.getFullName(this));
+            item.setCheckable(true);
+            item.setChecked(work == current);
+            item.setIcon(R.drawable.ic_menu_work);
+        }
+        menu.setOnMenuItemClickListener(item -> {
+            WorkInfo selected = findWorkByMenuId(item.getItemId());
+            if (selected != null) {
+                applyWork(selected, true);
+                return true;
+            }
+            return false;
+        });
+        forceShowMenuIcons(menu);
+        menu.show();
+    }
+
     private void updateLanguagePairIcon() {
         if (languagePairMenuItem == null) return;
         int iconRes = R.drawable.ic_language_menu;
@@ -492,6 +587,63 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (iconView != null) {
             iconView.setImageResource(iconRes);
         }
+    }
+
+    private View getWorkAnchor() {
+        if (toolbar != null) {
+            return toolbar;
+        }
+        if (readerView != null) {
+            return readerView;
+        }
+        return getWindow() != null ? getWindow().getDecorView() : null;
+    }
+
+    private WorkInfo findWorkByMenuId(int menuId) {
+        int index = menuId - MENU_WORK_ID_BASE;
+        if (index >= 0 && index < availableWorks.size()) {
+            return availableWorks.get(index);
+        }
+        return null;
+    }
+
+    private void ensureDefaultWork() {
+        if (currentWork == null && !availableWorks.isEmpty()) {
+            currentWork = availableWorks.get(0);
+        }
+    }
+
+    private WorkInfo getCurrentWork() {
+        ensureDefaultWork();
+        return currentWork;
+    }
+
+    private void reloadReaderForCurrentSelection() {
+        WorkInfo work = getCurrentWork();
+        if (readerView == null || work == null) return;
+        readerView.setUsageContext(currentLanguagePair, work.id);
+        readerView.loadFromJsonlAsset(work.asset);
+        readerView.post(this::updateSentenceRanges);
+        updateWorkMenuDisplay();
+    }
+
+    private void applyWork(WorkInfo work, boolean fromMenu) {
+        if (work == null) {
+            updateWorkMenuDisplay();
+            return;
+        }
+        ensureDefaultWork();
+        if (!fromMenu && work == currentWork) {
+            reloadReaderForCurrentSelection();
+            return;
+        }
+        if (work == currentWork) {
+            updateWorkMenuDisplay();
+            return;
+        }
+        stopSpeech();
+        currentWork = work;
+        reloadReaderForCurrentSelection();
     }
 
     private void forceShowMenuIcons(PopupMenu menu) {
@@ -525,18 +677,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             updateLanguagePairDisplay();
             return;
         }
+        ensureDefaultWork();
         if (languagePairInitialized && languagePair.equals(currentLanguagePair)) {
             updateLanguagePairDisplay();
+            reloadReaderForCurrentSelection();
             return;
         }
         languagePairInitialized = true;
         stopSpeech();
         currentLanguagePair = languagePair;
-        if (readerView != null) {
-            readerView.setUsageContext(currentLanguagePair, SAMPLE_WORK_ID);
-            readerView.loadFromJsonlAsset(SAMPLE_ASSET);
-            readerView.post(this::updateSentenceRanges);
-        }
+        reloadReaderForCurrentSelection();
         updateLanguagePairDisplay();
     }
 
@@ -626,7 +776,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, ruCsv);
         sheet.setUsageStatsDao(usageStatsDao);
         String languagePair = currentLanguagePair != null ? currentLanguagePair : LANGUAGE_PAIR_TT_RU;
-        sheet.setUsageContext(languagePair, SAMPLE_WORK_ID, span.getStartIndex());
+        WorkInfo work = getCurrentWork();
+        String workId = work != null ? work.id : null;
+        sheet.setUsageContext(languagePair, workId, span.getStartIndex());
         sheet.show(getFragmentManager(), "token-info");
     }
 

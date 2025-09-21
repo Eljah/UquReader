@@ -5,6 +5,13 @@
     <string name="language_pair_button_format">Языки: %1$s</string>
     <string name="language_pair_button_unset">Выбрать пару языков</string>
     <string name="language_pair_tt_ru">🇷🇺 Русский · Татарский</string>
+    <string name="work_menu_button_format">Произведение: %1$s</string>
+    <string name="work_menu_button_unset">Выбрать произведение</string>
+    <string name="work_menu_title">Выбрать произведение</string>
+    <string name="work_name_kubyzkabyz_full">«Кубыз кабыз». Р. Кашапов</string>
+    <string name="work_name_kubyzkabyz_short">Кубыз кабыз</string>
+    <string name="work_name_berenche_teatr_full">«Беренче Театр». Г. Камал</string>
+    <string name="work_name_berenche_teatr_short">Беренче Театр</string>
     <string name="lemma_format">лемма: %1$s</string>
     <string name="pos_format">часть речи: %1$s</string>
     <string name="segments_format">морфемы: %1$s</string>

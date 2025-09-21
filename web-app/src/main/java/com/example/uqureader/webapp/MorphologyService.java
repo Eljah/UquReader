@@ -1,55 +1,56 @@
 package com.example.uqureader.webapp;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
+import com.google.gson.JsonObject;
+
+import java.io.Closeable;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
- * Provides morphological markup responses for incoming texts.
- * <p>
- *     For now this service returns a precomputed placeholder produced
- *     by the original Python analyser for "Berenche teatr".
- * </p>
+ * Provides access to the Tatar morphological analyser via a persistent Python bridge.
  */
-public class MorphologyService {
+public class MorphologyService implements Closeable {
 
-    private final String markup;
+    private final PythonBridge bridge;
+    private final String version;
+    private final ConcurrentMap<String, JsonObject> tokenCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, JsonObject> textCache = new ConcurrentHashMap<>();
 
     public MorphologyService() {
-        this.markup = loadMarkup();
+        this(new PythonBridge());
     }
 
-    private String loadMarkup() {
-        final String resourcePath = "/markup/berenche_teatr_markup.txt";
-        try (InputStream stream = MorphologyService.class.getResourceAsStream(resourcePath)) {
-            if (stream == null) {
-                throw new IllegalStateException("Missing placeholder markup resource: " + resourcePath);
-            }
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-                return reader.lines().collect(Collectors.joining("\n"));
-            }
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed to read placeholder markup", ex);
+    MorphologyService(PythonBridge bridge) {
+        this.bridge = Objects.requireNonNull(bridge, "bridge");
+        this.version = extractVersion(bridge.requestVersion());
+    }
+
+    private String extractVersion(JsonObject response) {
+        if (response == null || !response.has("version")) {
+            throw new MorphologyException("Python bridge did not report a version");
         }
+        return response.get("version").getAsString();
     }
 
-    /**
-     * Returns the placeholder markup regardless of the provided text.
-     *
-     * @param text ignored for now; kept for future integration with the real analyser
-     * @return precomputed markup of the reference play
-     */
-    public String analyze(String text) {
-        return markup;
+    public String getVersion() {
+        return version;
     }
 
-    /**
-     * Exposes the cached markup string for tests and the CLI entry point.
-     */
-    public String getMarkup() {
-        return markup;
+    public JsonObject analyzeToken(String token) {
+        String key = token == null ? "" : token;
+        JsonObject response = tokenCache.computeIfAbsent(key, bridge::analyzeToken);
+        return response.deepCopy();
+    }
+
+    public JsonObject analyzeText(String text) {
+        String key = text == null ? "" : text;
+        JsonObject response = textCache.computeIfAbsent(key, bridge::analyzeText);
+        return response.deepCopy();
+    }
+
+    @Override
+    public void close() {
+        bridge.close();
     }
 }
