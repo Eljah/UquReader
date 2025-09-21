@@ -356,7 +356,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void speakTokenDetails(TokenSpan span, List<String> translations, boolean resumeAfter) {
         if (!ttsReady || textToSpeech == null || talgatVoice == null) return;
         if (span == null || span.token == null) return;
-        List<String> safeTranslations = DetailSpeechFormatter.sanitizeTranslations(translations);
+        List<String> combinedTranslations = new ArrayList<>();
+        if (translations != null) {
+            combinedTranslations.addAll(translations);
+        }
+        if (span.token != null && span.token.translations != null) {
+            combinedTranslations.addAll(span.token.translations);
+        }
+        List<String> safeTranslations = DetailSpeechFormatter.sanitizeTranslations(combinedTranslations);
         String detailText = DetailSpeechFormatter.buildDetailSpeech(span, safeTranslations, true);
         if (TextUtils.isEmpty(detailText)) {
             return;
