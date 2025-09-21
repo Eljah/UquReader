@@ -50,6 +50,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -355,7 +356,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void speakTokenDetails(TokenSpan span, List<String> translations, boolean resumeAfter) {
         if (!ttsReady || textToSpeech == null || talgatVoice == null) return;
         if (span == null || span.token == null) return;
-        List<String> safeTranslations = translations == null ? new ArrayList<>() : new ArrayList<>(translations);
+        List<String> safeTranslations = sanitizeTranslations(translations);
         String detailText = buildDetailSpeech(span, safeTranslations);
         if (TextUtils.isEmpty(detailText)) {
             return;
@@ -418,17 +419,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (!TextUtils.isEmpty(morph.pos)) {
                 appendSpeechSentence(builder, "Часть речи: " + GrammarResources.formatPos(morph.pos));
             }
-            String segments = morph.getSegmentedSurface();
-            if (!TextUtils.isEmpty(segments)) {
-                appendSpeechSentence(builder, "Сегменты: " + segments);
-            }
-            List<String> codes = morph.getFeatureCodes();
-            if (!codes.isEmpty()) {
-                appendSpeechSentence(builder, "Грамматические признаки: " + TextUtils.join(", ", codes));
-            }
         }
-        if (translations != null && !translations.isEmpty()) {
-            appendSpeechSentence(builder, "Перевод: " + TextUtils.join(", ", translations));
+        List<String> cleanedTranslations = sanitizeTranslations(translations);
+        if (!cleanedTranslations.isEmpty()) {
+            appendSpeechSentence(builder, "Перевод: " + TextUtils.join(", ", cleanedTranslations));
         } else {
             appendSpeechSentence(builder, "Перевод не найден");
         }
@@ -441,6 +435,21 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             builder.append('.').append(' ');
         }
         builder.append(sentence);
+    }
+
+    private List<String> sanitizeTranslations(List<String> translations) {
+        if (translations == null || translations.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<String> cleaned = new ArrayList<>(translations.size());
+        for (String value : translations) {
+            if (TextUtils.isEmpty(value)) continue;
+            String trimmed = value.trim();
+            if (!trimmed.isEmpty()) {
+                cleaned.add(trimmed);
+            }
+        }
+        return cleaned.isEmpty() ? Collections.emptyList() : cleaned;
     }
 
     private void handleNavigationIntent(Intent intent) {

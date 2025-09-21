@@ -187,7 +187,7 @@ public class TtsReaderController {
 
     public void speakTokenDetails(TokenSpan span, List<String> translations, boolean resumeAfter) {
         if (!initialized || span == null || span.token == null) return;
-        List<String> safeTranslations = translations == null ? Collections.emptyList() : new ArrayList<>(translations);
+        List<String> safeTranslations = safeTranslations(translations);
         resumeAfterDetails = resumeAfter && mode == Mode.READING;
         mode = Mode.DETAIL;
         updatePlaybackState();
@@ -213,17 +213,10 @@ public class TtsReaderController {
             if (!TextUtils.isEmpty(morph.pos)) {
                 appendSentence(builder, "Часть речи: " + GrammarResources.formatPos(morph.pos));
             }
-            String segments = morph.getSegmentedSurface();
-            if (!TextUtils.isEmpty(segments)) {
-                appendSentence(builder, "Сегменты: " + segments);
-            }
-            List<String> codes = morph.getFeatureCodes();
-            if (!codes.isEmpty()) {
-                appendSentence(builder, "Грамматические признаки: " + TextUtils.join(", ", codes));
-            }
         }
-        if (!translations.isEmpty()) {
-            appendSentence(builder, "Перевод: " + TextUtils.join(", ", translations));
+        List<String> cleanedTranslations = safeTranslations(translations);
+        if (!cleanedTranslations.isEmpty()) {
+            appendSentence(builder, "Перевод: " + TextUtils.join(", ", cleanedTranslations));
         } else {
             appendSentence(builder, "Перевод не найден");
         }
@@ -258,7 +251,15 @@ public class TtsReaderController {
         if (source == null || source.isEmpty()) {
             return Collections.emptyList();
         }
-        return new ArrayList<>(source);
+        List<String> cleaned = new ArrayList<>(source.size());
+        for (String item : source) {
+            if (TextUtils.isEmpty(item)) continue;
+            String trimmed = item.trim();
+            if (!trimmed.isEmpty()) {
+                cleaned.add(trimmed);
+            }
+        }
+        return cleaned.isEmpty() ? Collections.emptyList() : cleaned;
     }
 
     private void speakText(String text, String utteranceId, int queueMode) {
