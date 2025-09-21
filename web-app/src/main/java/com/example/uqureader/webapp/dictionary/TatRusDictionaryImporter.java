@@ -141,8 +141,8 @@ public final class TatRusDictionaryImporter {
     }
 
     private Entry parseEntry(Element element, String sectionId) {
-        Element lElement = findFirstChild(element, "l");
-        Element rElement = findFirstChild(element, "r");
+        Element lElement = findFirstDescendant(element, "l");
+        Element rElement = findFirstDescendant(element, "r");
         if (lElement == null || rElement == null) {
             return null;
         }
@@ -182,16 +182,13 @@ public final class TatRusDictionaryImporter {
         );
     }
 
-    private Element findFirstChild(Element parent, String tag) {
-        Node child = parent.getFirstChild();
-        while (child != null) {
-            if (child.getNodeType() == Node.ELEMENT_NODE) {
-                Element element = (Element) child;
-                if (tag.equals(element.getTagName())) {
-                    return element;
-                }
+    private Element findFirstDescendant(Element parent, String tag) {
+        NodeList nodes = parent.getElementsByTagName(tag);
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Node node = nodes.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                return (Element) node;
             }
-            child = child.getNextSibling();
         }
         return null;
     }
