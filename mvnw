@@ -33,10 +33,20 @@ fi
 
 build_base64_shim() {
   local build_script="${BASE64_DIR}/build.sh"
-  if [ ! -x "${build_script}" ]; then
-    echo "error: ${build_script} is missing or not executable" >&2
+  if [ ! -f "${build_script}" ]; then
+    echo "error: ${build_script} is missing" >&2
     exit 1
   fi
+
+  if [ ! -x "${build_script}" ]; then
+    chmod +x "${build_script}" 2>/dev/null || true
+  fi
+
+  if [ ! -x "${build_script}" ]; then
+    echo "error: ${build_script} is not executable" >&2
+    exit 1
+  fi
+
   "${build_script}"
 }
 
