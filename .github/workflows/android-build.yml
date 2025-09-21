@@ -104,7 +104,7 @@ jobs:
       - name: Build with Maven Wrapper
         env:
           APP_VERSION_CODE: ${{ steps.version.outputs.code }}
-        run: ./mvnw -B verify -Dapp.version.code=${APP_VERSION_CODE}
+        run: ./mvnw -pl android-app -am -B verify -Dapp.version.code=${APP_VERSION_CODE}
 
 #      - name: Run API 28 installation smoke test
 #        shell: bash
