@@ -349,6 +349,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         super.onDestroy();
     }
 
+    @Override public void onBackPressed() {
+        if (cancelDetailSpeech()) {
+            return;
+        }
+        super.onBackPressed();
+    }
+
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
         boolean resumeAfter = isSpeaking || shouldContinueSpeech;
         speakTokenDetails(span, ruLemmas, resumeAfter);
@@ -377,18 +384,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         awaitingResumeAfterDetail = !resumeAfter;
         detailAutoResume = resumeAfter;
         stopDetailPlayback();
-        if (pendingDetailRequest != null) {
-            Iterator<Map.Entry<String, SpeechRequest>> iterator = pendingRequests.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Map.Entry<String, SpeechRequest> entry = iterator.next();
-                if (entry.getValue() == pendingDetailRequest) {
-                    iterator.remove();
-                    break;
-                }
-            }
-            pendingDetailRequest.deleteFile();
-            pendingDetailRequest = null;
-        }
+        cancelPendingDetailRequest();
         try {
             File file = File.createTempFile("detail_" + Math.max(0, span.getStartIndex()) + "_", ".wav", getCacheDir());
             String utteranceId = "detail_" + (utteranceSequence++);
@@ -408,6 +404,29 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } catch (IOException e) {
             Log.e(TAG, "Failed to synthesize detail audio", e);
             awaitingResumeAfterDetail = !resumeAfter;
+        }
+    }
+
+    private void cancelPendingDetailRequest() {
+        if (pendingDetailRequest == null) {
+            return;
+        }
+        removePendingRequest(pendingDetailRequest);
+        pendingDetailRequest.deleteFile();
+        pendingDetailRequest = null;
+    }
+
+    private void removePendingRequest(SpeechRequest target) {
+        if (target == null) {
+            return;
+        }
+        Iterator<Map.Entry<String, SpeechRequest>> iterator = pendingRequests.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, SpeechRequest> entry = iterator.next();
+            if (entry.getValue() == target) {
+                iterator.remove();
+                break;
+            }
         }
     }
 
@@ -828,7 +847,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             textToSpeech.stop();
         }
         stopDetailPlayback();
-        pendingDetailRequest = null;
+        cancelPendingDetailRequest();
         activeDetailRequest = null;
         detailAutoResume = false;
         releaseSentencePlayer();
@@ -1261,6 +1280,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void performMediaButtonAction() {
+        if (cancelDetailSpeech()) {
+            return;
+        }
+        if (awaitingResumeAfterDetail) {
+            resumeSentenceAfterDetail();
+            return;
+        }
         if (isSpeaking) {
             pauseSpeechFromHeadset();
         } else {
@@ -1269,7 +1295,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void handleMediaSkip(boolean forward) {
-        if (detailPlaybackActive() || pendingDetailRequest != null || awaitingResumeAfterDetail) {
+        boolean detailActive = detailPlaybackActive()
+                || activeDetailRequest != null
+                || pendingDetailRequest != null
+                || awaitingResumeAfterDetail;
+        if (detailActive && !isSpeaking) {
             handleDetailSkip(forward);
             return;
         }
@@ -1635,6 +1665,22 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
+    private boolean cancelDetailSpeech() {
+        boolean hasDetail = detailPlaybackActive()
+                || activeDetailRequest != null
+                || pendingDetailRequest != null;
+        if (!hasDetail) {
+            return false;
+        }
+        stopDetailPlayback();
+        cancelPendingDetailRequest();
+        detailAutoResume = false;
+        awaitingResumeAfterDetail = true;
+        updatePlaybackState(PlaybackState.STATE_PAUSED);
+        updateSpeechButtons();
+        return true;
+    }
+
     private boolean detailPlaybackActive() {
         if (detailPlayer == null) return false;
         try {
@@ -1781,8 +1827,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return false;
         }
         int keyCode = event.getKeyCode();
-        if (detailPlaybackActive() || pendingDetailRequest != null) {
-            if (isSkipForwardKey(keyCode)) {
+        if (detailPlaybackActive() || activeDetailRequest != null || pendingDetailRequest != null) {
+            if (isPlayPauseKey(keyCode) || keyCode == KeyEvent.KEYCODE_BACK) {
+                cancelDetailSpeech();
+            } else if (isSkipForwardKey(keyCode)) {
                 handleDetailSkip(true);
             } else if (isSkipBackwardKey(keyCode)) {
                 handleDetailSkip(false);
