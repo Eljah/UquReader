@@ -4,6 +4,8 @@ import android.content.Context;
 
 import com.example.ttreader.model.Token;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.io.BufferedReader;
@@ -34,6 +36,18 @@ public class JsonlParser {
                 if (obj.has("analysis") && !obj.get("analysis").isJsonNull()) {
                     t.analysis = obj.get("analysis").getAsString();
                     t.morphology = MorphologyParser.parse(t.surface, t.analysis);
+                }
+                if (obj.has("translations") && obj.get("translations").isJsonArray()) {
+                    JsonArray arr = obj.getAsJsonArray("translations");
+                    List<String> translations = new ArrayList<>();
+                    for (JsonElement element : arr) {
+                        if (element != null && !element.isJsonNull()) {
+                            translations.add(element.getAsString());
+                        }
+                    }
+                    if (!translations.isEmpty()) {
+                        t.translations = translations;
+                    }
                 }
                 tokens.add(t);
             }

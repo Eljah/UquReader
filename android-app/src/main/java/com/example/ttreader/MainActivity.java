@@ -774,8 +774,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void showTokenSheet(TokenSpan span, List<String> ruLemmas) {
         if (span == null || span.token == null || span.token.analysis == null) return;
         dismissTokenSheet(false);
-        List<String> safeRu = ruLemmas == null ? new java.util.ArrayList<>() : ruLemmas;
-        String ruCsv = safeRu.isEmpty()? "—" : String.join(", ", safeRu);
+        List<String> combined = ruLemmas == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(ruLemmas);
+        if (span.token != null && span.token.translations != null) {
+            for (String translation : span.token.translations) {
+                if (!TextUtils.isEmpty(translation) && !combined.contains(translation)) {
+                    combined.add(translation);
+                }
+            }
+        }
+        String ruCsv = combined.isEmpty()? "—" : String.join(", ", combined);
         TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, ruCsv);
         sheet.setUsageStatsDao(usageStatsDao);
         String languagePair = currentLanguagePair != null ? currentLanguagePair : LANGUAGE_PAIR_TT_RU;
