@@ -2,6 +2,7 @@ android-sdk/
 android-commandlinetools.zip
 apache-maven-3.9.11-bin.tar.gz
 target/
+py_tat_morphan/
 *.log
 tools/base64encoder/*.jar
 android-app/tools/base64encoder/*.jar
