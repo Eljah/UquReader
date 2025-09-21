@@ -2,10 +2,10 @@
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd -P)"
-BASE64_DIR="${BASE_DIR}/tools/base64encoder"
+BASE64_DIR="${BASE_DIR}/android-app/tools/base64encoder"
 BASE64_JAR="${BASE64_DIR}/base64encoder.jar"
 BASE64_SRC="${BASE64_DIR}/src/main/java"
-DEBUG_KEYSTORE_SCRIPT="${BASE_DIR}/tools/debug-keystore/ensure-debug-keystore.sh"
+DEBUG_KEYSTORE_SCRIPT="${BASE_DIR}/android-app/tools/debug-keystore/ensure-debug-keystore.sh"
 DEFAULT_ANDROID_SDK="/usr/lib/android-sdk"
 
 if [ -z "${ANDROID_SDK_ROOT:-}" ] && [ -d "${DEFAULT_ANDROID_SDK}" ]; then

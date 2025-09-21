@@ -4,5 +4,7 @@ apache-maven-3.9.11-bin.tar.gz
 target/
 *.log
 tools/base64encoder/*.jar
+android-app/tools/base64encoder/*.jar
 *.keystore
 !tools/debug-keystore/debug.keystore
+!android-app/tools/debug-keystore/debug.keystore

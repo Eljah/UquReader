@@ -1,0 +1,369 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.example</groupId>
+    <artifactId>uqureader-parent</artifactId>
+    <version>1.1.0</version>
+  </parent>
+
+  <artifactId>uqureader</artifactId>
+  <packaging>apk</packaging>
+
+  <name>UquReader</name>
+
+  <properties>
+    <android.sdk.location>${env.ANDROID_HOME}</android.sdk.location>
+    <android.platform>28</android.platform>
+    <android.build-tools>33.0.2</android.build-tools>
+    <java.version>1.8</java.version>
+    <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
+    <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>
+    <app.version>${project.version}</app.version>
+    <app.version.code>2</app.version.code>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.simpligility.maven.plugins</groupId>
+        <artifactId>android-maven-plugin</artifactId>
+        <version>4.6.0</version>
+        <extensions>true</extensions>
+        <configuration>
+          <sdk>
+            <path>${android.sdk.location}</path>
+            <platform>${android.platform}</platform>
+            <buildTools>${android.build-tools}</buildTools>
+          </sdk>
+          <dexCompiler>D8</dexCompiler>
+          <d8MinApi>21</d8MinApi>
+          <undeployBeforeDeploy>true</undeployBeforeDeploy>
+          <manifest>
+            <debuggable>true</debuggable>
+            <versionName>${app.version}</versionName>
+            <versionCode>${app.version.code}</versionCode>
+          </manifest>
+          <artifactSet>
+            <excludes>
+              <exclude>android:android</exclude>
+            </excludes>
+          </artifactSet>
+          <sign>
+            <debug>false</debug>
+          </sign>
+        </configuration>
+        <executions>
+          <execution>
+            <id>update-manifest</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>manifest-update</goal>
+            </goals>
+          </execution>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>apk</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.5</version>
+          </dependency>
+          <dependency>
+            <groupId>local.sun</groupId>
+            <artifactId>base64encoder</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${base64encoder.jar}</systemPath>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>relocate-play-store-assets</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${project.basedir}/marketing" />
+                <move todir="${project.basedir}/marketing" flatten="true" failonerror="false">
+                  <fileset dir="${project.basedir}">
+                    <include name="src/main/res play_store_512.png" />
+                  </fileset>
+                </move>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>ensure-legacy-tools-metadata</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${android.sdk.location}/tools" />
+                <echo file="${android.sdk.location}/tools/source.properties" append="false">Pkg.Revision=0.0.0
+</echo>
+                <echo file="${project.build.directory}/ensure-build-tools.sh" append="false"><![CDATA[
+#!/bin/bash
+set -euo pipefail
+
+SDK_ROOT="${android.sdk.location}"
+BUILD_TOOLS_VERSION="${android.build-tools}"
+BUILD_TOOLS_DIR="${android.sdk.location}/build-tools/${android.build-tools}"
+
+if [ -d "$BUILD_TOOLS_DIR" ]; then
+  exit 0
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+CLI_ARCHIVE="$PROJECT_DIR/android-commandlinetools.zip"
+CLI_DEST="$SDK_ROOT/cmdline-tools/latest"
+
+install_cmdline_tools() {
+  local tmp
+  if [ ! -f "$CLI_ARCHIVE" ]; then
+    return 1
+  fi
+  tmp="$(mktemp -d)"
+  cleanup_install() {
+    rm -rf "$tmp"
+  }
+  trap cleanup_install EXIT
+  if ! unzip -q "$CLI_ARCHIVE" -d "$tmp"; then
+    trap - EXIT
+    cleanup_install
+    unset -f cleanup_install
+    return 1
+  fi
+  mkdir -p "$SDK_ROOT/cmdline-tools"
+  rm -rf "$CLI_DEST"
+  if ! mv "$tmp/cmdline-tools" "$CLI_DEST"; then
+    trap - EXIT
+    cleanup_install
+    unset -f cleanup_install
+    return 1
+  fi
+  trap - EXIT
+  cleanup_install
+  unset -f cleanup_install
+  return 0
+}
+
+if [ ! -x "$CLI_DEST/bin/sdkmanager" ]; then
+  install_cmdline_tools || true
+fi
+
+java_major_version() {
+  local version_line major minor
+  if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+    version_line="$($JAVA_HOME/bin/java -version 2>&1 | head -n 1)"
+  else
+    version_line="$(java -version 2>&1 | head -n 1)"
+  fi
+  if [[ $version_line =~ ([0-9]+)\.([0-9]+)\. ]]; then
+    major="${BASH_REMATCH[1]}"
+    minor="${BASH_REMATCH[2]}"
+    if [ "$major" = "1" ]; then
+      echo "$minor"
+    else
+      echo "$major"
+    fi
+  else
+    echo "0"
+  fi
+}
+
+JAVA_MAJOR="$(java_major_version)"
+
+declare -a CANDIDATES=(
+  "$CLI_DEST/bin/sdkmanager"
+  "${android.sdk.location}/cmdline-tools/bin/sdkmanager"
+  "${android.sdk.location}/tools/bin/sdkmanager"
+)
+
+for candidate in "${CANDIDATES[@]}"; do
+  if [ -x "$candidate" ]; then
+    if [[ "$candidate" == */tools/bin/sdkmanager ]] && [ "$JAVA_MAJOR" -gt 8 ]; then
+      continue
+    fi
+    SDKMANAGER="$candidate"
+    break
+  fi
+done
+
+if [ -z "${SDKMANAGER:-}" ]; then
+  if command -v sdkmanager >/dev/null 2>&1; then
+    SDKMANAGER="$(command -v sdkmanager)"
+  else
+    echo "sdkmanager not found under $SDK_ROOT; install Android cmdline-tools or set ANDROID_SDK_ROOT/ANDROID_HOME" >&2
+    exit 1
+  fi
+fi
+
+if [[ "$SDKMANAGER" == */tools/bin/sdkmanager ]] && [ "$JAVA_MAJOR" -gt 8 ]; then
+  echo "Legacy tools/bin/sdkmanager requires Java 8; install modern cmdline-tools under $SDK_ROOT" >&2
+  exit 1
+fi
+
+printf 'y\n' | "$SDKMANAGER" --sdk_root="$SDK_ROOT" "build-tools;$BUILD_TOOLS_VERSION"
+                ]]></echo>
+                <chmod file="${project.build.directory}/ensure-build-tools.sh" perm="755" />
+                <exec executable="bash">
+                  <arg value="${project.build.directory}/ensure-build-tools.sh" />
+                </exec>
+                <delete file="${project.build.directory}/ensure-build-tools.sh" />
+                <property name="d8.lib.dir" value="${android.sdk.location}/build-tools/${android.build-tools}/lib" />
+                <echo file="${project.build.directory}/wrap-d8.sh" append="false"><![CDATA[
+#!/bin/bash
+set -euo pipefail
+D8_DIR="${d8.lib.dir}"
+if [ -d "$D8_DIR" ]; then
+  if [ ! -f "$D8_DIR/d8-orig.jar" ]; then
+    mv "$D8_DIR/d8.jar" "$D8_DIR/d8-orig.jar"
+  fi
+  cat <<'EOF' > "$D8_DIR/d8-wrapper.mf"
+Manifest-Version: 1.0
+Main-Class: com.android.tools.r8.D8
+Class-Path: d8-orig.jar
+EOF
+  (cd "$D8_DIR" && jar cfm d8.jar d8-wrapper.mf >/dev/null)
+  rm -f "$D8_DIR/d8-wrapper.mf"
+fi
+]]></echo>
+                <chmod file="${project.build.directory}/wrap-d8.sh" perm="755" />
+                <exec executable="bash">
+                  <arg value="${project.build.directory}/wrap-d8.sh" />
+                </exec>
+                <delete file="${project.build.directory}/wrap-d8.sh" />
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sign-debug-apk</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <property name="apksigner.executable" value="${android.sdk.location}/build-tools/${android.build-tools}/apksigner" />
+                <property name="apk.output" value="${project.build.directory}/${project.artifactId}-${project.version}.apk" />
+                <property name="debug.keystore" value="${android.debug.keystore}" />
+                <available file="${apksigner.executable}" property="apksigner.present" />
+                <fail message="apksigner not found at ${apksigner.executable}" unless="apksigner.present" />
+                <exec executable="${apksigner.executable}">
+                  <arg value="sign" />
+                  <arg value="--ks" />
+                  <arg value="${debug.keystore}" />
+                  <arg value="--ks-pass" />
+                  <arg value="pass:android" />
+                  <arg value="--key-pass" />
+                  <arg value="pass:android" />
+                  <arg value="--ks-key-alias" />
+                  <arg value="androiddebugkey" />
+                  <arg value="${apk.output}" />
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+          <parameters>true</parameters>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>env-build-tools</id>
+      <activation>
+        <property>
+          <name>env.ANDROID_BUILD_TOOLS_VERSION</name>
+        </property>
+      </activation>
+      <properties>
+        <android.build-tools>${env.ANDROID_BUILD_TOOLS_VERSION}</android.build-tools>
+      </properties>
+    </profile>
+    <profile>
+      <id>env-android-sdk</id>
+      <activation>
+        <property>
+          <name>env.ANDROID_SDK_ROOT</name>
+        </property>
+      </activation>
+      <properties>
+        <android.sdk.location>${env.ANDROID_SDK_ROOT}</android.sdk.location>
+      </properties>
+    </profile>
+    <profile>
+      <id>env-android-home</id>
+      <activation>
+        <property>
+          <name>env.ANDROID_HOME</name>
+        </property>
+      </activation>
+      <properties>
+        <android.sdk.location>${env.ANDROID_HOME}</android.sdk.location>
+      </properties>
+    </profile>
+  </profiles>
+
+  <repositories>
+    <repository>
+      <id>google</id>
+      <url>https://maven.google.com</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>android</groupId>
+      <artifactId>android</artifactId>
+      <version>${android.platform}</version>
+      <scope>system</scope>
+      <systemPath>${android.sdk.location}/platforms/android-${android.platform}/android.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.11.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.errorprone</groupId>
+          <artifactId>error_prone_annotations</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+</project>
