@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
@@ -15,6 +16,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.example.ttreader.data.DictionaryDao;
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.FeatureMetadata;
@@ -23,6 +25,7 @@ import com.example.ttreader.model.UsageStat;
 import com.example.ttreader.util.GrammarResources;
 import com.example.ttreader.widget.UsageTimelineView;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,7 +43,9 @@ public class StatsActivity extends Activity {
     public static final int MODE_LANGUAGE = 1;
     public static final int MODE_WORK = 2;
 
+    private DbHelper dbHelper;
     private UsageStatsDao usageStatsDao;
+    private DictionaryDao dictionaryDao;
     private DateFormat dateFormat;
     private int mode = MODE_LANGUAGE;
     private String languagePair = "";
@@ -73,7 +78,13 @@ public class StatsActivity extends Activity {
         GrammarResources.initialize(this);
         setContentView(R.layout.activity_stats);
 
-        usageStatsDao = new UsageStatsDao(new DbHelper(this).getWritableDatabase());
+        dbHelper = new DbHelper(this);
+        usageStatsDao = new UsageStatsDao(dbHelper.getWritableDatabase());
+        try {
+            dictionaryDao = new DictionaryDao(dbHelper.ensureDictionaryDb());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault());
 
         Intent intent = getIntent();
@@ -107,6 +118,18 @@ public class StatsActivity extends Activity {
         LinearLayout featureContainer = findViewById(R.id.featureStatsContainer);
         populateLemmaStats(lemmaContainer);
         populateFeatureStats(featureContainer);
+    }
+
+    @Override protected void onDestroy() {
+        super.onDestroy();
+        if (dictionaryDao != null) {
+            dictionaryDao.close();
+            dictionaryDao = null;
+        }
+        if (dbHelper != null) {
+            dbHelper.close();
+            dbHelper = null;
+        }
     }
 
     private void setupSortControls() {
@@ -203,6 +226,23 @@ public class StatsActivity extends Activity {
                 bucket.lookupEvents = events.events;
             }
         }
+        if (dictionaryDao != null) {
+            for (LemmaStats entry : aggregated.values()) {
+                entry.translations.clear();
+                if (TextUtils.isEmpty(entry.lemma)) {
+                    continue;
+                }
+                List<Pair<String, Double>> ru = dictionaryDao.translateLemmaToRu(entry.lemma);
+                if (ru == null || ru.isEmpty()) {
+                    continue;
+                }
+                for (Pair<String, Double> pair : ru) {
+                    if (pair != null && !TextUtils.isEmpty(pair.first)) {
+                        entry.translations.add(pair.first);
+                    }
+                }
+            }
+        }
         lemmaStatsSource.addAll(aggregated.values());
         lemmaStatsLoaded = true;
         refreshLemmaStats();
@@ -237,6 +277,7 @@ public class StatsActivity extends Activity {
         for (LemmaStats entry : filtered) {
             View item = inflater.inflate(R.layout.item_stats_entry, lemmaStatsContainer, false);
             TextView title = item.findViewById(R.id.statsTitle);
+            TextView translation = item.findViewById(R.id.statsTranslation);
             TextView exposure = item.findViewById(R.id.statsExposure);
             TextView lookup = item.findViewById(R.id.statsLookup);
             UsageTimelineView exposureTimeline = item.findViewById(R.id.statsExposureTimeline);
@@ -248,6 +289,13 @@ public class StatsActivity extends Activity {
             TextView lookupStartLabel = item.findViewById(R.id.statsLookupTimelineStart);
             TextView lookupEndLabel = item.findViewById(R.id.statsLookupTimelineEnd);
             title.setText(formatLemmaTitle(entry));
+            if (entry.translations.isEmpty()) {
+                translation.setVisibility(View.GONE);
+            } else {
+                translation.setVisibility(View.VISIBLE);
+                translation.setText(getString(R.string.stats_translation_label,
+                        TextUtils.join(", ", entry.translations)));
+            }
             exposure.setText(getString(R.string.stats_exposure_label, entry.exposureCount, formatTime(entry.lastExposure)));
             lookup.setText(getString(R.string.stats_lookup_label, entry.lookupCount, formatTime(entry.lastLookup)));
             bindTimeline(exposureTimeline, exposureLabels, exposureStartLabel, exposureEndLabel,
@@ -557,6 +605,7 @@ public class StatsActivity extends Activity {
         List<UsageEvent> exposureEvents = new ArrayList<>();
         List<Float> lookupPositions = new ArrayList<>();
         List<UsageEvent> lookupEvents = new ArrayList<>();
+        List<String> translations = new ArrayList<>();
 
         LemmaStats(String lemma, String pos) {
             this.lemma = lemma;
