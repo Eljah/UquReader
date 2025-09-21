@@ -1,5 +1,6 @@
 package com.example.uqureader.webapp;
 
+import com.example.uqureader.webapp.assets.JsonlTranslationAugmenter;
 import com.example.uqureader.webapp.dictionary.TatRusDictionaryImporter;
 import com.sun.net.httpserver.HttpServer;
 
@@ -26,6 +27,23 @@ public final class Main {
             TatRusDictionaryImporter importer = new TatRusDictionaryImporter();
             int count = importer.importLatest(database);
             System.out.printf("Imported %d dictionary entries into %s%n", count, database.toAbsolutePath());
+            return;
+        }
+
+        if (args.length > 0 && "--augment-assets".equals(args[0])) {
+            Path assetsDirectory = args.length > 1
+                    ? Paths.get(args[1])
+                    : Paths.get("android-app", "src", "main", "assets");
+            Path dictionaryPath = args.length > 2
+                    ? Paths.get(args[2])
+                    : Paths.get("data", "tat_rus_dictionary.db");
+            JsonlTranslationAugmenter augmenter = new JsonlTranslationAugmenter();
+            JsonlTranslationAugmenter.Report report = augmenter.augment(assetsDirectory, dictionaryPath);
+            System.out.printf("Augmented %d files (%d tokens processed, %d with translations, %d translations recorded)%n",
+                    report.getFilesProcessed(),
+                    report.getTokensProcessed(),
+                    report.getTokensWithTranslations(),
+                    report.getTranslationsWritten());
             return;
         }
 
