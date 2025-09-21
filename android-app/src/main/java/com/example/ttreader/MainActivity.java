@@ -35,6 +35,8 @@ import android.widget.Toast;
 import android.widget.Toolbar;
 
 import com.example.ttreader.data.DbHelper;
+import com.example.ttreader.data.DeviceIdentity;
+import com.example.ttreader.data.DeviceStatsDao;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.reader.ReaderView;
@@ -108,6 +110,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
     private UsageStatsDao usageStatsDao;
+    private DeviceStatsDao deviceStatsDao;
     private ScrollView readerScrollView;
     private ReaderView readerView;
     private Toolbar toolbar;
@@ -207,6 +210,30 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
+    private static final class PendingDevicePauseEvent {
+        final DeviceIdentity device;
+        final long pauseOffsetMs;
+        final long letterIntervalMs;
+        final int pauseCharIndex;
+        final int sentenceIndex;
+        final String languagePair;
+        final String workId;
+        final long recordedAtMs;
+
+        PendingDevicePauseEvent(DeviceIdentity device, long pauseOffsetMs, long letterIntervalMs,
+                int pauseCharIndex, int sentenceIndex, String languagePair, String workId,
+                long recordedAtMs) {
+            this.device = device;
+            this.pauseOffsetMs = pauseOffsetMs;
+            this.letterIntervalMs = letterIntervalMs;
+            this.pauseCharIndex = pauseCharIndex;
+            this.sentenceIndex = sentenceIndex;
+            this.languagePair = languagePair == null ? "" : languagePair;
+            this.workId = workId == null ? "" : workId;
+            this.recordedAtMs = recordedAtMs;
+        }
+    }
+
     private TextToSpeech textToSpeech;
     private Voice talgatVoice;
     private boolean ttsReady = false;
@@ -219,6 +246,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int currentCharIndex = -1;
     private long estimatedUtteranceDurationMs = 0L;
     private MediaSession mediaSession;
+    private PendingDevicePauseEvent pendingDevicePauseEvent;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -229,6 +257,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         memoryDao = new MemoryDao(db);
         usageStatsDao = new UsageStatsDao(db);
+        deviceStatsDao = new DeviceStatsDao(db);
 
         toolbar = findViewById(R.id.topToolbar);
         if (toolbar != null) {
@@ -788,6 +817,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void startSpeech() {
+        finalizePendingDevicePauseEvent();
         if (!ttsReady || talgatVoice == null) return;
         dismissTokenSheet(true);
         exitPromptMode();
@@ -843,6 +873,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         stopProgressUpdates();
         exitPromptMode();
         clearSkipBackBehavior();
+        clearPendingDevicePauseEvent();
         if (textToSpeech != null) {
             textToSpeech.stop();
         }
@@ -1254,7 +1285,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 if (event != null && event.getAction() == KeyEvent.ACTION_DOWN) {
                     int keyCode = event.getKeyCode();
                     if (isPlayPauseKey(keyCode)) {
-                        speechProgressHandler.post(MainActivity.this::performMediaButtonAction);
+                        KeyEvent copy = new KeyEvent(event);
+                        speechProgressHandler.post(() -> performMediaButtonAction(copy));
                         return true;
                     } else if (isSkipForwardKey(keyCode)) {
                         speechProgressHandler.post(() -> handleMediaSkip(true));
@@ -1280,6 +1312,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void performMediaButtonAction() {
+        performMediaButtonAction(null);
+    }
+
+    private void performMediaButtonAction(KeyEvent keyEvent) {
+        DeviceIdentity deviceIdentity = DeviceIdentity.from(keyEvent);
         if (cancelDetailSpeech()) {
             return;
         }
@@ -1288,8 +1325,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return;
         }
         if (isSpeaking) {
+            if (deviceIdentity.shouldTrack()) {
+                capturePauseFromDevice(deviceIdentity);
+            } else {
+                clearPendingDevicePauseEvent();
+            }
             pauseSpeechFromHeadset();
         } else {
+            finalizePendingDevicePauseEvent();
             startSpeech();
         }
     }
@@ -1610,6 +1653,175 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void pauseSpeechFromHeadset() {
         pauseSpeech();
+    }
+
+    private void capturePauseFromDevice(DeviceIdentity deviceIdentity) {
+        if (deviceStatsDao == null || deviceIdentity == null || !deviceIdentity.shouldTrack()) {
+            return;
+        }
+        long pauseOffset = resolveCurrentPlaybackElapsedMs();
+        int pauseCharIndex = currentCharIndex >= 0 ? currentCharIndex : resolveFocusCharIndex();
+        long letterInterval = resolveCurrentLetterIntervalMs();
+        String language = currentLanguagePair == null ? "" : currentLanguagePair;
+        String workId = currentWork != null ? currentWork.id : "";
+        pendingDevicePauseEvent = new PendingDevicePauseEvent(
+                deviceIdentity,
+                pauseOffset,
+                letterInterval,
+                pauseCharIndex,
+                currentSentenceIndex,
+                language,
+                workId,
+                System.currentTimeMillis());
+        if (pauseCharIndex >= 0) {
+            applyAverageShiftForDevice(deviceIdentity, pauseCharIndex, letterInterval);
+        }
+    }
+
+    private void finalizePendingDevicePauseEvent() {
+        if (pendingDevicePauseEvent == null || deviceStatsDao == null) {
+            return;
+        }
+        PendingDevicePauseEvent pending = pendingDevicePauseEvent;
+        pendingDevicePauseEvent = null;
+        if (pending.device == null || !pending.device.shouldTrack()) {
+            return;
+        }
+        int targetCharIndex = resolveFocusCharIndex();
+        if (targetCharIndex < 0) {
+            targetCharIndex = currentCharIndex;
+        }
+        if (targetCharIndex < 0) {
+            return;
+        }
+        int pauseCharIndex = pending.pauseCharIndex >= 0 ? pending.pauseCharIndex : targetCharIndex;
+        int charDelta = Math.max(0, pauseCharIndex - targetCharIndex);
+        long letterInterval = pending.letterIntervalMs > 0 ? pending.letterIntervalMs : defaultLetterIntervalMs();
+        long deltaMs = charDelta <= 0 ? 0L : Math.max(0L, charDelta * Math.max(1L, letterInterval));
+        long targetOffset = Math.max(0L, pending.pauseOffsetMs - deltaMs);
+        deviceStatsDao.recordPauseReaction(
+                pending.device,
+                pending.pauseOffsetMs,
+                targetOffset,
+                deltaMs,
+                charDelta,
+                pending.languagePair,
+                pending.workId,
+                pending.recordedAtMs);
+    }
+
+    private void clearPendingDevicePauseEvent() {
+        pendingDevicePauseEvent = null;
+    }
+
+    private long resolveCurrentPlaybackElapsedMs() {
+        if (sentencePlayer != null) {
+            try {
+                return Math.max(0L, sentencePlayer.getCurrentPosition());
+            } catch (IllegalStateException ignored) {
+            }
+        }
+        ReaderView.SentenceRange sentence = null;
+        if (currentSentenceIndex >= 0 && currentSentenceIndex < sentenceRanges.size()) {
+            sentence = sentenceRanges.get(currentSentenceIndex);
+        }
+        if (sentence == null && currentSentenceRequest != null) {
+            sentence = currentSentenceRequest.sentenceRange;
+        }
+        if (sentence == null) {
+            return 0L;
+        }
+        int baseIndex = sentence.start;
+        int highlightIndex = currentCharIndex >= 0 ? currentCharIndex : baseIndex;
+        int offsetChars = Math.max(0, highlightIndex - baseIndex);
+        long letterInterval = resolveCurrentLetterIntervalMs();
+        return Math.max(0L, offsetChars * Math.max(1L, letterInterval));
+    }
+
+    private long resolveCurrentLetterIntervalMs() {
+        if (currentLetterIntervalMs > 0) {
+            return currentLetterIntervalMs;
+        }
+        ReaderView.SentenceRange sentence = null;
+        if (currentSentenceRequest != null && currentSentenceRequest.sentenceRange != null) {
+            sentence = currentSentenceRequest.sentenceRange;
+        } else if (currentSentenceIndex >= 0 && currentSentenceIndex < sentenceRanges.size()) {
+            sentence = sentenceRanges.get(currentSentenceIndex);
+        }
+        if (sentence != null) {
+            long duration = estimatedUtteranceDurationMs > 0
+                    ? estimatedUtteranceDurationMs
+                    : estimateSentenceDurationMs(sentence);
+            return computeLetterInterval(sentence, duration);
+        }
+        return defaultLetterIntervalMs();
+    }
+
+    private long defaultLetterIntervalMs() {
+        double charsPerSecond = BASE_CHARS_PER_SECOND * Math.max(0.1f, DEFAULT_SPEECH_RATE);
+        if (charsPerSecond <= 0.01d) {
+            return 50L;
+        }
+        return Math.max(10L, Math.round(1000d / charsPerSecond));
+    }
+
+    private void applyAverageShiftForDevice(DeviceIdentity deviceIdentity, int pauseCharIndex, long letterIntervalMs) {
+        if (deviceStatsDao == null || deviceIdentity == null) {
+            return;
+        }
+        DeviceStatsDao.DeviceReactionStats stats = deviceStatsDao.getStats(deviceIdentity.stableKey());
+        if (stats == null || stats.sampleCount < 10) {
+            return;
+        }
+        double avgDelay = Math.max(0d, stats.averageDelayMs);
+        if (avgDelay < 1d) {
+            return;
+        }
+        long interval = letterIntervalMs > 0 ? letterIntervalMs : defaultLetterIntervalMs();
+        int charShift = (int) Math.max(0, Math.round(avgDelay / Math.max(1d, (double) interval)));
+        if (charShift <= 0) {
+            return;
+        }
+        int targetIndex = Math.max(0, pauseCharIndex - charShift);
+        if (readerView != null) {
+            readerView.highlightLetter(targetIndex);
+        }
+        currentCharIndex = targetIndex;
+        adjustSentenceIndexForChar(targetIndex);
+    }
+
+    private void adjustSentenceIndexForChar(int charIndex) {
+        if (charIndex < 0 || sentenceRanges.isEmpty()) {
+            return;
+        }
+        int index = findSentenceIndexForChar(charIndex);
+        if (index < 0) {
+            return;
+        }
+        currentSentenceIndex = index;
+        ReaderView.SentenceRange range = sentenceRanges.get(index);
+        if (range != null) {
+            currentSentenceStart = range.start;
+            currentSentenceEnd = range.end;
+        }
+    }
+
+    private int findSentenceIndexForChar(int charIndex) {
+        if (charIndex < 0 || sentenceRanges.isEmpty()) {
+            return -1;
+        }
+        for (int i = 0; i < sentenceRanges.size(); i++) {
+            ReaderView.SentenceRange range = sentenceRanges.get(i);
+            if (range == null) {
+                continue;
+            }
+            int start = range.start;
+            int end = range.end;
+            if (start <= charIndex && charIndex < end) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void pauseSpeechForDetail() {

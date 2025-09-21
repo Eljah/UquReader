@@ -16,9 +16,15 @@ public class UsageStatsDao {
     public static final String EVENT_FEATURE = "feature";
 
     private final SQLiteDatabase db;
+    private final DbWriteQueue writeQueue;
 
     public UsageStatsDao(SQLiteDatabase db) {
+        this(db, DbWriteQueue.getInstance());
+    }
+
+    public UsageStatsDao(SQLiteDatabase db, DbWriteQueue queue) {
         this.db = db;
+        this.writeQueue = queue;
     }
 
     public void recordEvent(String languagePair, String workId, String lemma, String pos,
@@ -30,43 +36,54 @@ public class UsageStatsDao {
         String featureKey = sanitize(featureCode);
         int safeCharIndex = charIndex < 0 ? -1 : charIndex;
 
-        int count = 0;
-        int lastPosition = -1;
-        try (Cursor c = db.rawQuery(
-                "SELECT count, last_position FROM usage_stats WHERE language_pair=? AND work_id=? AND lemma=? AND pos=? AND feature_code=? AND event_type=?",
-                new String[]{languageKey, workKey, lemmaKey, posKey, featureKey, eventType})) {
-            if (c.moveToFirst()) {
-                count = c.getInt(0);
-                lastPosition = c.getInt(1);
+        final String fLanguage = languageKey;
+        final String fWork = workKey;
+        final String fLemma = lemmaKey;
+        final String fPos = posKey;
+        final String fFeature = featureKey;
+        final String fEventType = eventType;
+        final long fTimestamp = timestamp;
+        final int fCharIndex = safeCharIndex;
+
+        writeQueue.enqueue(() -> {
+            int count = 0;
+            int lastPosition = -1;
+            try (Cursor c = db.rawQuery(
+                    "SELECT count, last_position FROM usage_stats WHERE language_pair=? AND work_id=? AND lemma=? AND pos=? AND feature_code=? AND event_type=?",
+                    new String[]{fLanguage, fWork, fLemma, fPos, fFeature, fEventType})) {
+                if (c.moveToFirst()) {
+                    count = c.getInt(0);
+                    lastPosition = c.getInt(1);
+                }
             }
-        }
-        count += 1;
-        if (safeCharIndex >= 0) {
-            lastPosition = safeCharIndex;
-        }
+            count += 1;
+            if (fCharIndex >= 0) {
+                lastPosition = fCharIndex;
+            }
 
-        ContentValues cv = new ContentValues();
-        cv.put("language_pair", languageKey);
-        cv.put("work_id", workKey);
-        cv.put("lemma", lemmaKey);
-        cv.put("pos", posKey);
-        cv.put("feature_code", featureKey);
-        cv.put("event_type", eventType);
-        cv.put("count", count);
-        cv.put("last_seen_ms", timestamp);
-        cv.put("last_position", lastPosition);
-        db.insertWithOnConflict("usage_stats", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+            ContentValues cv = new ContentValues();
+            cv.put("language_pair", fLanguage);
+            cv.put("work_id", fWork);
+            cv.put("lemma", fLemma);
+            cv.put("pos", fPos);
+            cv.put("feature_code", fFeature);
+            cv.put("event_type", fEventType);
+            cv.put("count", count);
+            cv.put("last_seen_ms", fTimestamp);
+            cv.put("last_position", lastPosition);
+            db.insertWithOnConflict("usage_stats", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
 
-        ContentValues event = new ContentValues();
-        event.put("language_pair", languageKey);
-        event.put("work_id", workKey);
-        event.put("lemma", lemmaKey);
-        event.put("pos", posKey);
-        event.put("feature_code", featureKey);
-        event.put("event_type", eventType);
-        event.put("timestamp_ms", timestamp);
-        event.put("char_index", safeCharIndex);
-        db.insert("usage_event_log", null, event);
+            ContentValues event = new ContentValues();
+            event.put("language_pair", fLanguage);
+            event.put("work_id", fWork);
+            event.put("lemma", fLemma);
+            event.put("pos", fPos);
+            event.put("feature_code", fFeature);
+            event.put("event_type", fEventType);
+            event.put("timestamp_ms", fTimestamp);
+            event.put("char_index", fCharIndex);
+            db.insert("usage_event_log", null, event);
+        });
     }
 
     public List<UsageStat> getLemmaStats(String languagePair, String workId) {
