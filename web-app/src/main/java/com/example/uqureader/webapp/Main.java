@@ -1,11 +1,14 @@
 package com.example.uqureader.webapp;
 
+import com.example.uqureader.webapp.dictionary.TatRusDictionaryImporter;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * Entry point for the web module.
@@ -16,6 +19,16 @@ public final class Main {
     }
 
     public static void main(String[] args) throws Exception {
+        if (args.length > 0 && "--import-tat-rus".equals(args[0])) {
+            Path database = args.length > 1
+                    ? Paths.get(args[1])
+                    : Paths.get("data", "tat_rus_dictionary.db");
+            TatRusDictionaryImporter importer = new TatRusDictionaryImporter();
+            int count = importer.importLatest(database);
+            System.out.printf("Imported %d dictionary entries into %s%n", count, database.toAbsolutePath());
+            return;
+        }
+
         if (args.length > 0 && "--serve".equals(args[0])) {
             MorphologyService service = new MorphologyService();
             int port = args.length > 1 ? Integer.parseInt(args[1]) : 8080;
