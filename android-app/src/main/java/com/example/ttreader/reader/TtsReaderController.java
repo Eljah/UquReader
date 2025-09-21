@@ -186,7 +186,14 @@ public class TtsReaderController {
 
     public void speakTokenDetails(TokenSpan span, List<String> translations, boolean resumeAfter) {
         if (!initialized || span == null || span.token == null) return;
-        List<String> safeTranslations = DetailSpeechFormatter.sanitizeTranslations(translations);
+        List<String> combinedTranslations = new ArrayList<>();
+        if (translations != null) {
+            combinedTranslations.addAll(translations);
+        }
+        if (span.token != null && span.token.translations != null) {
+            combinedTranslations.addAll(span.token.translations);
+        }
+        List<String> safeTranslations = DetailSpeechFormatter.sanitizeTranslations(combinedTranslations);
         resumeAfterDetails = resumeAfter && mode == Mode.READING;
         mode = Mode.DETAIL;
         updatePlaybackState();
