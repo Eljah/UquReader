@@ -1,6 +1,5 @@
 package com.example.uqureader.webapp;
 
-import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.BufferedReader;
@@ -35,8 +34,8 @@ public final class Main {
                     System.err.println("Provide text via STDIN or run with --serve [port].");
                     return;
                 }
-                JsonObject result = service.analyzeText(input);
-                System.out.print(result);
+                String markup = service.markup(input);
+                System.out.print(markup);
             }
         }
     }
