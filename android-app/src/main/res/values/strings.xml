@@ -20,6 +20,7 @@
     <string name="feature_codes_format">морфологический набор: %1$s</string>
     <string name="features_title">Суффиксы и окончания</string>
     <string name="translation_format">→ %1$s</string>
+    <string name="stats_translation_label">Перевод: %1$s</string>
     <string name="feature_chip_format">%1$s · %2$s</string>
     <string name="feature_no_form">—</string>
     <string name="feature_dialog_tt">Татарское название: %1$s</string>
