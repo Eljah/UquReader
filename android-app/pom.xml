@@ -92,9 +92,77 @@
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.6.1</version>
+        <executions>
+          <execution>
+            <id>prefetch-lifecycle-runtime</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>get</goal>
+            </goals>
+            <configuration>
+              <artifact>androidx.lifecycle:lifecycle-runtime:aar:2.3.1</artifact>
+              <transitive>false</transitive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <version>3.1.0</version>
         <executions>
+          <execution>
+            <id>patch-lifecycle-runtime-aar</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <property name="lifecycle.aar"
+                          value="${settings.localRepository}/androidx/lifecycle/lifecycle-runtime/2.3.1/lifecycle-runtime-2.3.1.aar" />
+                <property name="lifecycle.patch.dir" value="${project.build.directory}/patched-lifecycle-runtime" />
+                <mkdir dir="${lifecycle.patch.dir}" />
+                <if>
+                  <available file="${lifecycle.aar}" />
+                  <then>
+                    <unzip src="${lifecycle.aar}" dest="${lifecycle.patch.dir}" overwrite="true" />
+                    <if>
+                      <available file="${lifecycle.patch.dir}/res/values/values.xml" />
+                      <then>
+                        <loadfile property="lifecycle.values.content"
+                                  srcFile="${lifecycle.patch.dir}/res/values/values.xml" />
+                        <condition property="lifecycle.needs.patch">
+                          <contains string="${lifecycle.values.content}"
+                                    substring="&lt;id name=&quot;view_tree_lifecycle_owner&quot;/&gt;" />
+                        </condition>
+                        <if>
+                          <isset property="lifecycle.needs.patch" />
+                          <then>
+                            <echo file="${lifecycle.patch.dir}/res/values/values.xml"><![CDATA[<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="view_tree_lifecycle_owner" />
+</resources>
+]]></echo>
+                            <zip destfile="${lifecycle.aar}.patched" basedir="${lifecycle.patch.dir}" />
+                            <move file="${lifecycle.aar}.patched" tofile="${lifecycle.aar}" overwrite="true" />
+                          </then>
+                        </if>
+                      </then>
+                    </if>
+                    <delete dir="${lifecycle.patch.dir}" />
+                  </then>
+                  <else>
+                    <echo>Lifecycle runtime AAR not present at ${lifecycle.aar}; skipping patch.</echo>
+                  </else>
+                </if>
+                <delete dir="${lifecycle.patch.dir}" failonerror="false" />
+              </target>
+            </configuration>
+          </execution>
           <execution>
             <id>relocate-play-store-assets</id>
             <phase>validate</phase>
