@@ -641,8 +641,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         WorkInfo work = getCurrentWork();
         if (readerView == null || work == null) return;
         readerView.setUsageContext(currentLanguagePair, work.id);
-        readerView.loadFromJsonlAsset(work.asset);
-        readerView.post(this::updateSentenceRanges);
+        readerView.loadFromJsonlAsset(work.asset, this::updateSentenceRanges);
         updateWorkMenuDisplay();
     }
 
