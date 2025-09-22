@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
@@ -30,6 +31,7 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.Toast;
 import android.widget.Toolbar;
@@ -65,6 +67,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final String TAG = "MainActivity";
     private static final String LANGUAGE_PAIR_TT_RU = "tt-ru";
     private static final int MENU_WORK_ID_BASE = 100;
+    private static final String PREFS_READER_STATE = "com.example.ttreader.reader_state";
+    private static final String KEY_LAST_WORK = "reader.last.work";
+
+    private static String keyWindowStart(String workId) {
+        return "reader.window." + (workId == null ? "" : workId);
+    }
+
+    private static String keySpeechChar(String workId) {
+        return "reader.speech." + (workId == null ? "" : workId);
+    }
     private static final class WorkInfo {
         final String id;
         final String asset;
@@ -113,6 +125,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private DeviceStatsDao deviceStatsDao;
     private ScrollView readerScrollView;
     private ReaderView readerView;
+    private ProgressBar readerLoadingIndicator;
+    private SharedPreferences readingPrefs;
+    private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
+    private final Runnable persistReadingRunnable = this::persistReadingStateNow;
+    private int pendingWindowStart = 0;
+    private int pendingSpeechChar = -1;
+    private boolean readingStateDirty = false;
+    private boolean restoringReadingState = false;
     private Toolbar toolbar;
     private MenuItem languagePairMenuItem;
     private MenuItem workMenuItem;
@@ -259,6 +279,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         usageStatsDao = new UsageStatsDao(db);
         deviceStatsDao = new DeviceStatsDao(db);
 
+        readingPrefs = getSharedPreferences(PREFS_READER_STATE, MODE_PRIVATE);
+        if (readingPrefs != null) {
+            String lastWorkId = readingPrefs.getString(KEY_LAST_WORK, null);
+            WorkInfo saved = findWorkById(lastWorkId);
+            if (saved != null) {
+                currentWork = saved;
+            }
+        }
+
         toolbar = findViewById(R.id.topToolbar);
         if (toolbar != null) {
             toolbar.setTitle(null);
@@ -275,7 +304,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
         readerScrollView = findViewById(R.id.readerScrollView);
         readerView = findViewById(R.id.readerView);
+        readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
         readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
+        readerView.attachScrollView(readerScrollView);
+        readerView.setWindowChangeListener(this::handleReaderWindowChanged);
 
         if (readerScrollView != null) {
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
@@ -360,10 +392,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override protected void onPause() {
+        persistReadingStateNow();
         super.onPause();
     }
 
     @Override protected void onDestroy() {
+        readingStateHandler.removeCallbacks(persistReadingRunnable);
         stopSpeech();
         if (textToSpeech != null) {
             textToSpeech.shutdown();
@@ -383,6 +417,27 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return;
         }
         super.onBackPressed();
+    }
+
+    @Override public void onTokenSingleTap(TokenSpan span) {
+        if (span == null) {
+            return;
+        }
+        dismissTokenSheet(false);
+        int start = Math.max(0, span.getStartIndex());
+        currentCharIndex = start;
+        updatePendingSpeechChar(currentCharIndex);
+        adjustSentenceIndexForChar(start);
+        if (readerView != null) {
+            ReaderView.SentenceRange sentence = readerView.findSentenceForCharIndex(start);
+            if (sentence != null) {
+                currentSentenceStart = sentence.start;
+                currentSentenceEnd = sentence.end;
+                readerView.highlightSentenceRange(sentence.start, sentence.end);
+            }
+            readerView.highlightLetter(start);
+            readerView.scrollToGlobalChar(start);
+        }
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
@@ -618,6 +673,18 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         return getWindow() != null ? getWindow().getDecorView() : null;
     }
 
+    private WorkInfo findWorkById(String workId) {
+        if (workId == null) {
+            return null;
+        }
+        for (WorkInfo info : availableWorks) {
+            if (info != null && workId.equals(info.id)) {
+                return info;
+            }
+        }
+        return null;
+    }
+
     private WorkInfo findWorkByMenuId(int menuId) {
         int index = menuId - MENU_WORK_ID_BASE;
         if (index >= 0 && index < availableWorks.size()) {
@@ -641,8 +708,97 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         WorkInfo work = getCurrentWork();
         if (readerView == null || work == null) return;
         readerView.setUsageContext(currentLanguagePair, work.id);
-        readerView.loadFromJsonlAsset(work.asset, this::updateSentenceRanges);
+        int initialChar = resolveInitialCharIndex(work);
+        pendingWindowStart = initialChar;
+        pendingSpeechChar = -1;
+        restoringReadingState = true;
+        showReaderLoading(true);
+        readerView.clearContent();
+        readerView.loadFromJsonlAsset(work.asset, initialChar, () -> {
+            updateSentenceRanges();
+            int speechChar = resolveSavedSpeechChar(work);
+            restoringReadingState = false;
+            int anchor = speechChar >= 0 ? speechChar : initialChar;
+            readerView.scrollToGlobalChar(anchor);
+            if (speechChar >= 0) {
+                currentCharIndex = speechChar;
+                updatePendingSpeechChar(currentCharIndex);
+                adjustSentenceIndexForChar(speechChar);
+                if (readerView != null) {
+                    ReaderView.SentenceRange sentence = readerView.findSentenceForCharIndex(speechChar);
+                    if (sentence != null) {
+                        currentSentenceStart = sentence.start;
+                        currentSentenceEnd = sentence.end;
+                        readerView.highlightSentenceRange(sentence.start, sentence.end);
+                    }
+                    readerView.highlightLetter(speechChar);
+                }
+            }
+            showReaderLoading(false);
+        });
         updateWorkMenuDisplay();
+    }
+
+    private int resolveInitialCharIndex(WorkInfo work) {
+        if (readingPrefs == null || work == null) {
+            return 0;
+        }
+        return Math.max(0, readingPrefs.getInt(keyWindowStart(work.id), 0));
+    }
+
+    private int resolveSavedSpeechChar(WorkInfo work) {
+        if (readingPrefs == null || work == null) {
+            return -1;
+        }
+        return readingPrefs.getInt(keySpeechChar(work.id), -1);
+    }
+
+    private void handleReaderWindowChanged(int start, int end) {
+        pendingWindowStart = Math.max(0, start);
+        if (!restoringReadingState) {
+            schedulePersistReadingState();
+        }
+    }
+
+    private void schedulePersistReadingState() {
+        if (!readingStateDirty) {
+            readingStateDirty = true;
+        }
+        readingStateHandler.removeCallbacks(persistReadingRunnable);
+        readingStateHandler.postDelayed(persistReadingRunnable, 500);
+    }
+
+    private void persistReadingStateNow() {
+        readingStateHandler.removeCallbacks(persistReadingRunnable);
+        readingStateDirty = false;
+        WorkInfo work = getCurrentWork();
+        if (readingPrefs == null || work == null) {
+            return;
+        }
+        SharedPreferences.Editor editor = readingPrefs.edit();
+        editor.putString(KEY_LAST_WORK, work.id);
+        editor.putInt(keyWindowStart(work.id), Math.max(0, pendingWindowStart));
+        int speechChar = pendingSpeechChar >= 0 ? pendingSpeechChar : resolveFocusCharIndex();
+        if (speechChar >= 0) {
+            editor.putInt(keySpeechChar(work.id), speechChar);
+        }
+        editor.apply();
+    }
+
+    private void showReaderLoading(boolean show) {
+        if (readerLoadingIndicator != null) {
+            readerLoadingIndicator.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+        if (readerScrollView != null) {
+            readerScrollView.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        }
+    }
+
+    private void updatePendingSpeechChar(int charIndex) {
+        pendingSpeechChar = charIndex;
+        if (!restoringReadingState) {
+            schedulePersistReadingState();
+        }
     }
 
     private void applyWork(WorkInfo work, boolean fromMenu) {
@@ -756,6 +912,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void scrollToSpan(TokenSpan span, int attempt) {
         if (readerView == null || readerScrollView == null || span == null) return;
+        readerView.ensureWindowContains(span.getStartIndex());
         android.text.Layout layout = readerView.getLayout();
         CharSequence text = readerView.getText();
         if ((layout == null || text == null) && attempt < 5) {
@@ -765,8 +922,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return;
         }
         int textLength = text.length();
-        int start = Math.max(0, Math.min(span.getStartIndex(), textLength));
-        int line = layout.getLineForOffset(start);
+        int localStart = readerView.toLocalCharIndex(span.getStartIndex());
+        int clampedStart = Math.max(0, Math.min(localStart, textLength));
+        int line = layout.getLineForOffset(clampedStart);
         int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
         readerScrollView.smoothScrollTo(0, y);
         readerScrollView.post(() ->
@@ -890,6 +1048,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         currentSentenceStart = -1;
         currentSentenceEnd = -1;
         currentCharIndex = -1;
+        updatePendingSpeechChar(-1);
         estimatedUtteranceDurationMs = 0L;
         pendingPlaybackSentenceIndex = -1;
         if (readerView != null) {
@@ -915,6 +1074,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         currentSentenceStart = sentence.start;
         currentSentenceEnd = sentence.end;
         currentCharIndex = sentence.start;
+        updatePendingSpeechChar(currentCharIndex);
         if (readerView != null) {
             readerView.highlightSentenceRange(sentence.start, sentence.end);
             readerView.highlightLetter(sentence.start);
@@ -1212,7 +1372,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } finally {
             try {
                 retriever.release();
-            } catch (RuntimeException ignored) {
+            } catch (IOException | RuntimeException ignored) {
             }
         }
         return 0L;
@@ -1229,6 +1389,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         int highlightIndex = sentence.start + offset;
         currentCharIndex = highlightIndex;
+        updatePendingSpeechChar(currentCharIndex);
         if (readerView != null) {
             readerView.highlightLetter(highlightIndex);
         }
@@ -1460,6 +1621,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     readerView.highlightLetter(currentSentenceStart);
                 }
                 currentCharIndex = currentSentenceStart;
+                updatePendingSpeechChar(currentCharIndex);
                 startProgressUpdates();
                 return;
             } catch (IllegalStateException e) {
@@ -1484,6 +1646,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         currentSentenceStart = -1;
         currentSentenceEnd = -1;
         currentCharIndex = -1;
+        updatePendingSpeechChar(-1);
         shouldContinueSpeech = true;
         speakCurrentSentence();
     }
@@ -1786,6 +1949,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerView.highlightLetter(targetIndex);
         }
         currentCharIndex = targetIndex;
+        updatePendingSpeechChar(currentCharIndex);
         adjustSentenceIndexForChar(targetIndex);
     }
 

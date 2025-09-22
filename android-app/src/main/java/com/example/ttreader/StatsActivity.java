@@ -10,10 +10,14 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.UsageStatsDao;
@@ -32,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class StatsActivity extends Activity {
     public static final String EXTRA_MODE = "com.example.ttreader.stats.MODE";
@@ -40,21 +46,7 @@ public class StatsActivity extends Activity {
     public static final int MODE_LANGUAGE = 1;
     public static final int MODE_WORK = 2;
 
-    private UsageStatsDao usageStatsDao;
-    private DateFormat dateFormat;
-    private int mode = MODE_LANGUAGE;
-    private String languagePair = "";
-    private String workId = "";
-    private UsageStatsDao.TimeBounds timeBounds;
-    private UsageStatsDao.PositionBounds positionBounds;
-    private LayoutInflater layoutInflater;
-    private LinearLayout lemmaStatsContainer;
-    private final List<LemmaStats> lemmaStatsSource = new ArrayList<>();
-    private boolean lemmaStatsLoaded = false;
-    private String lemmaFilterLower = "";
-    private LemmaSortMode lemmaSortMode = LemmaSortMode.ALPHABET_ASC;
-    private final Map<LemmaSortMode, ImageButton> sortButtons = new EnumMap<>(LemmaSortMode.class);
-
+    private static final int PAGE_SIZE = 20;
     private static final Map<Character, Integer> TATAR_ALPHABET_INDEX = new HashMap<>();
     private static final int TATAR_UNKNOWN_BASE = 1000;
 
@@ -67,6 +59,28 @@ public class StatsActivity extends Activity {
             TATAR_ALPHABET_INDEX.put(lower, i);
         }
     }
+
+    private UsageStatsDao usageStatsDao;
+    private DateFormat dateFormat;
+    private int mode = MODE_LANGUAGE;
+    private String languagePair = "";
+    private String workId = "";
+    private UsageStatsDao.TimeBounds timeBounds;
+    private UsageStatsDao.PositionBounds positionBounds;
+    private RecyclerView statsRecycler;
+    private StatsAdapter statsAdapter;
+    private ExecutorService backgroundExecutor;
+    private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final List<LemmaStats> lemmaStatsSource = new ArrayList<>();
+    private final List<LemmaStats> filteredLemmaStats = new ArrayList<>();
+    private final List<FeatureStats> featureStats = new ArrayList<>();
+    private boolean lemmaStatsLoaded = false;
+    private boolean lemmaStatsLoading = false;
+    private String lemmaFilterLower = "";
+    private String lemmaFilterText = "";
+    private LemmaSortMode lemmaSortMode = LemmaSortMode.ALPHABET_ASC;
+    private int nextLemmaIndex = 0;
+    private CharSequence axisDescriptionText = "";
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,170 +110,190 @@ public class StatsActivity extends Activity {
                 ? usageStatsDao.getCharBounds(languagePair, workId)
                 : new UsageStatsDao.PositionBounds(0, 0);
 
-        layoutInflater = LayoutInflater.from(this);
-
-        TextView axisDescription = findViewById(R.id.statsAxisDescription);
-        updateAxisDescription(axisDescription);
-
-        setupSortControls();
-
-        LinearLayout lemmaContainer = findViewById(R.id.lemmaStatsContainer);
-        LinearLayout featureContainer = findViewById(R.id.featureStatsContainer);
-        populateLemmaStats(lemmaContainer);
-        populateFeatureStats(featureContainer);
-    }
-
-    private void setupSortControls() {
-        EditText filterInput = findViewById(R.id.statsFilterInput);
-        if (filterInput != null) {
-            filterInput.addTextChangedListener(new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
-                @Override public void afterTextChanged(Editable s) {
-                    String value = s != null ? s.toString() : "";
-                    String normalized = value.trim();
-                    lemmaFilterLower = normalized.toLowerCase(Locale.getDefault());
-                    if (lemmaStatsLoaded) {
-                        refreshLemmaStats();
-                    }
+        statsRecycler = findViewById(R.id.statsRecycler);
+        statsRecycler.setLayoutManager(new LinearLayoutManager(this));
+        statsAdapter = new StatsAdapter();
+        statsRecycler.setAdapter(statsAdapter);
+        statsRecycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                if (dy <= 0) return;
+                if (!lemmaStatsLoaded || lemmaStatsLoading) return;
+                LinearLayoutManager lm = (LinearLayoutManager) recyclerView.getLayoutManager();
+                if (lm == null) return;
+                int total = statsAdapter.getLemmaItemCount();
+                int lastVisible = lm.findLastVisibleItemPosition();
+                if (total > 0 && lastVisible >= statsAdapter.getLemmaItemStart() + total - 5) {
+                    loadNextLemmaPage();
                 }
-            });
-        }
-        sortButtons.clear();
-        addSortButton(LemmaSortMode.ALPHABET_ASC, R.id.buttonSortAlphaAsc);
-        addSortButton(LemmaSortMode.ALPHABET_DESC, R.id.buttonSortAlphaDesc);
-        addSortButton(LemmaSortMode.LOOKUP_COUNT_DESC, R.id.buttonSortLookupCountDesc);
-        addSortButton(LemmaSortMode.LOOKUP_TIME_DESC, R.id.buttonSortLookupTimeDesc);
-        addSortButton(LemmaSortMode.LOOKUP_TIME_ASC, R.id.buttonSortLookupTimeAsc);
-        addSortButton(LemmaSortMode.LOOKUP_COUNT_ASC, R.id.buttonSortLookupCountAsc);
-        addSortButton(LemmaSortMode.EXPOSURE_COUNT_DESC, R.id.buttonSortExposureCountDesc);
-        addSortButton(LemmaSortMode.EXPOSURE_COUNT_ASC, R.id.buttonSortExposureCountAsc);
-        updateSortButtonState();
+            }
+        });
+
+        backgroundExecutor = Executors.newSingleThreadExecutor();
+
+        updateAxisDescriptionText();
+        loadLemmaStats();
+        loadFeatureStats();
     }
 
-    private void addSortButton(LemmaSortMode mode, int viewId) {
-        ImageButton button = findViewById(viewId);
-        if (button != null) {
-            sortButtons.put(mode, button);
-            button.setOnClickListener(v -> setLemmaSortMode(mode));
+    @Override protected void onDestroy() {
+        super.onDestroy();
+        if (backgroundExecutor != null) {
+            backgroundExecutor.shutdownNow();
+            backgroundExecutor = null;
         }
+    }
+    private void loadLemmaStats() {
+        lemmaStatsLoaded = false;
+        lemmaStatsLoading = true;
+        backgroundExecutor.submit(() -> {
+            String workScope = mode == MODE_WORK ? workId : null;
+            List<UsageStat> stats = usageStatsDao.getLemmaStats(languagePair, workScope);
+            Map<String, LemmaStats> aggregated = new HashMap<>();
+            for (UsageStat stat : stats) {
+                String key = safeString(stat.lemma) + "|" + safeString(stat.pos);
+                LemmaStats bucket = aggregated.get(key);
+                if (bucket == null) {
+                    bucket = new LemmaStats(stat.lemma, stat.pos);
+                    aggregated.put(key, bucket);
+                }
+                if (UsageStatsDao.EVENT_EXPOSURE.equals(stat.eventType)) {
+                    bucket.exposureCount = stat.count;
+                    bucket.lastExposure = stat.lastSeenMs;
+                    TimelineEvents events = normalizeEvents(
+                            usageStatsDao.getEvents(languagePair, workScope, stat.lemma, stat.pos, UsageStatsDao.EVENT_EXPOSURE));
+                    bucket.exposurePositions = events.positions;
+                    bucket.exposureEvents = events.events;
+                } else if (UsageStatsDao.EVENT_LOOKUP.equals(stat.eventType)) {
+                    bucket.lookupCount = stat.count;
+                    bucket.lastLookup = stat.lastSeenMs;
+                    TimelineEvents events = normalizeEvents(
+                            usageStatsDao.getEvents(languagePair, workScope, stat.lemma, stat.pos, UsageStatsDao.EVENT_LOOKUP));
+                    bucket.lookupPositions = events.positions;
+                    bucket.lookupEvents = events.events;
+                }
+            }
+            List<LemmaStats> result = new ArrayList<>(aggregated.values());
+            mainHandler.post(() -> {
+                lemmaStatsSource.clear();
+                lemmaStatsSource.addAll(result);
+                lemmaStatsLoaded = true;
+                lemmaStatsLoading = false;
+                rebuildFilteredLemmaStats();
+            });
+        });
+    }
+
+    private void rebuildFilteredLemmaStats() {
+        if (!lemmaStatsLoaded) return;
+        lemmaStatsLoading = true;
+        backgroundExecutor.submit(() -> {
+            List<LemmaStats> filtered = new ArrayList<>();
+            for (LemmaStats entry : lemmaStatsSource) {
+                if (matchesFilter(entry)) {
+                    filtered.add(entry);
+                }
+            }
+            sortLemmaStats(filtered);
+            mainHandler.post(() -> applyFilteredLemmaStats(filtered));
+        });
+    }
+
+    private void applyFilteredLemmaStats(List<LemmaStats> filtered) {
+        filteredLemmaStats.clear();
+        filteredLemmaStats.addAll(filtered);
+        nextLemmaIndex = 0;
+        lemmaStatsLoading = false;
+        boolean noData = lemmaStatsSource.isEmpty();
+        boolean filterEmpty = filteredLemmaStats.isEmpty();
+        loadNextLemmaPage(true, filterEmpty, noData);
+    }
+
+    private void loadNextLemmaPage() {
+        loadNextLemmaPage(false, filteredLemmaStats.isEmpty(), lemmaStatsSource.isEmpty());
+    }
+
+    private void loadNextLemmaPage(boolean reset, boolean filterEmpty, boolean noData) {
+        if (!lemmaStatsLoaded) return;
+        if (reset) {
+            statsAdapter.setLemmaItems(Collections.emptyList(), filterEmpty, noData);
+        }
+        if (filteredLemmaStats.isEmpty()) {
+            statsAdapter.setLemmaItems(Collections.emptyList(), filterEmpty, noData);
+            return;
+        }
+        if (nextLemmaIndex >= filteredLemmaStats.size()) {
+            if (reset) {
+                statsAdapter.setLemmaItems(Collections.emptyList(), false, false);
+            }
+            return;
+        }
+        int end = Math.min(filteredLemmaStats.size(), nextLemmaIndex + PAGE_SIZE);
+        List<LemmaStats> page = new ArrayList<>(filteredLemmaStats.subList(nextLemmaIndex, end));
+        nextLemmaIndex = end;
+        if (reset) {
+            statsAdapter.setLemmaItems(page, false, false);
+        } else {
+            statsAdapter.appendLemmaItems(page);
+        }
+    }
+
+    private void loadFeatureStats() {
+        backgroundExecutor.submit(() -> {
+            String workScope = mode == MODE_WORK ? workId : null;
+            List<UsageStat> stats = usageStatsDao.getFeatureStats(languagePair, workScope);
+            Map<String, FeatureStats> aggregated = new HashMap<>();
+            for (UsageStat stat : stats) {
+                String code = safeString(stat.featureCode);
+                FeatureStats bucket = aggregated.get(code);
+                if (bucket == null) {
+                    bucket = new FeatureStats(code);
+                    aggregated.put(code, bucket);
+                }
+                bucket.count += stat.count;
+                if (stat.lastSeenMs > bucket.lastSeen) bucket.lastSeen = stat.lastSeenMs;
+            }
+            List<FeatureStats> result = new ArrayList<>(aggregated.values());
+            Collections.sort(result, (a, b) -> safeString(a.code).compareToIgnoreCase(safeString(b.code)));
+            mainHandler.post(() -> {
+                featureStats.clear();
+                featureStats.addAll(result);
+                statsAdapter.setFeatureItems(featureStats);
+            });
+        });
+    }
+
+    private void updateAxisDescriptionText() {
+        if (mode == MODE_LANGUAGE) {
+            String start = formatAxisTime(timeBounds != null ? timeBounds.start : 0L);
+            String end = formatAxisTime(System.currentTimeMillis());
+            axisDescriptionText = getString(R.string.stats_axis_time, start, end);
+        } else {
+            int max = positionBounds != null ? positionBounds.max : -1;
+            int displayMax = max < 0 ? 0 : max + 1;
+            axisDescriptionText = getString(R.string.stats_axis_text, displayMax);
+        }
+        statsAdapter.notifyHeaderChanged();
     }
 
     private void setLemmaSortMode(LemmaSortMode mode) {
-        if (mode == null) return;
-        if (lemmaSortMode != mode) {
-            lemmaSortMode = mode;
-            if (lemmaStatsLoaded) {
-                refreshLemmaStats();
-            }
-        }
-        updateSortButtonState();
-    }
-
-    private void updateSortButtonState() {
-        int activeColor = resolveColor(android.R.color.holo_blue_dark);
-        int inactiveColor = resolveColor(android.R.color.darker_gray);
-        for (Map.Entry<LemmaSortMode, ImageButton> entry : sortButtons.entrySet()) {
-            ImageButton button = entry.getValue();
-            if (button == null) continue;
-            if (entry.getKey() == lemmaSortMode) {
-                button.setColorFilter(activeColor, PorterDuff.Mode.SRC_IN);
-            } else {
-                button.setColorFilter(inactiveColor, PorterDuff.Mode.SRC_IN);
-            }
-        }
-    }
-
-    private void populateLemmaStats(LinearLayout container) {
-        lemmaStatsContainer = container;
-        if (container == null) return;
-        container.removeAllViews();
-        lemmaStatsSource.clear();
-        lemmaStatsLoaded = false;
-
-        String workScope = mode == MODE_WORK ? workId : null;
-        List<UsageStat> stats = usageStatsDao.getLemmaStats(languagePair, workScope);
-        Map<String, LemmaStats> aggregated = new HashMap<>();
-        for (UsageStat stat : stats) {
-            String key = safeString(stat.lemma) + "|" + safeString(stat.pos);
-            LemmaStats bucket = aggregated.get(key);
-            if (bucket == null) {
-                bucket = new LemmaStats(stat.lemma, stat.pos);
-                aggregated.put(key, bucket);
-            }
-            if (UsageStatsDao.EVENT_EXPOSURE.equals(stat.eventType)) {
-                bucket.exposureCount = stat.count;
-                bucket.lastExposure = stat.lastSeenMs;
-                TimelineEvents events = normalizeEvents(
-                        usageStatsDao.getEvents(languagePair, workScope, stat.lemma, stat.pos, UsageStatsDao.EVENT_EXPOSURE));
-                bucket.exposurePositions = events.positions;
-                bucket.exposureEvents = events.events;
-            } else if (UsageStatsDao.EVENT_LOOKUP.equals(stat.eventType)) {
-                bucket.lookupCount = stat.count;
-                bucket.lastLookup = stat.lastSeenMs;
-                TimelineEvents events = normalizeEvents(
-                        usageStatsDao.getEvents(languagePair, workScope, stat.lemma, stat.pos, UsageStatsDao.EVENT_LOOKUP));
-                bucket.lookupPositions = events.positions;
-                bucket.lookupEvents = events.events;
-            }
-        }
-        lemmaStatsSource.addAll(aggregated.values());
-        lemmaStatsLoaded = true;
-        refreshLemmaStats();
-    }
-
-    private void refreshLemmaStats() {
-        if (lemmaStatsContainer == null) return;
-        lemmaStatsContainer.removeAllViews();
-        if (!lemmaStatsLoaded) return;
-
-        List<LemmaStats> filtered = new ArrayList<>();
-        for (LemmaStats entry : lemmaStatsSource) {
-            if (matchesFilter(entry)) {
-                filtered.add(entry);
-            }
-        }
-
-        if (filtered.isEmpty()) {
-            TextView tv = new TextView(this);
-            if (lemmaStatsSource.isEmpty()) {
-                tv.setText(R.string.stats_time_never);
-            } else {
-                tv.setText(R.string.stats_filter_empty);
-            }
-            lemmaStatsContainer.addView(tv);
+        if (mode == null || lemmaSortMode == mode) {
             return;
         }
-
-        sortLemmaStats(filtered);
-
-        LayoutInflater inflater = layoutInflater != null ? layoutInflater : LayoutInflater.from(this);
-        for (LemmaStats entry : filtered) {
-            View item = inflater.inflate(R.layout.item_stats_entry, lemmaStatsContainer, false);
-            TextView title = item.findViewById(R.id.statsTitle);
-            TextView exposure = item.findViewById(R.id.statsExposure);
-            TextView lookup = item.findViewById(R.id.statsLookup);
-            UsageTimelineView exposureTimeline = item.findViewById(R.id.statsExposureTimeline);
-            UsageTimelineView lookupTimeline = item.findViewById(R.id.statsLookupTimeline);
-            View exposureLabels = item.findViewById(R.id.statsExposureTimelineLabels);
-            TextView exposureStartLabel = item.findViewById(R.id.statsExposureTimelineStart);
-            TextView exposureEndLabel = item.findViewById(R.id.statsExposureTimelineEnd);
-            View lookupLabels = item.findViewById(R.id.statsLookupTimelineLabels);
-            TextView lookupStartLabel = item.findViewById(R.id.statsLookupTimelineStart);
-            TextView lookupEndLabel = item.findViewById(R.id.statsLookupTimelineEnd);
-            title.setText(formatLemmaTitle(entry));
-            exposure.setText(getString(R.string.stats_exposure_label, entry.exposureCount, formatTime(entry.lastExposure)));
-            lookup.setText(getString(R.string.stats_lookup_label, entry.lookupCount, formatTime(entry.lastLookup)));
-            bindTimeline(exposureTimeline, exposureLabels, exposureStartLabel, exposureEndLabel,
-                    entry.exposureCount, entry.exposurePositions, entry.exposureEvents,
-                    resolveColor(android.R.color.holo_green_dark));
-            bindTimeline(lookupTimeline, lookupLabels, lookupStartLabel, lookupEndLabel,
-                    entry.lookupCount, entry.lookupPositions, entry.lookupEvents,
-                    resolveColor(android.R.color.holo_blue_dark));
-            lemmaStatsContainer.addView(item);
-        }
+        lemmaSortMode = mode;
+        rebuildFilteredLemmaStats();
+        statsAdapter.notifyHeaderChanged();
     }
 
+    private void onFilterTextChanged(String value) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.equals(lemmaFilterText)) {
+            return;
+        }
+        lemmaFilterText = normalized;
+        lemmaFilterLower = normalized.toLowerCase(Locale.getDefault());
+        rebuildFilteredLemmaStats();
+    }
     private boolean matchesFilter(LemmaStats entry) {
         if (TextUtils.isEmpty(lemmaFilterLower)) return true;
         String lemma = safeString(entry.lemma);
@@ -363,61 +397,6 @@ public class StatsActivity extends Activity {
         return TATAR_UNKNOWN_BASE + ch;
     }
 
-    private enum LemmaSortMode {
-        ALPHABET_ASC,
-        ALPHABET_DESC,
-        LOOKUP_COUNT_DESC,
-        LOOKUP_TIME_DESC,
-        LOOKUP_TIME_ASC,
-        LOOKUP_COUNT_ASC,
-        EXPOSURE_COUNT_DESC,
-        EXPOSURE_COUNT_ASC
-    }
-
-    private void populateFeatureStats(LinearLayout container) {
-        container.removeAllViews();
-        String workScope = mode == MODE_WORK ? workId : null;
-        List<UsageStat> stats = usageStatsDao.getFeatureStats(languagePair, workScope);
-        Map<String, FeatureStats> aggregated = new HashMap<>();
-        for (UsageStat stat : stats) {
-            String code = safeString(stat.featureCode);
-            FeatureStats bucket = aggregated.get(code);
-            if (bucket == null) {
-                bucket = new FeatureStats(code);
-                aggregated.put(code, bucket);
-            }
-            bucket.count += stat.count;
-            if (stat.lastSeenMs > bucket.lastSeen) bucket.lastSeen = stat.lastSeenMs;
-        }
-        if (aggregated.isEmpty()) {
-            TextView tv = new TextView(this);
-            tv.setText(R.string.stats_time_never);
-            container.addView(tv);
-            return;
-        }
-        List<FeatureStats> featureStats = new ArrayList<>(aggregated.values());
-        Collections.sort(featureStats, (a, b) -> safeString(a.code).compareToIgnoreCase(safeString(b.code)));
-        for (FeatureStats entry : featureStats) {
-            TextView tv = new TextView(this);
-            tv.setText(getString(R.string.stats_feature_label,
-                    formatFeatureTitle(entry.code), entry.count, formatTime(entry.lastSeen)));
-            container.addView(tv);
-        }
-    }
-
-    private void updateAxisDescription(TextView view) {
-        if (view == null) return;
-        if (mode == MODE_LANGUAGE) {
-            String start = formatAxisTime(timeBounds != null ? timeBounds.start : 0L);
-            String end = formatAxisTime(System.currentTimeMillis());
-            view.setText(getString(R.string.stats_axis_time, start, end));
-        } else {
-            int max = positionBounds != null ? positionBounds.max : -1;
-            int displayMax = max < 0 ? 0 : max + 1;
-            view.setText(getString(R.string.stats_axis_text, displayMax));
-        }
-    }
-
     private void bindTimeline(UsageTimelineView view, View labelsContainer, TextView startLabel, TextView endLabel,
                               int count, List<Float> positions, List<UsageEvent> events, int color) {
         if (view == null) return;
@@ -518,45 +497,374 @@ public class StatsActivity extends Activity {
     }
 
     private String formatFeatureTitle(String code) {
-        FeatureMetadata meta = GrammarResources.getFeatureMetadata(code);
-        if (meta != null) {
-            return code + " · " + meta.titleRu;
+        if (TextUtils.isEmpty(code)) return getString(R.string.stats_feature_unknown);
+        FeatureMetadata metadata = GrammarResources.getFeatureMetadata(code);
+        if (metadata != null) {
+            if (!TextUtils.isEmpty(metadata.titleRu)) {
+                return metadata.titleRu;
+            }
+            if (!TextUtils.isEmpty(metadata.titleTt)) {
+                return metadata.titleTt;
+            }
         }
         return code;
     }
 
-    private String formatTime(long ms) {
-        if (ms <= 0) return getString(R.string.stats_time_never);
-        return dateFormat.format(ms);
+    private String formatTime(long timestamp) {
+        if (timestamp <= 0L) return getString(R.string.stats_time_never);
+        return dateFormat.format(new java.util.Date(timestamp));
     }
 
-    private String formatAxisTime(long ms) {
-        if (ms <= 0) return getString(R.string.stats_time_never);
-        return dateFormat.format(ms);
-    }
-
-    private int resolveColor(int colorResId) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return getResources().getColor(colorResId, getTheme());
-        }
-        return getResources().getColor(colorResId);
+    private String formatAxisTime(long timestamp) {
+        if (timestamp <= 0L) return getString(R.string.stats_time_unknown);
+        return dateFormat.format(new java.util.Date(timestamp));
     }
 
     private String safeString(String value) {
         return value == null ? "" : value;
     }
 
+    private int resolveColor(int resId) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return getResources().getColor(resId, getTheme());
+        }
+        //noinspection deprecation
+        return getResources().getColor(resId);
+    }
+    private class StatsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private static final int VIEW_TYPE_HEADER = 1;
+        private static final int VIEW_TYPE_LEMMA = 2;
+        private static final int VIEW_TYPE_FEATURE_HEADER = 3;
+        private static final int VIEW_TYPE_FEATURE = 4;
+        private static final int VIEW_TYPE_EMPTY = 5;
+        private static final int VIEW_TYPE_FEATURE_EMPTY = 6;
+
+        private final List<LemmaStats> visibleLemmaStats = new ArrayList<>();
+        private final List<FeatureStats> visibleFeatureStats = new ArrayList<>();
+        private boolean showLemmaEmpty = false;
+        private boolean showLemmaNever = false;
+        private boolean showFeatureEmpty = true;
+
+        @Override public int getItemCount() {
+            int count = 1; // header
+            if (showLemmaEmpty) {
+                count += 1;
+            } else {
+                count += visibleLemmaStats.size();
+            }
+            count += 1; // feature header
+            if (showFeatureEmpty) {
+                count += 1;
+            } else {
+                count += visibleFeatureStats.size();
+            }
+            return count;
+        }
+
+        @Override public int getItemViewType(int position) {
+            if (position == 0) {
+                return VIEW_TYPE_HEADER;
+            }
+            position -= 1;
+            if (showLemmaEmpty) {
+                if (position == 0) {
+                    return VIEW_TYPE_EMPTY;
+                }
+                position -= 1;
+            } else if (position < visibleLemmaStats.size()) {
+                return VIEW_TYPE_LEMMA;
+            } else {
+                position -= visibleLemmaStats.size();
+            }
+            if (position == 0) {
+                return VIEW_TYPE_FEATURE_HEADER;
+            }
+            position -= 1;
+            if (showFeatureEmpty) {
+                return VIEW_TYPE_FEATURE_EMPTY;
+            }
+            if (position >= 0 && position < visibleFeatureStats.size()) {
+                return VIEW_TYPE_FEATURE;
+            }
+            return VIEW_TYPE_FEATURE;
+        }
+
+        @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+            if (viewType == VIEW_TYPE_HEADER) {
+                View view = inflater.inflate(R.layout.item_stats_header, parent, false);
+                return new HeaderViewHolder(view);
+            } else if (viewType == VIEW_TYPE_LEMMA) {
+                View view = inflater.inflate(R.layout.item_stats_entry, parent, false);
+                return new LemmaViewHolder(view);
+            } else if (viewType == VIEW_TYPE_FEATURE_HEADER) {
+                View view = inflater.inflate(R.layout.item_stats_feature_header, parent, false);
+                return new FeatureHeaderViewHolder(view);
+            } else if (viewType == VIEW_TYPE_FEATURE_EMPTY) {
+                View view = inflater.inflate(R.layout.item_stats_empty, parent, false);
+                return new EmptyViewHolder(view);
+            } else if (viewType == VIEW_TYPE_FEATURE) {
+                View view = inflater.inflate(R.layout.item_stats_feature_entry, parent, false);
+                return new FeatureViewHolder(view);
+            } else {
+                View view = inflater.inflate(R.layout.item_stats_empty, parent, false);
+                return new EmptyViewHolder(view);
+            }
+        }
+
+        @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+            int viewType = getItemViewType(position);
+            if (viewType == VIEW_TYPE_HEADER) {
+                ((HeaderViewHolder) holder).bind();
+            } else if (viewType == VIEW_TYPE_LEMMA) {
+                int index = position - getLemmaItemStart();
+                LemmaStats entry = visibleLemmaStats.get(Math.max(0, Math.min(index, visibleLemmaStats.size() - 1)));
+                ((LemmaViewHolder) holder).bind(entry);
+            } else if (viewType == VIEW_TYPE_EMPTY) {
+                String message = showLemmaNever
+                        ? getString(R.string.stats_time_never)
+                        : getString(R.string.stats_filter_empty);
+                ((EmptyViewHolder) holder).bind(message);
+            } else if (viewType == VIEW_TYPE_FEATURE_HEADER) {
+                ((FeatureHeaderViewHolder) holder).bind();
+            } else if (viewType == VIEW_TYPE_FEATURE_EMPTY) {
+                ((EmptyViewHolder) holder).bind(getString(R.string.stats_time_never));
+            } else if (viewType == VIEW_TYPE_FEATURE) {
+                int index = position - getFeatureItemStart();
+                FeatureStats entry = visibleFeatureStats.get(Math.max(0, Math.min(index, visibleFeatureStats.size() - 1)));
+                ((FeatureViewHolder) holder).bind(entry);
+            }
+        }
+
+        void setLemmaItems(List<LemmaStats> items, boolean filterEmpty, boolean noData) {
+            visibleLemmaStats.clear();
+            if (items != null) {
+                visibleLemmaStats.addAll(items);
+            }
+            showLemmaEmpty = filterEmpty && visibleLemmaStats.isEmpty();
+            showLemmaNever = noData && showLemmaEmpty;
+            notifyDataSetChanged();
+        }
+
+        void appendLemmaItems(List<LemmaStats> items) {
+            if (items == null || items.isEmpty()) return;
+            showLemmaEmpty = false;
+            showLemmaNever = false;
+            int start = getLemmaItemStart() + visibleLemmaStats.size();
+            visibleLemmaStats.addAll(items);
+            notifyItemRangeInserted(start, items.size());
+        }
+
+        void setFeatureItems(List<FeatureStats> items) {
+            visibleFeatureStats.clear();
+            if (items != null) {
+                visibleFeatureStats.addAll(items);
+            }
+            showFeatureEmpty = visibleFeatureStats.isEmpty();
+            notifyDataSetChanged();
+        }
+
+        void notifyHeaderChanged() {
+            notifyItemChanged(0);
+        }
+
+        int getLemmaItemStart() {
+            return 1;
+        }
+
+        int getLemmaItemCount() {
+            return showLemmaEmpty ? 0 : visibleLemmaStats.size();
+        }
+
+        int getFeatureItemStart() {
+            int start = 1; // header
+            start += showLemmaEmpty ? 1 : visibleLemmaStats.size();
+            start += 1; // feature header
+            return start;
+        }
+    }
+
+    private class HeaderViewHolder extends RecyclerView.ViewHolder {
+        private final EditText filterInput;
+        private final TextView axisDescription;
+        private final TextView lemmaHeader;
+        private final Map<LemmaSortMode, ImageButton> sortButtons = new EnumMap<>(LemmaSortMode.class);
+        private final TextWatcher watcher = new SimpleTextWatcher() {
+            @Override public void afterTextChanged(Editable s) {
+                onFilterTextChanged(s != null ? s.toString() : "");
+            }
+        };
+        private boolean initialized = false;
+
+        HeaderViewHolder(View itemView) {
+            super(itemView);
+            filterInput = itemView.findViewById(R.id.statsFilterInput);
+            axisDescription = itemView.findViewById(R.id.statsAxisDescription);
+            lemmaHeader = itemView.findViewById(R.id.statsLemmaHeader);
+            registerSortButton(LemmaSortMode.ALPHABET_ASC, R.id.buttonSortAlphaAsc);
+            registerSortButton(LemmaSortMode.ALPHABET_DESC, R.id.buttonSortAlphaDesc);
+            registerSortButton(LemmaSortMode.LOOKUP_COUNT_DESC, R.id.buttonSortLookupCountDesc);
+            registerSortButton(LemmaSortMode.LOOKUP_TIME_DESC, R.id.buttonSortLookupTimeDesc);
+            registerSortButton(LemmaSortMode.LOOKUP_TIME_ASC, R.id.buttonSortLookupTimeAsc);
+            registerSortButton(LemmaSortMode.LOOKUP_COUNT_ASC, R.id.buttonSortLookupCountAsc);
+            registerSortButton(LemmaSortMode.EXPOSURE_COUNT_DESC, R.id.buttonSortExposureCountDesc);
+            registerSortButton(LemmaSortMode.EXPOSURE_COUNT_ASC, R.id.buttonSortExposureCountAsc);
+        }
+
+        void bind() {
+            if (!initialized) {
+                initialized = true;
+                if (filterInput != null) {
+                    filterInput.addTextChangedListener(watcher);
+                }
+            }
+            if (filterInput != null) {
+                String current = filterInput.getText() != null ? filterInput.getText().toString() : "";
+                if (!TextUtils.equals(current, lemmaFilterText)) {
+                    filterInput.setText(lemmaFilterText);
+                    filterInput.setSelection(filterInput.getText().length());
+                }
+            }
+            if (axisDescription != null) {
+                axisDescription.setText(axisDescriptionText);
+            }
+            if (lemmaHeader != null) {
+                lemmaHeader.setText(R.string.stats_lemma_header);
+            }
+            updateSortButtons();
+        }
+
+        private void registerSortButton(LemmaSortMode mode, int viewId) {
+            ImageButton button = itemView.findViewById(viewId);
+            if (button == null) return;
+            sortButtons.put(mode, button);
+            button.setOnClickListener(v -> setLemmaSortMode(mode));
+        }
+
+        private void updateSortButtons() {
+            int activeColor = resolveColor(android.R.color.holo_blue_dark);
+            int inactiveColor = resolveColor(android.R.color.darker_gray);
+            for (Map.Entry<LemmaSortMode, ImageButton> entry : sortButtons.entrySet()) {
+                ImageButton button = entry.getValue();
+                if (button == null) continue;
+                if (entry.getKey() == lemmaSortMode) {
+                    button.setColorFilter(activeColor, PorterDuff.Mode.SRC_IN);
+                } else {
+                    button.setColorFilter(inactiveColor, PorterDuff.Mode.SRC_IN);
+                }
+            }
+        }
+    }
+
+    private class LemmaViewHolder extends RecyclerView.ViewHolder {
+        private final TextView title;
+        private final TextView exposure;
+        private final TextView lookup;
+        private final UsageTimelineView exposureTimeline;
+        private final UsageTimelineView lookupTimeline;
+        private final View exposureLabels;
+        private final TextView exposureStartLabel;
+        private final TextView exposureEndLabel;
+        private final View lookupLabels;
+        private final TextView lookupStartLabel;
+        private final TextView lookupEndLabel;
+
+        LemmaViewHolder(View itemView) {
+            super(itemView);
+            title = itemView.findViewById(R.id.statsTitle);
+            exposure = itemView.findViewById(R.id.statsExposure);
+            lookup = itemView.findViewById(R.id.statsLookup);
+            exposureTimeline = itemView.findViewById(R.id.statsExposureTimeline);
+            lookupTimeline = itemView.findViewById(R.id.statsLookupTimeline);
+            exposureLabels = itemView.findViewById(R.id.statsExposureTimelineLabels);
+            exposureStartLabel = itemView.findViewById(R.id.statsExposureTimelineStart);
+            exposureEndLabel = itemView.findViewById(R.id.statsExposureTimelineEnd);
+            lookupLabels = itemView.findViewById(R.id.statsLookupTimelineLabels);
+            lookupStartLabel = itemView.findViewById(R.id.statsLookupTimelineStart);
+            lookupEndLabel = itemView.findViewById(R.id.statsLookupTimelineEnd);
+        }
+
+        void bind(LemmaStats entry) {
+            if (title != null) title.setText(formatLemmaTitle(entry));
+            if (exposure != null) {
+                exposure.setText(getString(R.string.stats_exposure_label,
+                        entry.exposureCount, formatTime(entry.lastExposure)));
+            }
+            if (lookup != null) {
+                lookup.setText(getString(R.string.stats_lookup_label,
+                        entry.lookupCount, formatTime(entry.lastLookup)));
+            }
+            bindTimeline(exposureTimeline, exposureLabels, exposureStartLabel, exposureEndLabel,
+                    entry.exposureCount, entry.exposurePositions, entry.exposureEvents,
+                    resolveColor(android.R.color.holo_green_dark));
+            bindTimeline(lookupTimeline, lookupLabels, lookupStartLabel, lookupEndLabel,
+                    entry.lookupCount, entry.lookupPositions, entry.lookupEvents,
+                    resolveColor(android.R.color.holo_blue_dark));
+        }
+    }
+
+    private static class FeatureHeaderViewHolder extends RecyclerView.ViewHolder {
+        private final TextView header;
+
+        FeatureHeaderViewHolder(View itemView) {
+            super(itemView);
+            header = itemView.findViewById(R.id.statsFeatureHeaderText);
+        }
+
+        void bind() {
+            if (header != null) {
+                header.setText(R.string.stats_feature_header);
+            }
+        }
+    }
+
+    private class FeatureViewHolder extends RecyclerView.ViewHolder {
+        private final TextView title;
+        private final TextView details;
+
+        FeatureViewHolder(View itemView) {
+            super(itemView);
+            title = itemView.findViewById(R.id.statsFeatureTitle);
+            details = itemView.findViewById(R.id.statsFeatureDetails);
+        }
+
+        void bind(FeatureStats entry) {
+            if (title != null) {
+                title.setText(formatFeatureTitle(entry.code));
+            }
+            if (details != null) {
+                details.setText(getString(R.string.stats_feature_label,
+                        formatFeatureTitle(entry.code), entry.count, formatTime(entry.lastSeen)));
+            }
+        }
+    }
+
+    private static class EmptyViewHolder extends RecyclerView.ViewHolder {
+        private final TextView textView;
+
+        EmptyViewHolder(View itemView) {
+            super(itemView);
+            textView = itemView.findViewById(R.id.statsEmptyText);
+        }
+
+        void bind(String message) {
+            if (textView != null) {
+                textView.setText(message);
+            }
+        }
+    }
+
     private static class LemmaStats {
         final String lemma;
         final String pos;
-        int exposureCount = 0;
-        int lookupCount = 0;
-        long lastExposure = 0;
-        long lastLookup = 0;
-        List<Float> exposurePositions = new ArrayList<>();
-        List<UsageEvent> exposureEvents = new ArrayList<>();
-        List<Float> lookupPositions = new ArrayList<>();
-        List<UsageEvent> lookupEvents = new ArrayList<>();
+        int exposureCount;
+        int lookupCount;
+        long lastExposure;
+        long lastLookup;
+        List<Float> exposurePositions;
+        List<UsageEvent> exposureEvents;
+        List<Float> lookupPositions;
+        List<UsageEvent> lookupEvents;
 
         LemmaStats(String lemma, String pos) {
             this.lemma = lemma;
@@ -567,9 +875,11 @@ public class StatsActivity extends Activity {
     private static class FeatureStats {
         final String code;
         int count = 0;
-        long lastSeen = 0;
+        long lastSeen = 0L;
 
-        FeatureStats(String code) { this.code = code; }
+        FeatureStats(String code) {
+            this.code = code;
+        }
     }
 
     private static class TimelineEvents {
@@ -577,8 +887,24 @@ public class StatsActivity extends Activity {
         final List<UsageEvent> events;
 
         TimelineEvents(List<Float> positions, List<UsageEvent> events) {
-            this.positions = positions;
-            this.events = events;
+            this.positions = positions != null ? positions : Collections.emptyList();
+            this.events = events != null ? events : Collections.emptyList();
         }
+    }
+
+    private abstract static class SimpleTextWatcher implements TextWatcher {
+        @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+        @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
+    }
+
+    private enum LemmaSortMode {
+        ALPHABET_ASC,
+        ALPHABET_DESC,
+        LOOKUP_COUNT_DESC,
+        LOOKUP_TIME_DESC,
+        LOOKUP_TIME_ASC,
+        LOOKUP_COUNT_ASC,
+        EXPOSURE_COUNT_DESC,
+        EXPOSURE_COUNT_ASC
     }
 }

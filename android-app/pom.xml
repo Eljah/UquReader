@@ -15,8 +15,8 @@
 
   <properties>
     <android.sdk.location>${env.ANDROID_HOME}</android.sdk.location>
-    <android.platform>28</android.platform>
-    <android.build-tools>33.0.2</android.build-tools>
+    <android.platform>33</android.platform>
+    <android.build-tools>30.0.3</android.build-tools>
     <java.version>1.8</java.version>
     <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
     <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>
@@ -287,6 +287,21 @@ fi
               </target>
             </configuration>
           </execution>
+          <execution>
+            <id>strip-duplicate-dummy-classes</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <exec executable="bash">
+                  <arg value="-c"/>
+                  <arg value="set -euo pipefail; for jar in ${project.build.directory}/unpacked-libs/*/classes.jar; do if [ -f &quot;$jar&quot; ]; then if zipinfo -1 &quot;$jar&quot; 2&gt;/dev/null | grep -qx dummy; then zip -qd &quot;$jar&quot; dummy || true; fi; fi; done"/>
+                </exec>
+              </target>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
 
@@ -364,6 +379,12 @@ fi
           <artifactId>error_prone_annotations</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>androidx.recyclerview</groupId>
+      <artifactId>recyclerview</artifactId>
+      <version>1.3.2</version>
+      <type>aar</type>
     </dependency>
   </dependencies>
 </project>
