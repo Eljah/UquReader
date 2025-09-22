@@ -37,7 +37,9 @@
     <string name="stats_exposure_label">Просмотрено в тексте: %1$d (последний раз %2$s)</string>
     <string name="stats_lookup_label">Открыто в подсказке: %1$d (последний раз %2$s)</string>
     <string name="stats_feature_label">%1$s — %2$d (последний раз %3$s)</string>
+    <string name="stats_feature_unknown">неизвестный признак</string>
     <string name="stats_time_never">никогда</string>
+    <string name="stats_time_unknown">неизвестно</string>
     <string name="stats_filter_hint">Фильтр по слову</string>
     <string name="stats_filter_empty">Совпадений не найдено</string>
     <string name="stats_sort_alpha_asc">Сортировать по алфавиту</string>

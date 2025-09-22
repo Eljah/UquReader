@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/statsFeatureHeaderText"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/stats_feature_header"
+    android:textStyle="bold"
+    android:textSize="18sp"
+    android:paddingTop="16dp"
+    android:paddingBottom="8dp" />
