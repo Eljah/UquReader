@@ -100,7 +100,13 @@ jobs:
           ANDROID_BUILD_TOOLS: 33.0.2
         run: |
           set -euo pipefail
+          set +o pipefail
           yes | sdkmanager --install "platforms;android-${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
+          sdk_status=$?
+          set -o pipefail
+          if [ "$sdk_status" -ne 0 ]; then
+            exit "$sdk_status"
+          fi
           if [ -d "$ANDROID_SDK_ROOT/build-tools" ]; then
             find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d ! -name "${ANDROID_BUILD_TOOLS}" -exec rm -rf {} +
           fi
