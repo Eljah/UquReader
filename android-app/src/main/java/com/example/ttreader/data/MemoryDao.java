@@ -6,8 +6,14 @@ import android.database.sqlite.SQLiteDatabase;
 
 public class MemoryDao {
     private final SQLiteDatabase db;
+    private final DbWriteQueue writeQueue;
 
-    public MemoryDao(SQLiteDatabase db) { this.db = db; }
+    public MemoryDao(SQLiteDatabase db) { this(db, DbWriteQueue.getInstance()); }
+
+    public MemoryDao(SQLiteDatabase db, DbWriteQueue queue) {
+        this.db = db;
+        this.writeQueue = queue;
+    }
 
     public double getCurrentStrength(String lemma, String featureKey, long nowMs, double halfLifeDays) {
         double s = 0; long last = nowMs;
@@ -23,17 +29,24 @@ public class MemoryDao {
     }
 
     public void updateOnLookup(String lemma, String featureKey, long nowMs, double increment) {
-        double s = 0;
-        try (Cursor c = db.rawQuery("SELECT strength FROM memory WHERE lemma=? AND IFNULL(feature_key,'~')=IFNULL(?, '~')",
-                new String[]{lemma, featureKey})) {
-            if (c.moveToFirst()) s = c.getDouble(0);
-        }
-        s = Math.min(10.0, s + increment);
-        ContentValues cv = new ContentValues();
-        cv.put("lemma", lemma);
-        cv.put("feature_key", featureKey);
-        cv.put("strength", s);
-        cv.put("last_seen_ms", nowMs);
-        db.insertWithOnConflict("memory", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+        final String safeLemma = lemma;
+        final String safeFeature = featureKey;
+        final long timestamp = nowMs;
+        final double delta = increment;
+        writeQueue.enqueue(() -> {
+            double s = 0;
+            try (Cursor c = db.rawQuery(
+                    "SELECT strength FROM memory WHERE lemma=? AND IFNULL(feature_key,'~')=IFNULL(?, '~')",
+                    new String[]{safeLemma, safeFeature})) {
+                if (c.moveToFirst()) s = c.getDouble(0);
+            }
+            s = Math.min(10.0, s + delta);
+            ContentValues cv = new ContentValues();
+            cv.put("lemma", safeLemma);
+            cv.put("feature_key", safeFeature);
+            cv.put("strength", s);
+            cv.put("last_seen_ms", timestamp);
+            db.insertWithOnConflict("memory", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+        });
     }
 }

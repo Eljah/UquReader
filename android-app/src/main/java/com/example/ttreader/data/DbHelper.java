@@ -18,7 +18,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 3;
+    private static final int APP_DB_VERSION = 4;
 
     private static final String TAG = "DbHelper";
     private static final String PREFS_NAME = "com.example.ttreader.DB_PREFS";
@@ -43,6 +43,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 ")");
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS memory_idx ON memory(lemma, IFNULL(feature_key,'~'))");
         createUsageTables(db);
+        createDeviceStatsTables(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -53,6 +54,9 @@ public class DbHelper extends SQLiteOpenHelper {
             db.execSQL("DROP TABLE IF EXISTS usage_stats");
             db.execSQL("DROP TABLE IF EXISTS usage_event_log");
             createUsageTables(db);
+        }
+        if (oldVersion < 4) {
+            createDeviceStatsTables(db);
         }
     }
 
@@ -194,6 +198,36 @@ public class DbHelper extends SQLiteOpenHelper {
                 ")");
         db.execSQL("CREATE INDEX IF NOT EXISTS usage_event_lookup_idx ON usage_event_log(\n" +
                 " language_pair, work_id, lemma, pos, event_type, timestamp_ms\n" +
+                ")");
+    }
+
+    private void createDeviceStatsTables(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS device_pause_events(\n" +
+                " id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+                " descriptor TEXT NOT NULL,\n" +
+                " display_name TEXT,\n" +
+                " vendor_id INTEGER,\n" +
+                " product_id INTEGER,\n" +
+                " source_flags INTEGER,\n" +
+                " pause_offset_ms INTEGER NOT NULL,\n" +
+                " target_offset_ms INTEGER NOT NULL,\n" +
+                " delta_ms INTEGER NOT NULL,\n" +
+                " char_delta INTEGER NOT NULL,\n" +
+                " language_pair TEXT,\n" +
+                " work_id TEXT,\n" +
+                " recorded_at_ms INTEGER NOT NULL\n" +
+                ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS device_pause_events_descriptor_idx\n" +
+                " ON device_pause_events(descriptor, recorded_at_ms)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS device_reaction_stats(\n" +
+                " descriptor TEXT PRIMARY KEY,\n" +
+                " display_name TEXT,\n" +
+                " vendor_id INTEGER,\n" +
+                " product_id INTEGER,\n" +
+                " source_flags INTEGER,\n" +
+                " sample_count INTEGER NOT NULL DEFAULT 0,\n" +
+                " avg_reaction_delay_ms REAL NOT NULL DEFAULT 0,\n" +
+                " last_seen_ms INTEGER NOT NULL DEFAULT 0\n" +
                 ")");
     }
 
