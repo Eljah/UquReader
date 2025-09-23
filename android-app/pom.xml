@@ -125,29 +125,68 @@
                 <property name="lifecycle.aar"
                           value="${settings.localRepository}/androidx/lifecycle/lifecycle-runtime/2.3.1/lifecycle-runtime-2.3.1.aar" />
                 <property name="lifecycle.patch.dir" value="${project.build.directory}/patched-lifecycle-runtime" />
-                <mkdir dir="${lifecycle.patch.dir}" />
-                <available file="${lifecycle.aar}" property="lifecycle.aar.exists" />
-                <unzip src="${lifecycle.aar}" dest="${lifecycle.patch.dir}" overwrite="true" if="lifecycle.aar.exists" />
-                <available file="${lifecycle.patch.dir}/res/values/values.xml" property="lifecycle.values.exists" />
-                <loadfile property="lifecycle.values.content"
-                          srcFile="${lifecycle.patch.dir}/res/values/values.xml"
-                          if="lifecycle.values.exists" />
-                <condition property="lifecycle.needs.patch">
-                  <and>
-                    <isset property="lifecycle.values.exists" />
-                    <contains string="${lifecycle.values.content}"
-                              substring="&lt;id name=&quot;view_tree_lifecycle_owner&quot;/&gt;" />
-                  </and>
-                </condition>
-                <echo level="info" message="Lifecycle runtime AAR not present at ${lifecycle.aar}; skipping patch." unless="lifecycle.aar.exists" />
-                <echo file="${lifecycle.patch.dir}/res/values/values.xml" if="lifecycle.needs.patch"><![CDATA[<?xml version="1.0" encoding="utf-8"?>
+                <property name="lifecycle.patch.script" value="${project.build.directory}/patch-lifecycle-runtime.sh" />
+                <echo file="${lifecycle.patch.script}" append="false"><![CDATA[#!/usr/bin/env bash
+set -euo pipefail
+
+AAR_PATH="$1"
+PATCH_DIR="$2"
+
+if [ ! -f "$AAR_PATH" ]; then
+  echo "Lifecycle runtime AAR not present at $AAR_PATH; skipping patch."
+  exit 0
+fi
+
+if [ -n "${JAVA_HOME:-}" ] && [ -x "$JAVA_HOME/bin/jar" ]; then
+  JAR_TOOL="$JAVA_HOME/bin/jar"
+elif command -v jar >/dev/null 2>&1; then
+  JAR_TOOL="$(command -v jar)"
+else
+  echo "Unable to locate the jar tool required to patch lifecycle runtime AAR" >&2
+  exit 1
+fi
+
+WORK_DIR="$PATCH_DIR/work"
+PATCHED_AAR="$PATCH_DIR/lifecycle-runtime.patched.aar"
+
+cleanup() {
+  rm -rf "$PATCH_DIR"
+}
+
+rm -rf "$PATCH_DIR"
+trap cleanup EXIT
+mkdir -p "$WORK_DIR"
+
+(cd "$WORK_DIR" && "$JAR_TOOL" xf "$AAR_PATH")
+
+VALUES_FILE="$WORK_DIR/res/values/values.xml"
+if [ ! -f "$VALUES_FILE" ]; then
+  echo "Lifecycle runtime values.xml missing; skipping patch."
+  exit 0
+fi
+
+if ! grep -q '<id name="view_tree_lifecycle_owner"/>' "$VALUES_FILE"; then
+  echo "Lifecycle runtime values.xml already patched; skipping patch."
+  exit 0
+fi
+
+cat > "$VALUES_FILE" <<'EOF'
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item type="id" name="view_tree_lifecycle_owner" />
 </resources>
+EOF
+
+"$JAR_TOOL" cfM "$PATCHED_AAR" -C "$WORK_DIR" .
+mv "$PATCHED_AAR" "$AAR_PATH"
+
+echo "Patched lifecycle runtime AAR at $AAR_PATH."
 ]]></echo>
-                <zip destfile="${lifecycle.aar}.patched" basedir="${lifecycle.patch.dir}" if="lifecycle.needs.patch" />
-                <move file="${lifecycle.aar}.patched" tofile="${lifecycle.aar}" overwrite="true" if="lifecycle.needs.patch" />
-                <delete dir="${lifecycle.patch.dir}" failonerror="false" />
+                <chmod file="${lifecycle.patch.script}" perm="700" />
+                <exec executable="${lifecycle.patch.script}">
+                  <arg value="${lifecycle.aar}" />
+                  <arg value="${lifecycle.patch.dir}" />
+                </exec>
               </target>
             </configuration>
           </execution>
