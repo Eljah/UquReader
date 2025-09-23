@@ -815,6 +815,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             updateWorkMenuDisplay();
             return;
         }
+        persistReadingStateNow();
         stopSpeech();
         currentWork = work;
         reloadReaderForCurrentSelection();
