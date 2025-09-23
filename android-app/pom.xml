@@ -102,7 +102,7 @@
               <goal>get</goal>
             </goals>
             <configuration>
-              <artifact>androidx.lifecycle:lifecycle-runtime:aar:2.3.1</artifact>
+              <artifact>androidx.lifecycle:lifecycle-runtime:2.3.1:aar</artifact>
               <transitive>false</transitive>
             </configuration>
           </execution>
