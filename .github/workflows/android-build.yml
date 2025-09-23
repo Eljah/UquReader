@@ -95,10 +95,20 @@ jobs:
             "${{ steps.version.outputs.version }}"
 
       - name: Install Android platform tools
+        env:
+          ANDROID_PLATFORM: 33
+          ANDROID_BUILD_TOOLS: 30.0.3
         run: |
-          yes | sdkmanager --install "platforms;android-28" "build-tools;28.0.3"
+          set -euo pipefail
+          set +o pipefail
+          yes | sdkmanager --install "platforms;android-${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
+          sdk_status=$?
+          set -o pipefail
+          if [ "$sdk_status" -ne 0 ]; then
+            exit "$sdk_status"
+          fi
           if [ -d "$ANDROID_SDK_ROOT/build-tools" ]; then
-            find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d ! -name '28.0.3' -exec rm -rf {} +
+            find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d ! -name "${ANDROID_BUILD_TOOLS}" -exec rm -rf {} +
           fi
 
       - name: Build with Maven Wrapper
