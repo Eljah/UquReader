@@ -32,6 +32,11 @@
         android:title="@string/stats_button_work"
         android:showAsAction="ifRoom" />
     <item
+        android:id="@+id/action_device_stats"
+        android:icon="@drawable/ic_stats_bluetooth"
+        android:title="@string/stats_button_device"
+        android:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_install_talgat"
         android:title="@string/speech_install_talgat"
         android:showAsAction="never" />

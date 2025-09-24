@@ -5,6 +5,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.text.TextUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DeviceStatsDao {
     private final SQLiteDatabase db;
     private final DbWriteQueue writeQueue;
@@ -29,6 +32,7 @@ public class DeviceStatsDao {
         final int vendorId = device.vendorId;
         final int productId = device.productId;
         final int sourceFlags = device.sourceFlags;
+        final int bluetoothLikely = device.bluetoothLikely ? 1 : 0;
         final long safePauseOffset = Math.max(0L, pauseOffsetMs);
         final long safeTargetOffset = Math.max(0L, targetOffsetMs);
         final long safeDelta = Math.max(0L, deltaMs);
@@ -44,6 +48,7 @@ public class DeviceStatsDao {
             event.put("vendor_id", vendorId);
             event.put("product_id", productId);
             event.put("source_flags", sourceFlags);
+            event.put("bluetooth_likely", bluetoothLikely);
             event.put("pause_offset_ms", safePauseOffset);
             event.put("target_offset_ms", safeTargetOffset);
             event.put("delta_ms", safeDelta);
@@ -72,6 +77,7 @@ public class DeviceStatsDao {
             stats.put("vendor_id", vendorId);
             stats.put("product_id", productId);
             stats.put("source_flags", sourceFlags);
+            stats.put("bluetooth_likely", bluetoothLikely);
             stats.put("sample_count", newCount);
             stats.put("avg_reaction_delay_ms", newAvg);
             stats.put("last_seen_ms", timestamp);
@@ -85,7 +91,7 @@ public class DeviceStatsDao {
             return null;
         }
         try (Cursor c = db.rawQuery(
-                "SELECT descriptor, display_name, vendor_id, product_id, source_flags, sample_count, avg_reaction_delay_ms, last_seen_ms " +
+                "SELECT descriptor, display_name, vendor_id, product_id, source_flags, bluetooth_likely, sample_count, avg_reaction_delay_ms, last_seen_ms " +
                         "FROM device_reaction_stats WHERE descriptor=?",
                 new String[]{key})) {
             if (c.moveToFirst()) {
@@ -95,12 +101,35 @@ public class DeviceStatsDao {
                         c.getInt(2),
                         c.getInt(3),
                         c.getInt(4),
-                        c.getInt(5),
-                        c.getDouble(6),
-                        c.getLong(7));
+                        c.getInt(5) != 0,
+                        c.getInt(6),
+                        c.getDouble(7),
+                        c.getLong(8));
             }
         }
         return null;
+    }
+
+    public List<DeviceReactionStats> getAllStats() {
+        List<DeviceReactionStats> results = new ArrayList<>();
+        try (Cursor c = db.rawQuery(
+                "SELECT descriptor, display_name, vendor_id, product_id, source_flags, bluetooth_likely, sample_count, avg_reaction_delay_ms, last_seen_ms " +
+                        "FROM device_reaction_stats ORDER BY avg_reaction_delay_ms ASC, descriptor ASC",
+                null)) {
+            while (c.moveToNext()) {
+                results.add(new DeviceReactionStats(
+                        c.getString(0),
+                        c.getString(1),
+                        c.getInt(2),
+                        c.getInt(3),
+                        c.getInt(4),
+                        c.getInt(5) != 0,
+                        c.getInt(6),
+                        c.getDouble(7),
+                        c.getLong(8)));
+            }
+        }
+        return results;
     }
 
     private static String sanitize(String value) {
@@ -113,17 +142,20 @@ public class DeviceStatsDao {
         public final int vendorId;
         public final int productId;
         public final int sourceFlags;
+        public final boolean bluetoothLikely;
         public final int sampleCount;
         public final double averageDelayMs;
         public final long lastSeenMs;
 
         DeviceReactionStats(String descriptor, String displayName, int vendorId, int productId,
-                            int sourceFlags, int sampleCount, double averageDelayMs, long lastSeenMs) {
+                            int sourceFlags, boolean bluetoothLikely, int sampleCount,
+                            double averageDelayMs, long lastSeenMs) {
             this.descriptor = descriptor == null ? "" : descriptor;
             this.displayName = displayName == null ? "" : displayName;
             this.vendorId = vendorId;
             this.productId = productId;
             this.sourceFlags = sourceFlags;
+            this.bluetoothLikely = bluetoothLikely;
             this.sampleCount = sampleCount;
             this.averageDelayMs = averageDelayMs;
             this.lastSeenMs = lastSeenMs;

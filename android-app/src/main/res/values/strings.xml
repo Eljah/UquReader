@@ -2,6 +2,7 @@
     <string name="app_name">UquReader</string>
     <string name="stats_button_language">Статистика языка</string>
     <string name="stats_button_work">Статистика произведения</string>
+    <string name="stats_button_device">Статистика Bluetooth</string>
     <string name="language_pair_button_format">Языки: %1$s</string>
     <string name="language_pair_button_unset">Выбрать пару языков</string>
     <string name="language_pair_tt_ru">🇷🇺 Русский · Татарский</string>
@@ -32,6 +33,12 @@
     <string name="no_features_placeholder">Дополнительных грамматических элементов нет</string>
     <string name="stats_language_title">Статистика языка</string>
     <string name="stats_work_title">Статистика произведения</string>
+    <string name="device_stats_title">Статистика Bluetooth-устройств</string>
+    <string name="device_stats_empty">Пока нет данных о Bluetooth-устройствах.</string>
+    <string name="device_stats_average_only">Средняя задержка: %1$.1f с</string>
+    <string name="device_stats_average_with_samples">Средняя задержка: %1$.1f с · %2$d наблюдений</string>
+    <string name="device_stats_last_seen">Последний раз: %1$s</string>
+    <string name="device_stats_unknown_device">Неизвестное устройство</string>
     <string name="stats_lemma_header">Леммы и части речи</string>
     <string name="stats_feature_header">Просмотры суффиксов</string>
     <string name="stats_exposure_label">Просмотрено в тексте: %1$d (последний раз %2$s)</string>

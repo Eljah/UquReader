@@ -21,7 +21,10 @@ import android.os.Looper;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -35,6 +38,8 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.Toast;
 import android.widget.Toolbar;
+
+import androidx.core.content.ContextCompat;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.DeviceIdentity;
@@ -77,6 +82,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static String keySpeechChar(String workId) {
         return "reader.speech." + (workId == null ? "" : workId);
     }
+
+    private static String keyFocusChar(String workId) {
+        return "reader.focus." + (workId == null ? "" : workId);
+    }
+
+    private static final int APPROX_WINDOW_PADDING_CHARS = 1000;
+    private static final int APPROX_CHARS_PER_PAGE = 1000;
     private static final class WorkInfo {
         final String id;
         final String asset;
@@ -143,6 +155,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
     private boolean languagePairInitialized = false;
     private WorkInfo currentWork;
+    private int readingProgressColor;
+    private int listeningProgressColor;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
@@ -273,6 +287,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         GrammarResources.initialize(this);
         setContentView(R.layout.activity_main);
 
+        readingProgressColor = ContextCompat.getColor(this, R.color.work_menu_progress_reading);
+        listeningProgressColor = ContextCompat.getColor(this, R.color.work_menu_progress_listening);
+
         dbHelper = new DbHelper(this);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         memoryDao = new MemoryDao(db);
@@ -364,6 +381,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return true;
         } else if (id == R.id.action_work_stats) {
             openWorkStats();
+            return true;
+        } else if (id == R.id.action_device_stats) {
+            openDeviceStats();
             return true;
         } else if (id == R.id.action_toggle_speech) {
             toggleSpeech();
@@ -543,6 +563,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         startActivity(intent);
     }
 
+    private void openDeviceStats() {
+        Intent intent = new Intent(this, DeviceStatsActivity.class);
+        startActivity(intent);
+    }
+
     private void showLanguagePairMenu(View anchor) {
         View safeAnchor = anchor != null ? anchor : getLanguagePairAnchor();
         if (safeAnchor == null) return;
@@ -633,8 +658,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         WorkInfo current = getCurrentWork();
         for (int i = 0; i < availableWorks.size(); i++) {
             WorkInfo work = availableWorks.get(i);
-            MenuItem item = menu.getMenu().add(Menu.NONE, MENU_WORK_ID_BASE + i, Menu.NONE,
-                    work.getFullName(this));
+            CharSequence title = buildWorkMenuTitle(work);
+            MenuItem item = menu.getMenu().add(Menu.NONE, MENU_WORK_ID_BASE + i, Menu.NONE, title);
             item.setCheckable(true);
             item.setChecked(work == current);
             item.setIcon(R.drawable.ic_menu_work);
@@ -649,6 +674,101 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         });
         forceShowMenuIcons(menu);
         menu.show();
+    }
+
+    private CharSequence buildWorkMenuTitle(WorkInfo work) {
+        if (work == null) {
+            return "";
+        }
+        String base = work.getFullName(this);
+        if (readingPrefs == null) {
+            return base;
+        }
+        Integer readingChar = getStoredFocusChar(work);
+        if (readingChar == null) {
+            Integer windowStart = getStoredWindowStart(work);
+            if (windowStart != null) {
+                readingChar = Math.max(0, windowStart + APPROX_WINDOW_PADDING_CHARS);
+            }
+        }
+        Integer listeningChar = getStoredSpeechChar(work);
+        Integer readingPage = readingChar != null ? approxPageForChar(readingChar) : null;
+        Integer listeningPage = listeningChar != null ? approxPageForChar(listeningChar) : null;
+        if (readingPage == null && listeningPage == null) {
+            return base;
+        }
+        SpannableStringBuilder builder = new SpannableStringBuilder(base);
+        builder.append(' ');
+        builder.append('(');
+        if (readingPage != null) {
+            appendColoredText(builder, String.valueOf(readingPage), readingProgressColor);
+        } else {
+            builder.append('—');
+        }
+        builder.append(' ');
+        builder.append('/');
+        builder.append(' ');
+        if (listeningPage != null) {
+            appendColoredText(builder, String.valueOf(listeningPage), listeningProgressColor);
+        } else {
+            builder.append('—');
+        }
+        builder.append(')');
+        return builder;
+    }
+
+    private void appendColoredText(SpannableStringBuilder builder, String text, int color) {
+        if (builder == null || TextUtils.isEmpty(text)) {
+            return;
+        }
+        int start = builder.length();
+        builder.append(text);
+        if (color != 0) {
+            builder.setSpan(new ForegroundColorSpan(color), start, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    private Integer getStoredWindowStart(WorkInfo work) {
+        if (readingPrefs == null || work == null) {
+            return null;
+        }
+        String key = keyWindowStart(work.id);
+        if (!readingPrefs.contains(key)) {
+            return null;
+        }
+        return Math.max(0, readingPrefs.getInt(key, 0));
+    }
+
+    private Integer getStoredSpeechChar(WorkInfo work) {
+        if (readingPrefs == null || work == null) {
+            return null;
+        }
+        String key = keySpeechChar(work.id);
+        if (!readingPrefs.contains(key)) {
+            return null;
+        }
+        int value = readingPrefs.getInt(key, -1);
+        return value >= 0 ? value : null;
+    }
+
+    private Integer getStoredFocusChar(WorkInfo work) {
+        if (readingPrefs == null || work == null) {
+            return null;
+        }
+        String key = keyFocusChar(work.id);
+        if (!readingPrefs.contains(key)) {
+            return null;
+        }
+        int value = readingPrefs.getInt(key, -1);
+        return value >= 0 ? value : null;
+    }
+
+    private int approxPageForChar(int charIndex) {
+        if (charIndex < 0) {
+            return 1;
+        }
+        int pageSize = Math.max(1, APPROX_CHARS_PER_PAGE);
+        return (charIndex / pageSize) + 1;
     }
 
     private void updateLanguagePairIcon() {
@@ -717,8 +837,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerView.loadFromJsonlAsset(work.asset, initialChar, () -> {
             updateSentenceRanges();
             int speechChar = resolveSavedSpeechChar(work);
+            int focusChar = resolveSavedFocusChar(work);
             restoringReadingState = false;
-            int anchor = speechChar >= 0 ? speechChar : initialChar;
+            int anchor;
+            if (speechChar >= 0) {
+                anchor = speechChar;
+            } else if (focusChar >= 0) {
+                anchor = focusChar;
+            } else {
+                anchor = initialChar;
+            }
             readerView.scrollToGlobalChar(anchor);
             if (speechChar >= 0) {
                 currentCharIndex = speechChar;
@@ -733,6 +861,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     }
                     readerView.highlightLetter(speechChar);
                 }
+            } else if (focusChar >= 0) {
+                adjustSentenceIndexForChar(focusChar);
             }
             showReaderLoading(false);
         });
@@ -751,6 +881,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return -1;
         }
         return readingPrefs.getInt(keySpeechChar(work.id), -1);
+    }
+
+    private int resolveSavedFocusChar(WorkInfo work) {
+        if (readingPrefs == null || work == null) {
+            return -1;
+        }
+        String key = keyFocusChar(work.id);
+        if (!readingPrefs.contains(key)) {
+            return -1;
+        }
+        return Math.max(0, readingPrefs.getInt(key, -1));
     }
 
     private void handleReaderWindowChanged(int start, int end) {
@@ -778,7 +919,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         SharedPreferences.Editor editor = readingPrefs.edit();
         editor.putString(KEY_LAST_WORK, work.id);
         editor.putInt(keyWindowStart(work.id), Math.max(0, pendingWindowStart));
-        int speechChar = pendingSpeechChar >= 0 ? pendingSpeechChar : resolveFocusCharIndex();
+        int focusChar = resolveFocusCharIndex();
+        if (focusChar >= 0) {
+            editor.putInt(keyFocusChar(work.id), focusChar);
+        }
+        int speechChar = pendingSpeechChar >= 0 ? pendingSpeechChar : -1;
         if (speechChar >= 0) {
             editor.putInt(keySpeechChar(work.id), speechChar);
         }

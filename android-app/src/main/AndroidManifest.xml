@@ -19,6 +19,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".StatsActivity" />
+        <activity android:name=".DeviceStatsActivity" />
 
     </application>
 </manifest>
