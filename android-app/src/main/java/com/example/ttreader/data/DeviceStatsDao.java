@@ -85,6 +85,45 @@ public class DeviceStatsDao {
         });
     }
 
+    public void recordDeviceSeen(DeviceIdentity device, long recordedAtMs) {
+        if (device == null || !device.shouldTrack()) {
+            return;
+        }
+        final String descriptor = sanitize(device.stableKey());
+        if (TextUtils.isEmpty(descriptor)) {
+            return;
+        }
+        final String displayName = sanitize(device.displayName);
+        final int vendorId = device.vendorId;
+        final int productId = device.productId;
+        final int sourceFlags = device.sourceFlags;
+        final int bluetoothLikely = device.bluetoothLikely ? 1 : 0;
+        final long timestamp = recordedAtMs <= 0 ? System.currentTimeMillis() : recordedAtMs;
+
+        writeQueue.enqueue(() -> {
+            ContentValues insertValues = new ContentValues();
+            insertValues.put("descriptor", descriptor);
+            insertValues.put("display_name", displayName);
+            insertValues.put("vendor_id", vendorId);
+            insertValues.put("product_id", productId);
+            insertValues.put("source_flags", sourceFlags);
+            insertValues.put("bluetooth_likely", bluetoothLikely);
+            insertValues.put("last_seen_ms", timestamp);
+            insertValues.put("sample_count", 0);
+            insertValues.put("avg_reaction_delay_ms", 0d);
+            db.insertWithOnConflict("device_reaction_stats", null, insertValues, SQLiteDatabase.CONFLICT_IGNORE);
+
+            ContentValues updateValues = new ContentValues();
+            updateValues.put("display_name", displayName);
+            updateValues.put("vendor_id", vendorId);
+            updateValues.put("product_id", productId);
+            updateValues.put("source_flags", sourceFlags);
+            updateValues.put("bluetooth_likely", bluetoothLikely);
+            updateValues.put("last_seen_ms", timestamp);
+            db.update("device_reaction_stats", updateValues, "descriptor=?", new String[]{descriptor});
+        });
+    }
+
     public DeviceReactionStats getStats(String descriptor) {
         String key = sanitize(descriptor);
         if (TextUtils.isEmpty(key)) {

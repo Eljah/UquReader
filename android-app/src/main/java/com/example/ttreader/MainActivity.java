@@ -25,6 +25,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -128,6 +129,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final int REQUEST_TYPE_DETAIL = 2;
     private static final int PREFETCH_SENTENCE_COUNT = 2;
     private static final long SKIP_BACK_RESET_PROGRESS_MS = 5000L;
+    private static final float WORK_MENU_TITLE_TEXT_SCALE = 0.9f;
+    private static final float WORK_MENU_METADATA_TEXT_SCALE = 0.8f;
 
     public static final String EXTRA_TARGET_CHAR_INDEX = "com.example.ttreader.TARGET_CHAR_INDEX";
 
@@ -181,6 +184,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int promptBaseCharIndex = -1;
     private boolean skipBackGoPrevious = false;
     private boolean skipBackRestartArmed = false;
+    private DeviceIdentity lastKnownDeviceIdentity;
 
     private final UtteranceProgressListener synthesisListener = new UtteranceProgressListener() {
         @Override public void onStart(String utteranceId) {
@@ -695,36 +699,59 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         Integer readingPage = readingChar != null ? approxPageForChar(readingChar) : null;
         Integer listeningPage = listeningChar != null ? approxPageForChar(listeningChar) : null;
         if (readingPage == null && listeningPage == null) {
-            return base;
+            SpannableStringBuilder builder = new SpannableStringBuilder();
+            appendWithSize(builder, base, WORK_MENU_TITLE_TEXT_SCALE);
+            return builder;
         }
-        SpannableStringBuilder builder = new SpannableStringBuilder(base);
-        builder.append(' ');
-        builder.append('(');
+        SpannableStringBuilder builder = new SpannableStringBuilder();
+        appendWithSize(builder, base, WORK_MENU_TITLE_TEXT_SCALE);
+        appendWithSize(builder, " ", WORK_MENU_METADATA_TEXT_SCALE);
+        appendWithSize(builder, "(", WORK_MENU_METADATA_TEXT_SCALE);
         if (readingPage != null) {
-            appendColoredText(builder, String.valueOf(readingPage), readingProgressColor);
+            appendColoredText(builder, String.valueOf(readingPage), readingProgressColor,
+                    WORK_MENU_METADATA_TEXT_SCALE);
         } else {
-            builder.append('—');
+            appendWithSize(builder, "—", WORK_MENU_METADATA_TEXT_SCALE);
         }
-        builder.append(' ');
-        builder.append('/');
-        builder.append(' ');
+        appendWithSize(builder, " ", WORK_MENU_METADATA_TEXT_SCALE);
+        appendWithSize(builder, "/", WORK_MENU_METADATA_TEXT_SCALE);
+        appendWithSize(builder, " ", WORK_MENU_METADATA_TEXT_SCALE);
         if (listeningPage != null) {
-            appendColoredText(builder, String.valueOf(listeningPage), listeningProgressColor);
+            appendColoredText(builder, String.valueOf(listeningPage), listeningProgressColor,
+                    WORK_MENU_METADATA_TEXT_SCALE);
         } else {
-            builder.append('—');
+            appendWithSize(builder, "—", WORK_MENU_METADATA_TEXT_SCALE);
         }
-        builder.append(')');
+        appendWithSize(builder, ")", WORK_MENU_METADATA_TEXT_SCALE);
         return builder;
     }
 
-    private void appendColoredText(SpannableStringBuilder builder, String text, int color) {
+    private void appendColoredText(SpannableStringBuilder builder, String text, int color,
+            float sizeScale) {
         if (builder == null || TextUtils.isEmpty(text)) {
             return;
         }
         int start = builder.length();
         builder.append(text);
+        if (sizeScale > 0f && sizeScale != 1f) {
+            builder.setSpan(new RelativeSizeSpan(sizeScale), start, builder.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
         if (color != 0) {
-            builder.setSpan(new ForegroundColorSpan(color), start, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            builder.setSpan(new ForegroundColorSpan(color), start, builder.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    private void appendWithSize(SpannableStringBuilder builder, CharSequence text, float sizeScale) {
+        if (builder == null || TextUtils.isEmpty(text)) {
+            return;
+        }
+        int start = builder.length();
+        builder.append(text);
+        if (sizeScale > 0f && sizeScale != 1f) {
+            builder.setSpan(new RelativeSizeSpan(sizeScale), start, builder.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
     }
 
@@ -1590,6 +1617,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 KeyEvent event = mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
                 if (event != null && event.getAction() == KeyEvent.ACTION_DOWN) {
                     int keyCode = event.getKeyCode();
+                    DeviceIdentity identity = DeviceIdentity.from(event);
+                    recordDevicePresence(identity);
                     if (isPlayPauseKey(keyCode)) {
                         KeyEvent copy = new KeyEvent(event);
                         speechProgressHandler.post(() -> performMediaButtonAction(copy));
@@ -1606,10 +1635,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
 
             @Override public void onSkipToNext() {
+                recordDevicePresence(lastKnownDeviceIdentity);
                 speechProgressHandler.post(() -> handleMediaSkip(true));
             }
 
             @Override public void onSkipToPrevious() {
+                recordDevicePresence(lastKnownDeviceIdentity);
                 speechProgressHandler.post(() -> handleMediaSkip(false));
             }
         });
@@ -1623,6 +1654,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void performMediaButtonAction(KeyEvent keyEvent) {
         DeviceIdentity deviceIdentity = DeviceIdentity.from(keyEvent);
+        recordDevicePresence(deviceIdentity);
         if (cancelDetailSpeech()) {
             return;
         }
@@ -2348,6 +2380,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return false;
         }
         int keyCode = event.getKeyCode();
+        DeviceIdentity deviceIdentity = DeviceIdentity.from(event);
+        recordDevicePresence(deviceIdentity);
         if (detailPlaybackActive() || activeDetailRequest != null || pendingDetailRequest != null) {
             if (isPlayPauseKey(keyCode) || keyCode == KeyEvent.KEYCODE_BACK) {
                 cancelDetailSpeech();
@@ -2387,6 +2421,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return true;
         }
         return false;
+    }
+
+    private void recordDevicePresence(DeviceIdentity deviceIdentity) {
+        if (deviceIdentity == null || !deviceIdentity.shouldTrack()) {
+            return;
+        }
+        lastKnownDeviceIdentity = deviceIdentity;
+        if (deviceStatsDao == null) {
+            return;
+        }
+        deviceStatsDao.recordDeviceSeen(deviceIdentity, System.currentTimeMillis());
     }
 
     private boolean isExternalInputDevice(InputDevice device) {
