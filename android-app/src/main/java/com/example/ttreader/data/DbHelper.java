@@ -18,7 +18,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 4;
+    private static final int APP_DB_VERSION = 5;
 
     private static final String TAG = "DbHelper";
     private static final String PREFS_NAME = "com.example.ttreader.DB_PREFS";
@@ -57,6 +57,18 @@ public class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 4) {
             createDeviceStatsTables(db);
+        }
+        if (oldVersion < 5) {
+            try {
+                db.execSQL("ALTER TABLE device_pause_events ADD COLUMN bluetooth_likely INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {
+                // Column may already exist on some devices.
+            }
+            try {
+                db.execSQL("ALTER TABLE device_reaction_stats ADD COLUMN bluetooth_likely INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {
+                // Column may already exist on some devices.
+            }
         }
     }
 
@@ -209,6 +221,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 " vendor_id INTEGER,\n" +
                 " product_id INTEGER,\n" +
                 " source_flags INTEGER,\n" +
+                " bluetooth_likely INTEGER NOT NULL DEFAULT 0,\n" +
                 " pause_offset_ms INTEGER NOT NULL,\n" +
                 " target_offset_ms INTEGER NOT NULL,\n" +
                 " delta_ms INTEGER NOT NULL,\n" +
@@ -225,6 +238,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 " vendor_id INTEGER,\n" +
                 " product_id INTEGER,\n" +
                 " source_flags INTEGER,\n" +
+                " bluetooth_likely INTEGER NOT NULL DEFAULT 0,\n" +
                 " sample_count INTEGER NOT NULL DEFAULT 0,\n" +
                 " avg_reaction_delay_ms REAL NOT NULL DEFAULT 0,\n" +
                 " last_seen_ms INTEGER NOT NULL DEFAULT 0\n" +

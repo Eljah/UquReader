@@ -1,4 +1,6 @@
 <resources>
     <color name="reader_sentence_outline">#4CAF50</color>
     <color name="reader_letter_highlight">#2E7D32</color>
+    <color name="work_menu_progress_reading">#FF000000</color>
+    <color name="work_menu_progress_listening">@color/reader_letter_highlight</color>
 </resources>
