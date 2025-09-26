@@ -76,9 +76,6 @@ public class DeviceStatsActivity extends Activity {
                     if (!entry.bluetoothLikely && !looksLikeBluetooth(entry)) {
                         continue;
                     }
-                    if (entry.sampleCount <= 0) {
-                        continue;
-                    }
                     filtered.add(entry);
                 }
             }
@@ -157,9 +154,13 @@ public class DeviceStatsActivity extends Activity {
                 nameView.setText(name);
 
                 double seconds = Math.max(0d, stats.averageDelayMs) / 1000d;
-                String averageText = stats.sampleCount > 0
-                        ? context.getString(R.string.device_stats_average_with_samples, seconds, stats.sampleCount)
-                        : context.getString(R.string.device_stats_average_only, seconds);
+                String averageText;
+                if (stats.sampleCount > 0) {
+                    averageText = context.getString(R.string.device_stats_average_with_samples, seconds, stats.sampleCount);
+                } else {
+                    averageText = context.getString(R.string.device_stats_average_no_samples,
+                            Math.max(0, stats.sampleCount));
+                }
                 averageView.setText(averageText);
 
                 if (stats.lastSeenMs > 0 && dateFormat != null) {

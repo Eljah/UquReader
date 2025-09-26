@@ -39,6 +39,7 @@
     <string name="device_stats_empty">Пока нет данных о Bluetooth-устройствах.</string>
     <string name="device_stats_average_only">Средняя задержка: %1$.1f с</string>
     <string name="device_stats_average_with_samples">Средняя задержка: %1$.1f с · %2$d наблюдений</string>
+    <string name="device_stats_average_no_samples">Средняя задержка: нет данных · %1$d наблюдений</string>
     <string name="device_stats_last_seen">Последний раз: %1$s</string>
     <string name="device_stats_unknown_device">Неизвестное устройство</string>
     <string name="stats_lemma_header">Леммы и части речи</string>
