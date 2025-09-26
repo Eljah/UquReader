@@ -117,7 +117,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             new WorkInfo("berenche_teatr.ttmorph", "berenche_teatr.ttmorph.jsonl",
                     R.string.work_name_berenche_teatr_full, R.string.work_name_berenche_teatr_short),
             new WorkInfo("yazgy_jillar.ttmorph", "yazgy_jillar.ttmorph.jsonl",
-                    R.string.work_name_yazgy_jillar_full, R.string.work_name_yazgy_jillar_short)
+                    R.string.work_name_yazgy_jillar_full, R.string.work_name_yazgy_jillar_short),
+            new WorkInfo("harri_potter_ham_lagnetle_bala.ttmorph", "harri_potter_ham_lagnetle_bala.ttmorph.jsonl",
+                    R.string.work_name_harri_potter_ham_lagnetle_bala_full,
+                    R.string.work_name_harri_potter_ham_lagnetle_bala_short)
     );
     private static final String RHVOICE_PACKAGE = "com.github.olga_yakovleva.rhvoice.android";
     private static final String TALGAT_NAME_KEYWORD = "talgat";

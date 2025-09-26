@@ -15,6 +15,8 @@
     <string name="work_name_berenche_teatr_short">Беренче Театр</string>
     <string name="work_name_yazgy_jillar_full">«Язгы җилләр». К. Нәҗми</string>
     <string name="work_name_yazgy_jillar_short">Язгы җилләр</string>
+    <string name="work_name_harri_potter_ham_lagnetle_bala_full">«Һарри Поттер һәм Ләгънәтле бала». Җ. Роулинг</string>
+    <string name="work_name_harri_potter_ham_lagnetle_bala_short">Һарри Поттер һәм Ләгънәтле бала</string>
     <string name="lemma_format">лемма: %1$s</string>
     <string name="pos_format">часть речи: %1$s</string>
     <string name="segments_format">морфемы: %1$s</string>

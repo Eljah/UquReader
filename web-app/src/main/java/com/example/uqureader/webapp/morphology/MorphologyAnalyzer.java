@@ -40,7 +40,9 @@ public final class MorphologyAnalyzer {
     }
 
     public static MorphologyAnalyzer loadDefault() {
-        return new MorphologyAnalyzer(loadDictionary("/markup/berenche_teatr_markup.txt"));
+        Map<String, String> dictionary = new LinkedHashMap<>(loadDictionary("/markup/berenche_teatr_markup.txt"));
+        loadDictionary("/markup/harri_potter_ham_lagnetle_bala_markup.txt").forEach(dictionary::putIfAbsent);
+        return new MorphologyAnalyzer(dictionary);
     }
 
     public TextAnalysis analyze(String text) {
