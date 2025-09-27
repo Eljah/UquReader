@@ -1,15 +1,15 @@
 package com.example.uqureader.webapp.morphology;
 
 import com.example.uqureader.webapp.MorphologyException;
+import com.example.uqureader.webapp.morphology.hfst.HfstTransducer;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -20,134 +20,112 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Lightweight Java port of the tokenisation and tagging logic used by the Python
- * {@code py_tat_morphan} package. The implementation relies on pre-generated markup stored in the
- * application resources and reproduces the same token level annotations without spawning a Python
- * interpreter.
+ * Java port of the {@code py_tat_morphan} morphological analyser. The implementation loads an HFST
+ * transducer and performs the same suffix-based analysis that the Python version executes, without
+ * relying on pre-generated dictionaries of tokens.
  */
 public final class MorphologyAnalyzer {
 
     private static final Pattern SPLIT_PATTERN = Pattern.compile("([ .,!?\\n\\r\\t“”„‘«»≪≫\\{\\}\\(\\)\\[\\]:;\\'\\\"+=*\\—_^…\\|\\/\\\\ ]|[0-9]+)");
     private static final Pattern DIGITS = Pattern.compile("^[0-9]+$");
-    private static final Pattern LATIN = Pattern.compile("^[a-zA-Z]+$");
-    private static final Pattern SINGLE_CYRILLIC = Pattern.compile("^[а-эА-ЭөүһңҗҺҮӨҖҢӘЁё]$");
-    private static final Pattern NON_CYRILLIC = Pattern.compile("^[^а-яА-ЯөүһңҗәҺҮӨҖҢӘЁё]+$");
+    private static final Pattern LATIN = Pattern.compile("^[a-zA-Z-]+$");
+    private static final Pattern SIGN = Pattern.compile("^[^а-яА-ЯөүһңҗәҺҮӨҖҢӘЁё]$");
+    private static final Pattern CYRILLIC = Pattern.compile("^[а-яА-ЯөӨүҮһҺңҢҗҖәӘЁё]+$");
+    private static final Pattern CYRILLIC_HYPHEN = Pattern.compile("^[а-яА-ЯөӨүҮһҺңҢҗҖәӘЁё]+-[а-яА-ЯөӨүҮһҺңҢҗҖЁёәӘ]+$");
 
-    private final Map<String, String> dictionary;
+    private static final Map<Character, Character> LETTER_NORMALISATION = Map.ofEntries(
+            Map.entry('ђ', 'ә'), Map.entry('њ', 'ү'), Map.entry('ќ', 'җ'), Map.entry('љ', 'ө'),
+            Map.entry('ћ', 'ң'), Map.entry('џ', 'һ'), Map.entry('Ә', 'ә'), Map.entry('Ү', 'ү'),
+            Map.entry('Ө', 'ө'), Map.entry('Җ', 'җ'), Map.entry('Һ', 'һ'), Map.entry('Ң', 'ң'),
+            Map.entry('Ђ', 'Җ'), Map.entry('Љ', 'Ө'), Map.entry('Њ', 'ү'), Map.entry('Ќ', 'Җ'),
+            Map.entry('Џ', 'һ'), Map.entry('Ћ', 'Ң'));
 
-    private MorphologyAnalyzer(Map<String, String> dictionary) {
-        this.dictionary = dictionary;
+    private static final Set<String> SENTENCE_PUNCTUATION = Set.of(".", "!", "?", "…");
+    private static final Set<String> COMMA_LIKE = Set.of(",", ":", ";", "—", "–", "-", "_");
+    private static final Set<String> BRACKETS = Set.of("(", ")", "[", "]", "{", "}");
+    private static final Set<String> QUOTES = Set.of("“", "”", "\"", "'", "»", "«", "≪", "≫", "„", "‘");
+
+    private final HfstTransducer transducer;
+    private final boolean ignoreNewlines;
+
+    private MorphologyAnalyzer(HfstTransducer transducer, boolean ignoreNewlines) {
+        this.transducer = Objects.requireNonNull(transducer, "transducer");
+        this.ignoreNewlines = ignoreNewlines;
     }
 
     public static MorphologyAnalyzer loadDefault() {
-        Map<String, String> dictionary = new LinkedHashMap<>(loadDictionary("/markup/berenche_teatr_markup.txt"));
-        loadDictionary("/markup/harri_potter_ham_lagnetle_bala_markup.txt").forEach(dictionary::putIfAbsent);
-        return new MorphologyAnalyzer(dictionary);
+        InputStream stream = null;
+        try {
+            String systemProperty = System.getProperty("morphology.transducer.path");
+            if (systemProperty != null && !systemProperty.isBlank()) {
+                stream = java.nio.file.Files.newInputStream(java.nio.file.Path.of(systemProperty));
+            }
+            if (stream == null) {
+                String envPath = System.getenv("MORPHOLOGY_TRANSDUCER");
+                if (envPath != null && !envPath.isBlank()) {
+                    stream = java.nio.file.Files.newInputStream(java.nio.file.Path.of(envPath));
+                }
+            }
+            if (stream == null) {
+                stream = MorphologyAnalyzer.class.getResourceAsStream("/morphology/tatar_last.hfstol");
+            }
+            if (stream == null) {
+                throw new MorphologyException("Missing morphology transducer resource. Provide path via system property 'morphology.transducer.path' or environment variable 'MORPHOLOGY_TRANSDUCER'.");
+            }
+            try (InputStream in = stream) {
+                return new MorphologyAnalyzer(HfstTransducer.read(in), true);
+            }
+        } catch (IOException ex) {
+            throw new MorphologyException("Failed to initialise morphology analyser", ex);
+        }
     }
 
     public TextAnalysis analyze(String text) {
-        String content = text == null ? "" : text;
-        List<TokenEntry> tokens = tokenize(content);
-        List<List<TokenEntry>> sentences = splitIntoSentences(tokens);
-        String markup = tokens.stream()
+        String prepared = fix(text == null ? "" : text);
+        List<String> tokens = tokenize(prepared);
+        Map<String, String> taggedTokens = processTokens(tokens);
+
+        List<TokenEntry> entries = new ArrayList<>(tokens.size());
+        for (String token : tokens) {
+            String tag = taggedTokens.getOrDefault(token, "Error");
+            entries.add(new TokenEntry(token, tag));
+        }
+
+        List<List<TokenEntry>> sentences = splitIntoSentences(entries);
+        String markup = entries.stream()
                 .map(entry -> entry.token() + "\t" + entry.analysis())
                 .collect(Collectors.joining("\n"));
-        int uniqueTokens = (int) tokens.stream()
-                .map(entry -> entry.token().toLowerCase(Locale.ROOT))
-                .distinct()
-                .count();
-        return new TextAnalysis(tokens, sentences, markup, uniqueTokens);
+        return new TextAnalysis(tokens.size(), taggedTokens.size(), sentences, markup);
+    }
+
+    public String analyseToken(String token) {
+        return analyseTokenInternal(token == null ? "" : token);
     }
 
     public String lookup(String token) {
-        String key = token == null ? "" : token;
-        return dictionary.getOrDefault(key, classifyToken(key));
-    }
-
-    private List<TokenEntry> tokenize(String text) {
-        List<TokenEntry> result = new ArrayList<>();
-        Matcher matcher = SPLIT_PATTERN.matcher(text);
-        int last = 0;
-        while (matcher.find()) {
-            if (matcher.start() > last) {
-                String token = text.substring(last, matcher.start());
-                addToken(result, token);
-            }
-            String separator = matcher.group();
-            addToken(result, separator);
-            last = matcher.end();
-        }
-        if (last < text.length()) {
-            addToken(result, text.substring(last));
-        }
-        return result;
-    }
-
-    private void addToken(List<TokenEntry> target, String token) {
         if (token == null || token.isEmpty()) {
-            return;
+            return null;
         }
-        if (isWhitespace(token)) {
-            return;
+        List<HfstTransducer.Analysis> analyses = transducer.analyze(token);
+        if (analyses.isEmpty()) {
+            return null;
         }
-        String analysis = dictionary.get(token);
-        if (analysis == null) {
-            analysis = classifyToken(token);
-        }
-        target.add(new TokenEntry(token, analysis));
-    }
-
-    private boolean isWhitespace(String token) {
-        return token.chars().allMatch(Character::isWhitespace);
-    }
-
-    private static Map<String, String> loadDictionary(String resourcePath) {
-        InputStream stream = MorphologyAnalyzer.class.getResourceAsStream(resourcePath);
-        if (stream == null) {
-            throw new MorphologyException("Missing morphology resource: " + resourcePath);
-        }
-        Map<String, String> map = new LinkedHashMap<>();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.isEmpty()) {
-                    continue;
-                }
-                String[] parts = line.split("\t", 2);
-                if (parts.length != 2) {
-                    throw new MorphologyException("Invalid markup line: " + line);
-                }
-                map.putIfAbsent(parts[0], parts[1]);
-            }
-            return map;
-        } catch (IOException ex) {
-            throw new MorphologyException("Failed to read morphology resource: " + resourcePath, ex);
-        }
-    }
-
-    private static List<List<TokenEntry>> splitIntoSentences(List<TokenEntry> tokens) {
-        List<List<TokenEntry>> sentences = new ArrayList<>();
-        List<TokenEntry> current = new ArrayList<>();
-        for (TokenEntry entry : tokens) {
-            current.add(entry);
-            if ("Type1".equals(entry.analysis())) {
-                sentences.add(unmodifiableCopy(current));
-                current.clear();
+        Set<String> normalised = new LinkedHashSet<>();
+        for (HfstTransducer.Analysis analysis : analyses) {
+            String value = trimPlus(analysis.output());
+            if (!value.isEmpty()) {
+                normalised.add(value);
             }
         }
-        if (!current.isEmpty()) {
-            sentences.add(unmodifiableCopy(current));
+        if (normalised.isEmpty()) {
+            return null;
         }
-        return Collections.unmodifiableList(sentences);
+        return normalised.stream().sorted().collect(Collectors.joining(";")) + ";";
     }
 
-    private static List<TokenEntry> unmodifiableCopy(List<TokenEntry> entries) {
-        return Collections.unmodifiableList(new ArrayList<>(entries));
-    }
-
-    private String classifyToken(String token) {
-        if (token.isEmpty()) {
-            return "NR";
+    private String analyseTokenInternal(String token) {
+        if (token.equals("\n") || token.equals("\n\r")) {
+            return "NL";
         }
         if (DIGITS.matcher(token).matches()) {
             return "Num";
@@ -164,32 +142,158 @@ public final class MorphologyAnalyzer {
         if (isQuote(token)) {
             return "Type4";
         }
-        if (SINGLE_CYRILLIC.matcher(token).matches()) {
-            return "Letter";
+        if (SIGN.matcher(token).matches()) {
+            return "Sign";
         }
         if (LATIN.matcher(token).matches()) {
             return "Latin";
         }
-        if (NON_CYRILLIC.matcher(token).matches()) {
-            return "Sign";
+        if (CYRILLIC.matcher(token).matches() || CYRILLIC_HYPHEN.matcher(token).matches()) {
+            if (token.chars().filter(ch -> ch == '-').count() > 1) {
+                return "Error";
+            }
+            String result = lookup(token);
+            if (result == null) {
+                result = lookup(token.toLowerCase(Locale.ROOT));
+            }
+            return result != null ? result : "NR";
         }
-        return "NR";
+        return "Error";
+    }
+
+    private Map<String, String> processTokens(List<String> tokens) {
+        Map<String, String> tagged = new LinkedHashMap<>();
+        for (String token : tokens) {
+            if ("\n\r".equals(token) || "\r".equals(token)) {
+                continue;
+            }
+            tagged.computeIfAbsent(token, this::analyseTokenInternal);
+        }
+        return tagged;
+    }
+
+    private List<List<TokenEntry>> splitIntoSentences(List<TokenEntry> tokens) {
+        List<List<TokenEntry>> sentences = new ArrayList<>();
+        List<TokenEntry> current = new ArrayList<>();
+        for (TokenEntry entry : tokens) {
+            current.add(entry);
+            if ("Type1".equals(entry.analysis())) {
+                sentences.add(unmodifiableCopy(current));
+                current.clear();
+            } else if ("NL".equals(entry.analysis()) && !ignoreNewlines) {
+                sentences.add(unmodifiableCopy(current));
+                current.clear();
+            }
+        }
+        if (!current.isEmpty()) {
+            sentences.add(unmodifiableCopy(current));
+        }
+        return Collections.unmodifiableList(sentences);
+    }
+
+    private List<String> tokenize(String text) {
+        List<String> tokens = new ArrayList<>();
+        Matcher matcher = SPLIT_PATTERN.matcher(text);
+        int last = 0;
+        while (matcher.find()) {
+            if (matcher.start() > last) {
+                String token = text.substring(last, matcher.start());
+                addToken(tokens, token);
+            }
+            addToken(tokens, matcher.group());
+            last = matcher.end();
+        }
+        if (last < text.length()) {
+            addToken(tokens, text.substring(last));
+        }
+        return tokens;
+    }
+
+    private void addToken(List<String> target, String token) {
+        if (token == null || token.isEmpty()) {
+            return;
+        }
+        String trimmed = token.strip();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        String cleaned = stripHyphen(trimmed);
+        if (cleaned.isEmpty()) {
+            return;
+        }
+        target.add(cleaned);
+    }
+
+    private String stripHyphen(String value) {
+        int start = 0;
+        int end = value.length();
+        while (start < end && value.charAt(start) == '-') {
+            start++;
+        }
+        while (end > start && value.charAt(end - 1) == '-') {
+            end--;
+        }
+        return value.substring(start, end);
+    }
+
+    private String fix(String text) {
+        if (text.isEmpty()) {
+            return text;
+        }
+        StringBuilder builder = new StringBuilder(text.length());
+        text.codePoints().forEach(cp -> {
+            char ch = (char) cp;
+            Character replacement = LETTER_NORMALISATION.get(ch);
+            if (replacement != null) {
+                builder.append(replacement);
+            } else {
+                builder.appendCodePoint(cp);
+            }
+        });
+        String normalised = builder.toString();
+        normalised = normalised.replace("-\r\n", "")
+                .replace("-\n\r", "")
+                .replace("-\n", "")
+                .replace("-\r", "")
+                .replace("¬", "")
+                .replace("...", "…")
+                .replace("!..", "!")
+                .replace("?..", "?")
+                .replace(" -", " - ")
+                .replace("- ", " - ")
+                .replace("\u00ad", "")
+                .replace("\ufeff", "")
+                .replace("ª", "")
+                .replace("’", "")
+                .replace("´", "");
+        return Normalizer.normalize(normalised, Normalizer.Form.NFC);
     }
 
     private boolean isSentencePunctuation(String token) {
-        return Set.of(".", "!", "?", "…").contains(token);
+        return SENTENCE_PUNCTUATION.contains(token);
     }
 
     private boolean isCommaLike(String token) {
-        return Set.of(",", ":", ";", "—", "–", "-", "_").contains(token);
+        return COMMA_LIKE.contains(token);
     }
 
     private boolean isBracket(String token) {
-        return Set.of("(", ")", "[", "]", "{", "}").contains(token);
+        return BRACKETS.contains(token);
     }
 
     private boolean isQuote(String token) {
-        return Set.of("“", "”", "\"", "'", "»", "«", "≪", "≫", "„", "‘").contains(token);
+        return QUOTES.contains(token);
+    }
+
+    private static List<TokenEntry> unmodifiableCopy(List<TokenEntry> entries) {
+        return Collections.unmodifiableList(new ArrayList<>(entries));
+    }
+
+    private String trimPlus(String value) {
+        if (value.endsWith("+")) {
+            return value.substring(0, value.length() - 1);
+        }
+        return value;
     }
 
     public static final class TokenEntry {
@@ -211,24 +315,24 @@ public final class MorphologyAnalyzer {
     }
 
     public static final class TextAnalysis {
-        private final List<TokenEntry> tokens;
+        private final int tokensCount;
+        private final int uniqueTokensCount;
         private final List<List<TokenEntry>> sentences;
         private final String markup;
-        private final int uniqueTokens;
 
-        private TextAnalysis(List<TokenEntry> tokens, List<List<TokenEntry>> sentences, String markup, int uniqueTokens) {
-            this.tokens = Collections.unmodifiableList(new ArrayList<>(tokens));
-            this.sentences = sentences;
+        private TextAnalysis(int tokensCount, int uniqueTokensCount, List<List<TokenEntry>> sentences, String markup) {
+            this.tokensCount = tokensCount;
+            this.uniqueTokensCount = uniqueTokensCount;
+            this.sentences = Collections.unmodifiableList(new ArrayList<>(sentences));
             this.markup = markup;
-            this.uniqueTokens = uniqueTokens;
         }
 
         public int tokensCount() {
-            return tokens.size();
+            return tokensCount;
         }
 
         public int uniqueTokensCount() {
-            return uniqueTokens;
+            return uniqueTokensCount;
         }
 
         public int sentencesCount() {
