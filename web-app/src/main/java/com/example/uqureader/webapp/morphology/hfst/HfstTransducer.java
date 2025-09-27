@@ -581,24 +581,24 @@ public final class HfstTransducer {
         }
     }
 
-    private static final class TransitionIndex {
-        private final int inputSymbol;
-        private final long target;
+    private static class TransitionIndex {
+        final int inputSymbol;
+        final long target;
 
         private TransitionIndex(int inputSymbol, long target) {
             this.inputSymbol = inputSymbol;
             this.target = target;
         }
 
-        private boolean isFinal() {
+        boolean isFinal() {
             return inputSymbol == NO_SYMBOL_NUMBER && target != NO_TABLE_INDEX;
         }
     }
 
-    private static final class Transition {
-        private final int inputSymbol;
-        private final int outputSymbol;
-        private final long target;
+    private static class Transition {
+        final int inputSymbol;
+        final int outputSymbol;
+        final long target;
 
         private Transition(int inputSymbol, int outputSymbol, long target) {
             this.inputSymbol = inputSymbol;
@@ -606,7 +606,7 @@ public final class HfstTransducer {
             this.target = target;
         }
 
-        private boolean isFinal() {
+        boolean isFinal() {
             return inputSymbol == NO_SYMBOL_NUMBER
                     && outputSymbol == NO_SYMBOL_NUMBER
                     && target == 1;
