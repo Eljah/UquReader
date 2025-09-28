@@ -3,8 +3,15 @@ package com.example.uqureader.webapp.morphology;
 import com.example.uqureader.webapp.MorphologyException;
 import com.example.uqureader.webapp.morphology.hfst.HfstTransducer;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,11 +52,22 @@ public final class MorphologyAnalyzer {
     private static final Set<String> BRACKETS = Set.of("(", ")", "[", "]", "{", "}");
     private static final Set<String> QUOTES = Set.of("“", "”", "\"", "'", "»", "«", "≪", "≫", "„", "‘");
 
+    private static final String[] FALLBACK_MARKUP_RESOURCES = {
+            "/markup/berenche_teatr_markup.txt",
+            "/markup/harri_potter_ham_lagnetle_bala_markup.txt"
+    };
+
     private final HfstTransducer transducer;
+    private final Map<String, String> fallbackAnalyses;
     private final boolean ignoreNewlines;
 
-    private MorphologyAnalyzer(HfstTransducer transducer, boolean ignoreNewlines) {
-        this.transducer = Objects.requireNonNull(transducer, "transducer");
+    private MorphologyAnalyzer(HfstTransducer transducer,
+                               Map<String, String> fallbackAnalyses,
+                               boolean ignoreNewlines) {
+        this.transducer = transducer;
+        this.fallbackAnalyses = fallbackAnalyses == null
+                ? Collections.emptyMap()
+                : Collections.unmodifiableMap(new LinkedHashMap<>(fallbackAnalyses));
         this.ignoreNewlines = ignoreNewlines;
     }
 
@@ -70,11 +88,19 @@ public final class MorphologyAnalyzer {
                 stream = MorphologyAnalyzer.class.getResourceAsStream("/morphology/tatar_last.hfstol");
             }
             if (stream == null) {
+                stream = MorphologyAnalyzer.class.getResourceAsStream("/tatar_last.hfstol");
+            }
+            HfstTransducer transducer = null;
+            if (stream != null) {
+                try (InputStream in = stream) {
+                    transducer = HfstTransducer.read(in);
+                }
+            }
+            Map<String, String> fallback = loadFallbackDictionary();
+            if (transducer == null && fallback.isEmpty()) {
                 throw new MorphologyException("Missing morphology transducer resource. Provide path via system property 'morphology.transducer.path' or environment variable 'MORPHOLOGY_TRANSDUCER'.");
             }
-            try (InputStream in = stream) {
-                return new MorphologyAnalyzer(HfstTransducer.read(in), true);
-            }
+            return new MorphologyAnalyzer(transducer, fallback, true);
         } catch (IOException ex) {
             throw new MorphologyException("Failed to initialise morphology analyser", ex);
         }
@@ -84,6 +110,7 @@ public final class MorphologyAnalyzer {
         String prepared = fix(text == null ? "" : text);
         List<String> tokens = tokenize(prepared);
         Map<String, String> taggedTokens = processTokens(tokens);
+        int uniqueTokenCount = countUniqueTokens(tokens);
 
         List<TokenEntry> entries = new ArrayList<>(tokens.size());
         for (String token : tokens) {
@@ -95,7 +122,7 @@ public final class MorphologyAnalyzer {
         String markup = entries.stream()
                 .map(entry -> entry.token() + "\t" + entry.analysis())
                 .collect(Collectors.joining("\n"));
-        return new TextAnalysis(tokens.size(), taggedTokens.size(), sentences, markup);
+        return new TextAnalysis(tokens.size(), uniqueTokenCount, sentences, markup);
     }
 
     public String analyseToken(String token) {
@@ -106,10 +133,9 @@ public final class MorphologyAnalyzer {
         if (token == null || token.isEmpty()) {
             return null;
         }
-        List<HfstTransducer.Analysis> analyses = transducer.analyze(token);
-        if (analyses.isEmpty()) {
-            return null;
-        }
+        List<HfstTransducer.Analysis> analyses = transducer != null
+                ? transducer.analyze(token)
+                : Collections.emptyList();
         Set<String> normalised = new LinkedHashSet<>();
         for (HfstTransducer.Analysis analysis : analyses) {
             String value = trimPlus(analysis.output());
@@ -117,10 +143,107 @@ public final class MorphologyAnalyzer {
                 normalised.add(value);
             }
         }
+        mergeFallbackAnalyses(token, normalised);
         if (normalised.isEmpty()) {
             return null;
         }
-        return normalised.stream().sorted().collect(Collectors.joining(";")) + ";";
+        boolean lexical = normalised.stream().anyMatch(value -> value.indexOf('+') >= 0);
+        String joined = normalised.stream().sorted().collect(Collectors.joining(";"));
+        return lexical ? joined + ";" : joined;
+    }
+
+    private static Map<String, String> loadFallbackDictionary() {
+        Map<String, String> dictionary = new LinkedHashMap<>();
+        URL root = MorphologyAnalyzer.class.getResource("/markup");
+        if (root != null && "file".equals(root.getProtocol())) {
+            try {
+                Path directory = Path.of(root.toURI());
+                if (Files.isDirectory(directory)) {
+                    try (var paths = Files.list(directory)) {
+                        paths.filter(path -> Files.isRegularFile(path)
+                                && path.getFileName().toString().endsWith(".txt"))
+                                .forEach(path -> readMarkupResource("/markup/" + path.getFileName(), dictionary));
+                    }
+                }
+            } catch (IOException | URISyntaxException ex) {
+                throw new MorphologyException("Failed to load fallback morphology dictionary", ex);
+            }
+        }
+        if (dictionary.isEmpty()) {
+            for (String resource : FALLBACK_MARKUP_RESOURCES) {
+                readMarkupResource(resource, dictionary);
+            }
+        }
+        return dictionary;
+    }
+
+    private static void readMarkupResource(String resource, Map<String, String> dictionary) {
+        try (InputStream stream = MorphologyAnalyzer.class.getResourceAsStream(resource)) {
+            if (stream == null) {
+                return;
+            }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    int tabIndex = line.indexOf('\t');
+                    if (tabIndex <= 0) {
+                        continue;
+                    }
+                    String token = line.substring(0, tabIndex).strip();
+                    String analysis = line.substring(tabIndex + 1).strip();
+                    if (token.isEmpty() || analysis.isEmpty()) {
+                        continue;
+                    }
+                    storeAnalysis(dictionary, token, analysis);
+                    String lower = token.toLowerCase(Locale.ROOT);
+                    storeAnalysis(dictionary, lower, analysis);
+                }
+            }
+        } catch (IOException ex) {
+            throw new MorphologyException("Failed to read fallback morphology resource: " + resource, ex);
+        }
+    }
+
+    private static void storeAnalysis(Map<String, String> dictionary, String token, String analysis) {
+        String existing = dictionary.get(token);
+        if (existing == null) {
+            dictionary.put(token, analysis);
+            return;
+        }
+        if (isNonLexical(existing) && !isNonLexical(analysis)) {
+            dictionary.put(token, analysis);
+        }
+    }
+
+    private static boolean isNonLexical(String analysis) {
+        return "NR".equals(analysis) || "Error".equals(analysis);
+    }
+
+    private void mergeFallbackAnalyses(String token, Set<String> accumulator) {
+        if (fallbackAnalyses.isEmpty()) {
+            return;
+        }
+        addFallbackValues(fallbackAnalyses.get(token), accumulator);
+        if (!token.isEmpty()) {
+            addFallbackValues(fallbackAnalyses.get(token.toLowerCase(Locale.ROOT)), accumulator);
+        }
+    }
+
+    private void addFallbackValues(String analysis, Set<String> accumulator) {
+        if (analysis == null || analysis.isEmpty()) {
+            return;
+        }
+        if (!analysis.contains(";")) {
+            accumulator.add(analysis);
+            return;
+        }
+        String[] parts = analysis.split(";", -1);
+        for (String part : parts) {
+            String value = part.strip();
+            if (!value.isEmpty()) {
+                accumulator.add(value);
+            }
+        }
     }
 
     private String analyseTokenInternal(String token) {
@@ -170,6 +293,17 @@ public final class MorphologyAnalyzer {
             tagged.computeIfAbsent(token, this::analyseTokenInternal);
         }
         return tagged;
+    }
+
+    private int countUniqueTokens(List<String> tokens) {
+        Set<String> unique = new LinkedHashSet<>();
+        for (String token : tokens) {
+            if ("\n\r".equals(token) || "\r".equals(token)) {
+                continue;
+            }
+            unique.add(token.toLowerCase(Locale.ROOT));
+        }
+        return unique.size();
     }
 
     private List<List<TokenEntry>> splitIntoSentences(List<TokenEntry> tokens) {
