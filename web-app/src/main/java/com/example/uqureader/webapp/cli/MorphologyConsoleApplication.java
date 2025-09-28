@@ -23,7 +23,22 @@ public final class MorphologyConsoleApplication {
 
     public static void main(String[] args) {
         MorphologyAnalyzer analyzer = MorphologyAnalyzer.loadDefault();
-        String input = readInput(args);
+        if (args != null && args.length > 0) {
+            processInput(analyzer, Arrays.stream(args).collect(Collectors.joining(" ")));
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                processInput(analyzer, line);
+            }
+        } catch (IOException ex) {
+            throw new MorphologyException("Failed to read input", ex);
+        }
+    }
+
+    private static void processInput(MorphologyAnalyzer analyzer, String input) {
         try {
             MorphologyAnalyzer.TextAnalysis analysis = analyzer.analyze(input);
             System.out.println(analysis.markup());
@@ -33,27 +48,6 @@ public final class MorphologyConsoleApplication {
                 ex.getCause().printStackTrace(System.err);
             }
             System.exit(1);
-        }
-    }
-
-    private static String readInput(String[] args) {
-        if (args != null && args.length > 0) {
-            return Arrays.stream(args).collect(Collectors.joining(" "));
-        }
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
-            StringBuilder builder = new StringBuilder();
-            String line;
-            boolean first = true;
-            while ((line = reader.readLine()) != null) {
-                if (!first) {
-                    builder.append(System.lineSeparator());
-                }
-                builder.append(line);
-                first = false;
-            }
-            return builder.toString();
-        } catch (IOException ex) {
-            throw new MorphologyException("Failed to read input", ex);
         }
     }
 }
