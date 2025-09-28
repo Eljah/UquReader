@@ -85,10 +85,12 @@ public final class MorphologyAnalyzer {
                 }
             }
             if (stream == null) {
-                stream = MorphologyAnalyzer.class.getResourceAsStream("/morphology/tatar_last.hfstol");
+                stream = MorphologyAnalyzer.class.getResourceAsStream("/morphology/analyser-gt-desc.hfstol");
             }
             if (stream == null) {
-                stream = MorphologyAnalyzer.class.getResourceAsStream("/tatar_last.hfstol");
+                //analyser-gt-desc
+                stream = MorphologyAnalyzer.class.getResourceAsStream("/analyser-gt-desc.hfstol");
+                //stream = MorphologyAnalyzer.class.getResourceAsStream("/tatar_last.hfstol");
             }
             HfstTransducer transducer = null;
             if (stream != null) {
