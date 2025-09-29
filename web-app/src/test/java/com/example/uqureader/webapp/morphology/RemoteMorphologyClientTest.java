@@ -16,6 +16,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 class RemoteMorphologyClientTest {
 
@@ -88,15 +90,24 @@ class RemoteMorphologyClientTest {
     }
 
     @Test
-    void splitIntoBatchesKeepsLongSentenceIntact() {
-        String longSentence = "а".repeat(520) + ".";
+    void splitIntoBatchesSplitsOversizedSentence() {
+        String fragment = "озын җөмлә";
+        String longSentence = String.join(" ", Collections.nCopies(80, fragment));
         RemoteMorphologyClient client = new RemoteMorphologyClient(HttpClient.newHttpClient(),
-                URI.create("http://localhost:1/new2022/morph/ajax.php"), 500);
+                URI.create("http://localhost:1/new2022/morph/ajax.php"), 120);
 
         List<String> batches = client.splitIntoBatches(longSentence);
 
-        Assertions.assertEquals(1, batches.size());
-        Assertions.assertEquals(longSentence, batches.get(0));
+        Assertions.assertTrue(batches.size() > 1);
+        Assertions.assertTrue(batches.stream().allMatch(batch -> batch.length() <= 120));
+
+        List<String> originalTokens = Arrays.stream(longSentence.trim().split("\\s+")).collect(Collectors.toList());
+        List<String> resultingTokens = batches.stream()
+                .flatMap(part -> Arrays.stream(part.split("\\s+")))
+                .filter(token -> !token.isBlank())
+                .collect(Collectors.toList());
+
+        Assertions.assertEquals(originalTokens, resultingTokens);
     }
 
     private Map<String, String> readForm(HttpExchange exchange) throws IOException {
