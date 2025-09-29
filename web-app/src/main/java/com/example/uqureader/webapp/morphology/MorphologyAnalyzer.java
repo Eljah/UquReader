@@ -85,12 +85,10 @@ public final class MorphologyAnalyzer {
                 }
             }
             if (stream == null) {
-                stream = MorphologyAnalyzer.class.getResourceAsStream("/morphology/analyser-gt-desc.hfstol");
-            }
-            if (stream == null) {
-                //analyser-gt-desc
-                stream = MorphologyAnalyzer.class.getResourceAsStream("/analyser-gt-desc.hfstol");
-                //stream = MorphologyAnalyzer.class.getResourceAsStream("/tatar_last.hfstol");
+                Path bundledTransducer = Path.of("web-app", "src", "main", "resources", "analyser-gt-desc.hfstol");
+                if (Files.exists(bundledTransducer)) {
+                    stream = Files.newInputStream(bundledTransducer);
+                }
             }
             HfstTransducer transducer = null;
             if (stream != null) {
@@ -105,6 +103,20 @@ public final class MorphologyAnalyzer {
             return new MorphologyAnalyzer(transducer, fallback, true);
         } catch (IOException ex) {
             throw new MorphologyException("Failed to initialise morphology analyser", ex);
+        }
+    }
+
+    public static MorphologyAnalyzer load(Path transducerPath) {
+        Objects.requireNonNull(transducerPath, "transducerPath");
+        if (!Files.isRegularFile(transducerPath)) {
+            throw new MorphologyException("Morphology transducer not found: " + transducerPath.toAbsolutePath());
+        }
+        try (InputStream stream = Files.newInputStream(transducerPath)) {
+            HfstTransducer transducer = HfstTransducer.read(stream);
+            Map<String, String> fallback = loadFallbackDictionary();
+            return new MorphologyAnalyzer(transducer, fallback, true);
+        } catch (IOException ex) {
+            throw new MorphologyException("Failed to load morphology transducer from " + transducerPath.toAbsolutePath(), ex);
         }
     }
 
