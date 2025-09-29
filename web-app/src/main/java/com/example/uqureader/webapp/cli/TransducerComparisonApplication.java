@@ -70,7 +70,7 @@ public final class TransducerComparisonApplication {
         try {
             List<LoadedTransducer> loadedTransducers = new ArrayList<>(transducers.size());
             for (ResolvedTransducer transducer : transducers) {
-                MorphologyAnalyzer analyzer = MorphologyAnalyzer.load(transducer.path());
+                MorphologyAnalyzer analyzer = MorphologyAnalyzer.load(transducer.path(), false);
                 loadedTransducers.add(new LoadedTransducer(transducer, analyzer));
             }
             writeComparisonLog(loadedTransducers, output, texts);
@@ -112,7 +112,9 @@ public final class TransducerComparisonApplication {
                     .append(transducer.resolved().path().toAbsolutePath())
                     .append(System.lineSeparator());
         }
-        builder.append(System.lineSeparator());
+        builder.append("Fallback dictionary: disabled for comparison")
+                .append(System.lineSeparator())
+                .append(System.lineSeparator());
 
         for (int i = 0; i < transducers.size(); i++) {
             for (int j = i + 1; j < transducers.size(); j++) {
