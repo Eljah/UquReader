@@ -88,8 +88,9 @@ public final class TatarMorphologyAnnotator {
 
         out.printf("# Файл: %s%n", file);
         List<WordMarkup> markup = client.analyzeText(content);
-        for (WordMarkup token : markup) {
-            out.printf("%s\t%s%n", token.word(), String.join(" | ", token.analyses()));
+        String formatted = RemoteMorphologyClient.formatAsMarkup(markup);
+        if (!formatted.isEmpty()) {
+            out.println(formatted);
         }
         out.println();
     }

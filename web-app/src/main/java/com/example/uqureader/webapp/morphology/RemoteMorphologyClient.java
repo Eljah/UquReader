@@ -97,7 +97,7 @@ public class RemoteMorphologyClient {
     // -------------------- HttpClient factory --------------------
 
     private static HttpClient createHttpClientFromSystem() {
-        boolean insecure = Boolean.getBoolean("morphology.ssl.insecure"); // -Dmorphology.ssl.insecure=true
+        boolean insecure = true; // сервис использует невалидный сертификат — всегда работаем в insecure-режиме
         CookieManager cm = new CookieManager();
         cm.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 
@@ -569,6 +569,52 @@ public class RemoteMorphologyClient {
         }
         public String word() { return word; }
         public List<String> analyses() { return analyses; }
+    }
+
+    private static final Set<String> SINGLE_VALUE_TAGS = Set.of(
+            "Error", "Latin", "NR", "Num", "Rus", "Sign", "Type1", "Type2", "Type3", "Type4"
+    );
+
+    /**
+     * Converts the remote markup into the tab-separated format used by the bundled markup resources.
+     */
+    public static String formatAsMarkup(List<WordMarkup> tokens) {
+        Objects.requireNonNull(tokens, "tokens");
+        if (tokens.isEmpty()) return "";
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < tokens.size(); i++) {
+            WordMarkup token = tokens.get(i);
+            String analyses = normaliseAnalyses(token.analyses());
+            builder.append(token.word()).append('\t').append(analyses);
+            if (i + 1 < tokens.size()) builder.append('\n');
+        }
+        return builder.toString();
+    }
+
+    private static String normaliseAnalyses(List<String> analyses) {
+        if (analyses == null || analyses.isEmpty()) {
+            return "Error";
+        }
+        List<String> cleaned = new ArrayList<>();
+        for (String analysis : analyses) {
+            if (analysis == null) continue;
+            String trimmed = analysis.trim();
+            if (!trimmed.isEmpty()) cleaned.add(trimmed);
+        }
+        if (cleaned.isEmpty()) {
+            return "Error";
+        }
+        int size = cleaned.size();
+        StringBuilder builder = new StringBuilder();
+        for (String value : cleaned) {
+            boolean appendSemicolon = size > 1 || !SINGLE_VALUE_TAGS.contains(value);
+            if (appendSemicolon && !value.endsWith(";")) {
+                builder.append(value).append(';');
+            } else {
+                builder.append(value);
+            }
+        }
+        return builder.toString();
     }
 
     private String describeBatch(String batch) {
