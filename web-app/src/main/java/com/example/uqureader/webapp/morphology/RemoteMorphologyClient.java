@@ -72,6 +72,37 @@ public class RemoteMorphologyClient {
             RequestVariant.get("text-get", (raw, encoded) -> "text=" + encoded)
     );
 
+    private static final String ORIGIN = "https://tugantel.tatar";
+    private static final String REFERER = ORIGIN + "/new2022/morph/";
+    private static final String USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                    + "Chrome/125.0.0.0 Safari/537.36";
+    private static final List<RequestVariant> WORD_VARIANTS = List.of(
+            RequestVariant.post("word", (raw, encoded) -> "word=" + encoded),
+            RequestVariant.post("word+ajax_action", (raw, encoded) -> "word=" + encoded + "&ajax_action=word"),
+            RequestVariant.post("word+ajax", (raw, encoded) -> "word=" + encoded + "&ajax=1"),
+            RequestVariant.post("word+mode=analyze", (raw, encoded) -> "word=" + encoded + "&mode=analyze"),
+            RequestVariant.post("word+mode=analyse", (raw, encoded) -> "word=" + encoded + "&mode=analyse"),
+            RequestVariant.post("word+lang=tt", (raw, encoded) -> "word=" + encoded + "&lang=tt"),
+            RequestVariant.post("word+lang=tt+mode", (raw, encoded) -> "word=" + encoded + "&lang=tt&mode=analyze"),
+            RequestVariant.post("text-parameter", (raw, encoded) -> "text=" + encoded),
+            RequestVariant.post("request=word", (raw, encoded) -> "request=word&word=" + encoded),
+            RequestVariant.get("word-get", (raw, encoded) -> "word=" + encoded)
+    );
+    private static final List<RequestVariant> TEXT_VARIANTS = List.of(
+            RequestVariant.post("text", (raw, encoded) -> "text=" + encoded),
+            RequestVariant.post("text+ajax_action", (raw, encoded) -> "text=" + encoded + "&ajax_action=text"),
+            RequestVariant.post("text+ajax", (raw, encoded) -> "text=" + encoded + "&ajax=1"),
+            RequestVariant.post("text+mode=analyze", (raw, encoded) -> "text=" + encoded + "&mode=analyze"),
+            RequestVariant.post("text+mode=analyse", (raw, encoded) -> "text=" + encoded + "&mode=analyse"),
+            RequestVariant.post("text+lang=tt", (raw, encoded) -> "text=" + encoded + "&lang=tt"),
+            RequestVariant.post("text+lang=tt+mode", (raw, encoded) -> "text=" + encoded + "&lang=tt&mode=analyze"),
+            RequestVariant.post("request=text", (raw, encoded) -> "request=text&text=" + encoded),
+            RequestVariant.post("operation=analyse", (raw, encoded) -> "text=" + encoded + "&operation=analyse"),
+            RequestVariant.post("json-data", (raw, encoded) -> "data=" + urlEncode(jsonPayload("text", raw))),
+            RequestVariant.get("text-get", (raw, encoded) -> "text=" + encoded)
+    );
+
     private final HttpClient httpClient;
     private final URI endpoint;
     private final int batchLimit;
