@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.time.Duration;
 
 /**
  * Lightweight HTTP client for querying the Tugantel online morphology service.
@@ -37,6 +38,39 @@ import java.util.function.Function;
 public class RemoteMorphologyClient {
 
     private static final int DEFAULT_BATCH_LIMIT = 500;
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
+
+    private static final String ORIGIN = "https://tugantel.tatar";
+    private static final String REFERER = ORIGIN + "/new2022/morph/";
+    private static final String USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                    + "Chrome/125.0.0.0 Safari/537.36";
+    private static final List<RequestVariant> WORD_VARIANTS = List.of(
+            RequestVariant.post("word", (raw, encoded) -> "word=" + encoded),
+            RequestVariant.post("word+ajax_action", (raw, encoded) -> "word=" + encoded + "&ajax_action=word"),
+            RequestVariant.post("word+ajax", (raw, encoded) -> "word=" + encoded + "&ajax=1"),
+            RequestVariant.post("word+mode=analyze", (raw, encoded) -> "word=" + encoded + "&mode=analyze"),
+            RequestVariant.post("word+mode=analyse", (raw, encoded) -> "word=" + encoded + "&mode=analyse"),
+            RequestVariant.post("word+lang=tt", (raw, encoded) -> "word=" + encoded + "&lang=tt"),
+            RequestVariant.post("word+lang=tt+mode", (raw, encoded) -> "word=" + encoded + "&lang=tt&mode=analyze"),
+            RequestVariant.post("text-parameter", (raw, encoded) -> "text=" + encoded),
+            RequestVariant.post("request=word", (raw, encoded) -> "request=word&word=" + encoded),
+            RequestVariant.get("word-get", (raw, encoded) -> "word=" + encoded)
+    );
+    private static final List<RequestVariant> TEXT_VARIANTS = List.of(
+            RequestVariant.post("text", (raw, encoded) -> "text=" + encoded),
+            RequestVariant.post("text+ajax_action", (raw, encoded) -> "text=" + encoded + "&ajax_action=text"),
+            RequestVariant.post("text+ajax", (raw, encoded) -> "text=" + encoded + "&ajax=1"),
+            RequestVariant.post("text+mode=analyze", (raw, encoded) -> "text=" + encoded + "&mode=analyze"),
+            RequestVariant.post("text+mode=analyse", (raw, encoded) -> "text=" + encoded + "&mode=analyse"),
+            RequestVariant.post("text+lang=tt", (raw, encoded) -> "text=" + encoded + "&lang=tt"),
+            RequestVariant.post("text+lang=tt+mode", (raw, encoded) -> "text=" + encoded + "&lang=tt&mode=analyze"),
+            RequestVariant.post("request=text", (raw, encoded) -> "request=text&text=" + encoded),
+            RequestVariant.post("operation=analyse", (raw, encoded) -> "text=" + encoded + "&operation=analyse"),
+            RequestVariant.post("json-data", (raw, encoded) -> "data=" + urlEncode(jsonPayload("text", raw))),
+            RequestVariant.get("text-get", (raw, encoded) -> "text=" + encoded)
+    );
 
     private static final String ORIGIN = "https://tugantel.tatar";
     private static final String REFERER = ORIGIN + "/new2022/morph/";
@@ -101,7 +135,8 @@ public class RemoteMorphologyClient {
     }
 
     private static HttpClient createDefaultHttpClient() {
-        HttpClient.Builder builder = HttpClient.newBuilder();
+        HttpClient.Builder builder = HttpClient.newBuilder()
+                .connectTimeout(CONNECT_TIMEOUT);
         configureProxy(builder);
         return builder.build();
     }
@@ -251,7 +286,12 @@ public class RemoteMorphologyClient {
                     batches.add(current.toString());
                     current.setLength(0);
                 }
-                batches.add(trimmed);
+                List<String> fragments = splitOversizedSentence(trimmed);
+                for (String fragment : fragments) {
+                    if (!fragment.isBlank()) {
+                        batches.add(fragment);
+                    }
+                }
                 continue;
             }
 
@@ -272,6 +312,42 @@ public class RemoteMorphologyClient {
             batches.add(current.toString());
         }
         return Collections.unmodifiableList(batches);
+    }
+
+    private List<String> splitOversizedSentence(String sentence) {
+        List<String> fragments = new ArrayList<>();
+        int length = sentence.length();
+        int start = 0;
+        while (start < length) {
+            int end = Math.min(start + batchLimit, length);
+            if (end < length) {
+                int whitespaceBoundary = findLastWhitespaceBoundary(sentence, start, end);
+                if (whitespaceBoundary > start) {
+                    end = whitespaceBoundary;
+                }
+            }
+            if (end == start) {
+                end = Math.min(start + batchLimit, length);
+            }
+            String fragment = sentence.substring(start, end).strip();
+            if (!fragment.isEmpty()) {
+                fragments.add(fragment);
+            }
+            start = end;
+        }
+        return fragments;
+    }
+
+    private int findLastWhitespaceBoundary(String sentence, int start, int candidateEnd) {
+        int index = candidateEnd;
+        while (index > start) {
+            int codePoint = sentence.codePointBefore(index);
+            if (Character.isWhitespace(codePoint)) {
+                return index;
+            }
+            index -= Character.charCount(codePoint);
+        }
+        return -1;
     }
 
     private List<String> splitSentences(String text) {
@@ -327,6 +403,7 @@ public class RemoteMorphologyClient {
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
         }
         applyCommonHeaders(builder);
+        builder.timeout(REQUEST_TIMEOUT);
         return builder.build();
     }
 
