@@ -19,6 +19,8 @@ import java.util.Objects;
  */
 public final class TatarMorphologyAnnotator {
 
+    private static final String OUTPUT_SUFFIX = ".morph.tsv";
+
     private final RemoteMorphologyClient client;
     private final PrintStream out;
     private final PrintStream err;
@@ -81,22 +83,43 @@ public final class TatarMorphologyAnnotator {
 
     private void annotateFile(Path file) throws IOException {
         String content = Files.readString(file, StandardCharsets.UTF_8);
+        Path outputFile = deriveOutputPath(file);
         if (content.isBlank()) {
-            out.printf("# %s — пустой файл%n%n", file);
+            writeOutput(outputFile, "");
+            out.printf("# %s — пустой файл (создан пустой результат: %s)%n%n", file, outputFile);
             return;
         }
 
         out.printf("# Файл: %s%n", file);
         List<WordMarkup> markup = client.analyzeText(content);
         String formatted = RemoteMorphologyClient.formatAsMarkup(markup);
-        if (!formatted.isEmpty()) {
-            out.println(formatted);
-        }
-        out.println();
+        writeOutput(outputFile, formatted);
+        out.printf("# Результат сохранён в: %s%n%n", outputFile);
     }
 
     private void printUsage() {
         err.println("Использование: java -cp web-app-<версия>.jar com.example.uqureader.webapp.cli.TatarMorphologyAnnotator <файл> [<файл> ...]");
         err.println("Каждый указанный файл будет отправлен на сервис Tugantel для морфологической разметки.");
+    }
+
+    private static Path deriveOutputPath(Path inputFile) {
+        Path fileName = inputFile.getFileName();
+        if (fileName == null) {
+            throw new IllegalArgumentException("Имя файла не может быть определено для пути: " + inputFile);
+        }
+        String candidate = fileName.toString() + OUTPUT_SUFFIX;
+        return inputFile.resolveSibling(candidate);
+    }
+
+    private static void writeOutput(Path outputFile, String content) throws IOException {
+        Path parent = outputFile.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        String normalised = content;
+        if (!normalised.isEmpty() && !normalised.endsWith(System.lineSeparator())) {
+            normalised = normalised + System.lineSeparator();
+        }
+        Files.writeString(outputFile, normalised, StandardCharsets.UTF_8);
     }
 }

@@ -509,6 +509,11 @@ public class RemoteMorphologyClient {
     // HTML fallback (эвристический, без зависимостей)
     private List<WordMarkup> parseHtmlPairs(String html) {
         if (html == null || html.isBlank()) return Collections.emptyList();
+        List<WordMarkup> fromPre = parsePreformattedMarkup(html);
+        if (!fromPre.isEmpty()) {
+            return fromPre;
+        }
+
         String noScript = html.replaceAll("(?is)<script.*?</script>", " ")
                 .replaceAll("(?is)<style.*?</style>", " ");
         String text = noScript.replaceAll("(?i)<br\\s*/?>", "\n")
@@ -556,6 +561,74 @@ public class RemoteMorphologyClient {
         JsonElement el = object.get(property);
         if (el == null || el.isJsonNull()) return null;
         return el.isJsonPrimitive() ? el.getAsString() : null;
+    }
+
+    private List<WordMarkup> parsePreformattedMarkup(String html) {
+        Pattern prePattern = Pattern.compile("(?is)<pre[^>]*>(.*?)</pre>");
+        Matcher matcher = prePattern.matcher(html);
+        while (matcher.find()) {
+            String body = matcher.group(1);
+            String text = decodeHtmlEntities(body.replaceAll("(?is)<[^>]+>", ""));
+            List<String> lines = new ArrayList<>();
+            for (String rawLine : text.split("\\R")) {
+                String trimmed = rawLine.strip();
+                if (!trimmed.isEmpty()) {
+                    lines.add(trimmed);
+                }
+            }
+            if (lines.size() < 2) {
+                continue;
+            }
+            List<WordMarkup> tokens = new ArrayList<>();
+            for (int i = 0; i + 1 < lines.size(); i += 2) {
+                String word = decodeHtmlEntities(lines.get(i));
+                String analysisLine = decodeHtmlEntities(lines.get(i + 1));
+                List<String> analyses = splitAnalysesLine(analysisLine);
+                if (word.isEmpty() || analyses.isEmpty()) {
+                    continue;
+                }
+                tokens.add(new WordMarkup(word, analyses));
+            }
+            if (!tokens.isEmpty()) {
+                return tokens;
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    private List<String> splitAnalysesLine(String line) {
+        if (line == null) {
+            return Collections.emptyList();
+        }
+        String cleaned = line.trim();
+        if (cleaned.isEmpty()) {
+            return Collections.emptyList();
+        }
+        String[] parts = cleaned.split(";");
+        List<String> values = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                values.add(trimmed);
+            }
+        }
+        if (values.isEmpty()) {
+            values.add("Error");
+        }
+        return values;
+    }
+
+    private String decodeHtmlEntities(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        return value
+                .replace("&nbsp;", " ")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'");
     }
 
     /** Value object describing a remote morphology result. */
