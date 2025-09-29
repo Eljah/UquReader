@@ -6,7 +6,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.URI;
@@ -15,25 +21,27 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.text.BreakIterator;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Set;
+import java.time.Duration;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.time.Duration;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Lightweight HTTP client for querying the Tugantel online morphology service.
- * <p>
- * The client exposes helpers for analysing isolated tokens as well as longer
- * passages of text. Longer passages are split into batches of complete
- * sentences so that each HTTP request stays below the 500 character limit
- * imposed by the remote service.
+ * Учитывает:
+ *  - необходимость cookie/«прогрева» сессии;
+ *  - нестабильность конечной точки (ajax.php/страница);
+ *  - проблемы с TLS-сертификатом (опциональный insecure-режим).
+ *
+ * По умолчанию TLS-проверка включена (безопасно).
+ * Для обхода кривого сертификата можно запустить JVM с -Dmorphology.ssl.insecure=true
+ * или указать ваш trustStore: -Djavax.net.ssl.trustStore=... -Djavax.net.ssl.trustStorePassword=...
  */
 public class RemoteMorphologyClient {
 
@@ -42,374 +50,308 @@ public class RemoteMorphologyClient {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
 
     private static final String ORIGIN = "https://tugantel.tatar";
-    private static final String REFERER = ORIGIN + "/new2022/morph/";
+    private static final String REFERER = ORIGIN + "/new2022/morph/"; // важен слэш
     private static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                     + "Chrome/125.0.0.0 Safari/537.36";
-    private static final List<RequestVariant> WORD_VARIANTS = List.of(
-            RequestVariant.post("word", (raw, encoded) -> "word=" + encoded),
-            RequestVariant.post("word+ajax_action", (raw, encoded) -> "word=" + encoded + "&ajax_action=word"),
-            RequestVariant.post("word+ajax", (raw, encoded) -> "word=" + encoded + "&ajax=1"),
-            RequestVariant.post("word+mode=analyze", (raw, encoded) -> "word=" + encoded + "&mode=analyze"),
-            RequestVariant.post("word+mode=analyse", (raw, encoded) -> "word=" + encoded + "&mode=analyse"),
-            RequestVariant.post("word+lang=tt", (raw, encoded) -> "word=" + encoded + "&lang=tt"),
-            RequestVariant.post("word+lang=tt+mode", (raw, encoded) -> "word=" + encoded + "&lang=tt&mode=analyze"),
-            RequestVariant.post("text-parameter", (raw, encoded) -> "text=" + encoded),
-            RequestVariant.post("request=word", (raw, encoded) -> "request=word&word=" + encoded),
-            RequestVariant.get("word-get", (raw, encoded) -> "word=" + encoded)
-    );
-    private static final List<RequestVariant> TEXT_VARIANTS = List.of(
-            RequestVariant.post("text", (raw, encoded) -> "text=" + encoded),
-            RequestVariant.post("text+ajax_action", (raw, encoded) -> "text=" + encoded + "&ajax_action=text"),
-            RequestVariant.post("text+ajax", (raw, encoded) -> "text=" + encoded + "&ajax=1"),
-            RequestVariant.post("text+mode=analyze", (raw, encoded) -> "text=" + encoded + "&mode=analyze"),
-            RequestVariant.post("text+mode=analyse", (raw, encoded) -> "text=" + encoded + "&mode=analyse"),
-            RequestVariant.post("text+lang=tt", (raw, encoded) -> "text=" + encoded + "&lang=tt"),
-            RequestVariant.post("text+lang=tt+mode", (raw, encoded) -> "text=" + encoded + "&lang=tt&mode=analyze"),
-            RequestVariant.post("request=text", (raw, encoded) -> "request=text&text=" + encoded),
-            RequestVariant.post("operation=analyse", (raw, encoded) -> "text=" + encoded + "&operation=analyse"),
-            RequestVariant.post("json-data", (raw, encoded) -> "data=" + urlEncode(jsonPayload("text", raw))),
-            RequestVariant.get("text-get", (raw, encoded) -> "text=" + encoded)
+
+    // Порядок важен: сначала HTTPS, затем HTTP (если сервер позволяет).
+    private static final List<URI> DEFAULT_ENDPOINTS = List.of(
+            URI.create("https://tugantel.tatar/new2022/morph/ajax.php"),
+            URI.create("https://tugantel.tatar/new2022/morph"),
+            URI.create("http://tugantel.tatar/new2022/morph/ajax.php"),
+            URI.create("http://tugantel.tatar/new2022/morph")
     );
 
-    private static final String ORIGIN = "https://tugantel.tatar";
-    private static final String REFERER = ORIGIN + "/new2022/morph/";
-    private static final String USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                    + "Chrome/125.0.0.0 Safari/537.36";
+    /** Сервер реально принимает form-urlencoded text=... */
     private static final List<RequestVariant> WORD_VARIANTS = List.of(
-            RequestVariant.post("word", (raw, encoded) -> "word=" + encoded),
-            RequestVariant.post("word+ajax_action", (raw, encoded) -> "word=" + encoded + "&ajax_action=word"),
-            RequestVariant.post("word+ajax", (raw, encoded) -> "word=" + encoded + "&ajax=1"),
-            RequestVariant.post("word+mode=analyze", (raw, encoded) -> "word=" + encoded + "&mode=analyze"),
-            RequestVariant.post("word+mode=analyse", (raw, encoded) -> "word=" + encoded + "&mode=analyse"),
-            RequestVariant.post("word+lang=tt", (raw, encoded) -> "word=" + encoded + "&lang=tt"),
-            RequestVariant.post("word+lang=tt+mode", (raw, encoded) -> "word=" + encoded + "&lang=tt&mode=analyze"),
-            RequestVariant.post("text-parameter", (raw, encoded) -> "text=" + encoded),
-            RequestVariant.post("request=word", (raw, encoded) -> "request=word&word=" + encoded),
-            RequestVariant.get("word-get", (raw, encoded) -> "word=" + encoded)
+            RequestVariant.post("text", (raw, enc) -> "text=" + enc)
     );
     private static final List<RequestVariant> TEXT_VARIANTS = List.of(
-            RequestVariant.post("text", (raw, encoded) -> "text=" + encoded),
-            RequestVariant.post("text+ajax_action", (raw, encoded) -> "text=" + encoded + "&ajax_action=text"),
-            RequestVariant.post("text+ajax", (raw, encoded) -> "text=" + encoded + "&ajax=1"),
-            RequestVariant.post("text+mode=analyze", (raw, encoded) -> "text=" + encoded + "&mode=analyze"),
-            RequestVariant.post("text+mode=analyse", (raw, encoded) -> "text=" + encoded + "&mode=analyse"),
-            RequestVariant.post("text+lang=tt", (raw, encoded) -> "text=" + encoded + "&lang=tt"),
-            RequestVariant.post("text+lang=tt+mode", (raw, encoded) -> "text=" + encoded + "&lang=tt&mode=analyze"),
-            RequestVariant.post("request=text", (raw, encoded) -> "request=text&text=" + encoded),
-            RequestVariant.post("operation=analyse", (raw, encoded) -> "text=" + encoded + "&operation=analyse"),
-            RequestVariant.post("json-data", (raw, encoded) -> "data=" + urlEncode(jsonPayload("text", raw))),
-            RequestVariant.get("text-get", (raw, encoded) -> "text=" + encoded)
+            RequestVariant.post("text", (raw, enc) -> "text=" + enc)
     );
 
     private final HttpClient httpClient;
-    private final URI endpoint;
+    private final List<URI> endpoints;
     private final int batchLimit;
 
-    /**
-     * Creates a client that targets the production Tugantel endpoint.
-     */
+    /** Конфигурация по умолчанию. */
     public RemoteMorphologyClient() {
-        this(createDefaultHttpClient(), URI.create("https://tugantel.tatar/new2022/morph/ajax.php"),
-                DEFAULT_BATCH_LIMIT);
+        this(createHttpClientFromSystem(), DEFAULT_ENDPOINTS, DEFAULT_BATCH_LIMIT);
+        warmupSession();
     }
 
-    /**
-     * Creates a client configured with a custom HTTP client and endpoint.
-     *
-     * @param httpClient HTTP client to use
-     * @param endpoint   absolute URI of the Tugantel AJAX handler
-     * @param batchLimit maximum number of characters per batch
-     */
-    public RemoteMorphologyClient(HttpClient httpClient, URI endpoint, int batchLimit) {
+    /** Кастомный конструктор. */
+    public RemoteMorphologyClient(HttpClient httpClient, List<URI> endpoints, int batchLimit) {
         this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
-        this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
-        if (!endpoint.isAbsolute()) {
-            throw new IllegalArgumentException("Endpoint URI must be absolute");
+        Objects.requireNonNull(endpoints, "endpoints");
+        if (endpoints.isEmpty()) throw new IllegalArgumentException("At least one endpoint must be provided");
+        for (URI ep : endpoints) {
+            if (ep == null || !ep.isAbsolute()) throw new IllegalArgumentException("Endpoint URI must be absolute: " + ep);
         }
-        if (batchLimit <= 0) {
-            throw new IllegalArgumentException("Batch limit must be positive");
-        }
+        if (batchLimit <= 0) throw new IllegalArgumentException("Batch limit must be positive");
+        this.endpoints = List.copyOf(endpoints);
         this.batchLimit = batchLimit;
     }
 
-    private static HttpClient createDefaultHttpClient() {
-        HttpClient.Builder builder = HttpClient.newBuilder()
-                .connectTimeout(CONNECT_TIMEOUT);
-        configureProxy(builder);
-        return builder.build();
+    // -------------------- HttpClient factory --------------------
+
+    private static HttpClient createHttpClientFromSystem() {
+        boolean insecure = Boolean.getBoolean("morphology.ssl.insecure"); // -Dmorphology.ssl.insecure=true
+        CookieManager cm = new CookieManager();
+        cm.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+
+        HttpClient.Builder b = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(CONNECT_TIMEOUT)
+                .cookieHandler(cm);
+
+        configureProxy(b);
+
+        if (insecure) {
+            try {
+                SSLContext sslContext = insecureSSLContext();
+                HostnameVerifier hv = (hostname, session) -> true;
+                b.sslContext(sslContext).sslParameters(sslContext.getDefaultSSLParameters());
+                // Hostname verifier задаётся на уровне клиента только через builder на JDK17+ при создании,
+                // но java.net.http не даёт публичного API для установки кастомного verifier.
+                // Поэтому оставляем только TrustManager "trust-all". Обычно этого достаточно.
+            } catch (NoSuchAlgorithmException | KeyManagementException e) {
+                // Если не смогли создать insecure контекст — оставляем дефолтный, чтобы не ломать клиент.
+            }
+        }
+
+        return b.build();
+    }
+
+    private static SSLContext insecureSSLContext() throws NoSuchAlgorithmException, KeyManagementException {
+        TrustManager[] trustAll = new TrustManager[] {
+                new X509TrustManager() {
+                    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                    public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                }
+        };
+        SSLContext sc = SSLContext.getInstance("TLS");
+        sc.init(null, trustAll, new java.security.SecureRandom());
+        return sc;
     }
 
     private static void configureProxy(HttpClient.Builder builder) {
         ProxyConfig proxy = ProxyConfig.detect();
-        if (proxy == null) {
-            return;
-        }
+        if (proxy == null) return;
         builder.proxy(ProxySelector.of(new InetSocketAddress(proxy.host(), proxy.port())));
     }
 
     private record ProxyConfig(String host, int port) {
-
         private static ProxyConfig detect() {
-            if (isProxyDisabled()) {
-                return null;
-            }
-            ProxyConfig fromSystemProperties = fromSystemProperties();
-            if (fromSystemProperties != null) {
-                return fromSystemProperties;
-            }
-            ProxyConfig fromEnvironment = fromEnvironment();
-            if (fromEnvironment != null) {
-                return fromEnvironment;
-            }
-            return new ProxyConfig("proxy", 8080);
+            if (isProxyDisabled()) return null;
+            ProxyConfig p = fromSystemProperties();
+            if (p != null) return p;
+            p = fromEnvironment();
+            if (p != null) return p;
+            return null;
         }
-
         private static boolean isProxyDisabled() {
-            if (Boolean.getBoolean("morphology.proxy.disable")) {
-                return true;
-            }
+            if (Boolean.getBoolean("morphology.proxy.disable")) return true;
             String disabled = System.getenv("MORPHOLOGY_PROXY_DISABLE");
             return disabled != null && disabled.equalsIgnoreCase("true");
         }
-
         private static ProxyConfig fromSystemProperties() {
             ProxyConfig https = normalise(System.getProperty("https.proxyHost"), System.getProperty("https.proxyPort"));
-            if (https != null) {
-                return https;
-            }
+            if (https != null) return https;
             return normalise(System.getProperty("http.proxyHost"), System.getProperty("http.proxyPort"));
         }
-
         private static ProxyConfig fromEnvironment() {
-            String[] uriKeys = {"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"};
-            for (String key : uriKeys) {
-                ProxyConfig config = parseProxyUri(System.getenv(key));
-                if (config != null) {
-                    return config;
-                }
+            String[] keys = {"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"};
+            for (String k : keys) {
+                ProxyConfig c = parseProxyUri(System.getenv(k));
+                if (c != null) return c;
             }
             return normalise(System.getenv("PROXY_HOST"), System.getenv("PROXY_PORT"));
         }
-
-        private static ProxyConfig parseProxyUri(String value) {
-            if (value == null || value.isBlank()) {
-                return null;
-            }
+        private static ProxyConfig parseProxyUri(String v) {
+            if (v == null || v.isBlank()) return null;
             try {
-                String candidate = value.contains("://") ? value : "http://" + value;
+                String candidate = v.contains("://") ? v : "http://" + v;
                 URI uri = URI.create(candidate);
                 String host = uri.getHost();
                 int port = uri.getPort();
-                if (host == null || host.isBlank()) {
-                    return null;
-                }
-                if (port <= 0) {
-                    port = uri.getScheme() != null && uri.getScheme().equalsIgnoreCase("https") ? 443 : 80;
-                }
+                if (host == null || host.isBlank()) return null;
+                if (port <= 0) port = "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
                 return new ProxyConfig(host, port);
             } catch (IllegalArgumentException ex) {
                 return null;
             }
         }
-
         private static ProxyConfig normalise(String host, String portValue) {
-            if (host == null || host.isBlank()) {
-                return null;
-            }
+            if (host == null || host.isBlank()) return null;
             int port = 80;
             if (portValue != null && !portValue.isBlank()) {
-                try {
-                    port = Integer.parseInt(portValue.trim());
-                } catch (NumberFormatException ignored) {
-                    port = 80;
-                }
+                try { port = Integer.parseInt(portValue.trim()); } catch (NumberFormatException ignored) { port = 80; }
             }
-            if (port <= 0) {
-                port = 80;
-            }
+            if (port <= 0) port = 80;
             return new ProxyConfig(host.trim(), port);
         }
     }
 
-    /**
-     * Performs morphology lookup for a single token.
-     *
-     * @param word surface form to analyse
-     * @return {@link WordMarkup} with analyses returned by the remote service
-     */
-    public WordMarkup analyzeWord(String word) {
-        Objects.requireNonNull(word, "word");
-        return attemptVariants(word, WORD_VARIANTS, body -> parseWordResponse(word, body),
-                "слово \"" + word + "\"");
+    // -------------------- Warmup --------------------
+
+    private void warmupSession() {
+        HttpRequest req = HttpRequest.newBuilder(URI.create(REFERER))
+                .GET()
+                .header("User-Agent", USER_AGENT)
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "ru,en;q=0.8,tt;q=0.7")
+                .header("Referer", REFERER)
+                .timeout(REQUEST_TIMEOUT)
+                .build();
+        try {
+            httpClient.send(req, HttpResponse.BodyHandlers.discarding());
+        } catch (Exception ignore) {
+            // главное — попытаться получить cookie; ошибки прогрева не критичны
+        }
     }
 
-    /**
-     * Performs morphology lookup for an arbitrary text. The text is split into
-     * batches of complete sentences, each containing at most 500 characters,
-     * and the batches are sent sequentially to the remote service.
-     *
-     * @param text input text to analyse
-     * @return list of {@link WordMarkup} entries for all analysed tokens
-     */
+    // -------------------- Public API --------------------
+
+    public WordMarkup analyzeWord(String word) {
+        Objects.requireNonNull(word, "word");
+        return attemptEndpointsAndVariants(
+                word, WORD_VARIANTS, b -> parseFlexibleResponse(word, b), "слово \"" + word + "\""
+        );
+    }
+
     public List<WordMarkup> analyzeText(String text) {
         Objects.requireNonNull(text, "text");
         List<String> batches = splitIntoBatches(text);
-        List<WordMarkup> result = new ArrayList<>();
+        List<WordMarkup> out = new ArrayList<>();
         for (String batch : batches) {
-            List<WordMarkup> batchMarkup = attemptVariants(batch, TEXT_VARIANTS, this::parseBatchResponse,
-                    describeBatch(batch));
-            result.addAll(batchMarkup);
+            List<WordMarkup> part = attemptEndpointsAndVariants(
+                    batch, TEXT_VARIANTS, this::parseFlexibleBatchResponse, describeBatch(batch)
+            );
+            out.addAll(part);
         }
-        return Collections.unmodifiableList(result);
+        return Collections.unmodifiableList(out);
     }
 
-    /**
-     * Splits the provided text into batches of sentences respecting the
-     * configured 500 character limit. Visible for unit tests.
-     */
+    // -------------------- batching --------------------
+
     List<String> splitIntoBatches(String text) {
         List<String> sentences = splitSentences(text);
-        if (sentences.isEmpty()) {
-            return Collections.emptyList();
-        }
+        if (sentences.isEmpty()) return Collections.emptyList();
         List<String> batches = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         for (String sentence : sentences) {
             String trimmed = sentence.strip();
-            if (trimmed.isEmpty()) {
-                continue;
-            }
-            if (trimmed.length() > batchLimit) {
+            if (trimmed.isEmpty()) continue;
+            if (trimmed.length() > DEFAULT_BATCH_LIMIT) {
                 if (current.length() > 0) {
                     batches.add(current.toString());
                     current.setLength(0);
                 }
-                List<String> fragments = splitOversizedSentence(trimmed);
-                for (String fragment : fragments) {
-                    if (!fragment.isBlank()) {
-                        batches.add(fragment);
-                    }
-                }
+                batches.addAll(splitOversizedSentence(trimmed));
                 continue;
             }
-
-            int prospectiveLength = current.length() == 0
-                    ? trimmed.length()
-                    : current.length() + 1 + trimmed.length();
-            if (current.length() == 0) {
-                current.append(trimmed);
-            } else if (prospectiveLength <= batchLimit) {
-                current.append('\n').append(trimmed);
-            } else {
+            int prospective = current.length() == 0 ? trimmed.length() : current.length() + 1 + trimmed.length();
+            if (current.length() == 0) current.append(trimmed);
+            else if (prospective <= DEFAULT_BATCH_LIMIT) current.append('\n').append(trimmed);
+            else {
                 batches.add(current.toString());
                 current.setLength(0);
                 current.append(trimmed);
             }
         }
-        if (current.length() > 0) {
-            batches.add(current.toString());
-        }
+        if (current.length() > 0) batches.add(current.toString());
         return Collections.unmodifiableList(batches);
     }
 
     private List<String> splitOversizedSentence(String sentence) {
         List<String> fragments = new ArrayList<>();
-        int length = sentence.length();
-        int start = 0;
+        int length = sentence.length(), start = 0;
         while (start < length) {
-            int end = Math.min(start + batchLimit, length);
+            int end = Math.min(start + DEFAULT_BATCH_LIMIT, length);
             if (end < length) {
-                int whitespaceBoundary = findLastWhitespaceBoundary(sentence, start, end);
-                if (whitespaceBoundary > start) {
-                    end = whitespaceBoundary;
-                }
+                int wb = findLastWhitespaceBoundary(sentence, start, end);
+                if (wb > start) end = wb;
             }
-            if (end == start) {
-                end = Math.min(start + batchLimit, length);
-            }
+            if (end == start) end = Math.min(start + DEFAULT_BATCH_LIMIT, length);
             String fragment = sentence.substring(start, end).strip();
-            if (!fragment.isEmpty()) {
-                fragments.add(fragment);
-            }
+            if (!fragment.isEmpty()) fragments.add(fragment);
             start = end;
         }
         return fragments;
     }
 
-    private int findLastWhitespaceBoundary(String sentence, int start, int candidateEnd) {
-        int index = candidateEnd;
-        while (index > start) {
-            int codePoint = sentence.codePointBefore(index);
-            if (Character.isWhitespace(codePoint)) {
-                return index;
-            }
-            index -= Character.charCount(codePoint);
+    private int findLastWhitespaceBoundary(String s, int start, int candidateEnd) {
+        int i = candidateEnd;
+        while (i > start) {
+            int cp = s.codePointBefore(i);
+            if (Character.isWhitespace(cp)) return i;
+            i -= Character.charCount(cp);
         }
         return -1;
     }
 
     private List<String> splitSentences(String text) {
-        BreakIterator iterator = BreakIterator.getSentenceInstance(new Locale("tt"));
-        iterator.setText(text);
+        BreakIterator it = BreakIterator.getSentenceInstance(new Locale("tt"));
+        it.setText(text);
         List<String> sentences = new ArrayList<>();
-        int start = iterator.first();
-        for (int end = iterator.next(); end != BreakIterator.DONE; start = end, end = iterator.next()) {
+        int start = it.first();
+        for (int end = it.next(); end != BreakIterator.DONE; start = end, end = it.next()) {
             String sentence = text.substring(start, end);
-            if (!sentence.isBlank()) {
-                sentences.add(sentence);
-            }
+            if (!sentence.isBlank()) sentences.add(sentence);
         }
         return sentences;
     }
 
-    private <T> T attemptVariants(String value,
-                                  List<RequestVariant> variants,
-                                  Function<String, T> parser,
-                                  String contextDescription) {
-        String encodedValue = urlEncode(value);
+    // -------------------- HTTP & retry logic --------------------
+
+    private <T> T attemptEndpointsAndVariants(String value,
+                                              List<RequestVariant> variants,
+                                              Function<String, T> parser,
+                                              String ctx) {
+        String encoded = urlEncode(value);
         List<String> failures = new ArrayList<>();
-        for (RequestVariant variant : variants) {
-            HttpRequest request = buildRequest(variant, value, encodedValue);
-            try {
-                String body = execute(request);
-                return parser.apply(body);
-            } catch (MorphologyException ex) {
-                failures.add(variant.describeFailure(ex));
-            } catch (RuntimeException ex) {
-                String message = ex.getMessage();
-                if (message == null || message.isBlank()) {
-                    message = ex.getClass().getSimpleName();
+
+        for (URI ep : endpoints) {
+            for (RequestVariant v : variants) {
+                HttpRequest req = buildRequest(ep, v, value, encoded);
+                try {
+                    String body = execute(req);
+                    return parser.apply(body);
+                } catch (MorphologyException ex) {
+                    failures.add(ep + " [" + v.description + "] -> " + ex.getMessage());
+                } catch (RuntimeException ex) {
+                    String msg = (ex.getMessage() == null || ex.getMessage().isBlank())
+                            ? ex.getClass().getSimpleName() : ex.getMessage();
+                    failures.add(ep + " [" + v.description + "] -> " + msg);
                 }
-                failures.add(variant.describeFailure(new MorphologyException(message, ex)));
             }
         }
-        String message = "Удалённый сервис не принял запрос (" + contextDescription + ")";
-        if (!failures.isEmpty()) {
-            message += ": " + String.join("; ", failures);
-        }
-        throw new MorphologyException(message);
+
+        String msg = "Удалённый сервис не принял запрос (" + ctx + ")";
+        if (!failures.isEmpty()) msg += ": " + String.join("; ", failures);
+        throw new MorphologyException(msg);
     }
 
-    private HttpRequest buildRequest(RequestVariant variant, String rawValue, String encodedValue) {
-        String payload = variant.payloadFactory.apply(rawValue, encodedValue);
-        HttpRequest.Builder builder;
+    private HttpRequest buildRequest(URI endpoint, RequestVariant variant, String raw, String encoded) {
+        String payload = variant.payloadFactory.apply(raw, encoded);
+        HttpRequest.Builder b;
         if (variant.method == HttpMethod.GET) {
-            builder = HttpRequest.newBuilder(appendQuery(endpoint, payload)).GET();
+            b = HttpRequest.newBuilder(appendQuery(endpoint, payload)).GET();
         } else {
-            builder = HttpRequest.newBuilder(endpoint)
+            b = HttpRequest.newBuilder(endpoint)
                     .POST(HttpRequest.BodyPublishers.ofString(payload))
                     .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
         }
-        applyCommonHeaders(builder);
-        builder.timeout(REQUEST_TIMEOUT);
-        return builder.build();
+        applyCommonHeaders(b);
+        b.timeout(REQUEST_TIMEOUT);
+        return b.build();
     }
 
-    private HttpRequest.Builder applyCommonHeaders(HttpRequest.Builder builder) {
-        return builder
-                .header("Accept", "application/json, text/plain, */*")
+    private HttpRequest.Builder applyCommonHeaders(HttpRequest.Builder b) {
+        return b.header("Accept", "text/html,application/json;q=0.9,*/*;q=0.8")
                 .header("User-Agent", USER_AGENT)
                 .header("Origin", ORIGIN)
                 .header("Referer", REFERER)
@@ -419,131 +361,141 @@ public class RemoteMorphologyClient {
     }
 
     private URI appendQuery(URI base, String query) {
-        if (query == null || query.isBlank()) {
-            return base;
-        }
-        StringBuilder builder = new StringBuilder(base.toString());
-        if (base.getQuery() == null || base.getQuery().isBlank()) {
-            builder.append('?').append(query);
-        } else {
-            builder.append('&').append(query);
-        }
-        return URI.create(builder.toString());
-    }
-
-    private String describeBatch(String batch) {
-        String trimmed = batch.strip();
-        if (trimmed.length() > 40) {
-            trimmed = trimmed.substring(0, 37) + "…";
-        }
-        return "фрагмент \"" + trimmed + "\"";
-    }
-
-    private static String jsonPayload(String key, String value) {
-        JsonObject object = new JsonObject();
-        object.addProperty(key, value);
-        return object.toString();
+        if (query == null || query.isBlank()) return base;
+        StringBuilder sb = new StringBuilder(base.toString());
+        if (base.getQuery() == null || base.getQuery().isBlank()) sb.append('?').append(query);
+        else sb.append('&').append(query);
+        return URI.create(sb.toString());
     }
 
     private String execute(HttpRequest request) {
         try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            if (response.statusCode() != 200) {
-                throw new MorphologyException("Remote morphology service returned status " + response.statusCode());
+            HttpResponse<String> resp = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (resp.statusCode() != 200) {
+                String body = resp.body();
+                String snippet = body != null ? body.substring(0, Math.min(200, body.length())).replaceAll("\\s+", " ").trim() : "";
+                throw new MorphologyException("Remote morphology service returned status " + resp.statusCode()
+                        + (snippet.isEmpty() ? "" : " — body: " + snippet));
             }
-            return response.body();
+            return resp.body();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            throw new MorphologyException("Failed to query remote morphology service", ex);
+            throw new MorphologyException("Failed to query remote morphology service (InterruptedException)", ex);
         } catch (IOException ex) {
-            throw new MorphologyException("Failed to query remote morphology service", ex);
+            String msg = ex.getClass().getSimpleName() + (ex.getMessage() != null ? (": " + ex.getMessage()) : "");
+            throw new MorphologyException("Failed to query remote morphology service (" + msg + ")", ex);
         }
     }
 
-    private WordMarkup parseWordResponse(String fallbackWord, String body) {
-        JsonElement element = parseJson(body);
-        if (!element.isJsonObject()) {
-            throw new MorphologyException("Unexpected response format: " + body);
-        }
-        return parseWordObject(element.getAsJsonObject(), fallbackWord);
+    private static String urlEncode(String v) {
+        return URLEncoder.encode(v, StandardCharsets.UTF_8);
     }
 
-    private List<WordMarkup> parseBatchResponse(String body) {
-        JsonElement element = parseJson(body);
-        if (element.isJsonArray()) {
-            return parseWordArray(element.getAsJsonArray());
+    private enum HttpMethod { GET, POST }
+
+    private static final class RequestVariant {
+        private final HttpMethod method;
+        private final String description;
+        private final BiFunction<String, String, String> payloadFactory;
+        private RequestVariant(HttpMethod method, String description, BiFunction<String, String, String> payloadFactory) {
+            this.method = method; this.description = description; this.payloadFactory = payloadFactory;
         }
-        if (element.isJsonObject()) {
-            JsonObject object = element.getAsJsonObject();
-            if (object.has("tokens") && object.get("tokens").isJsonArray()) {
-                return parseWordArray(object.getAsJsonArray("tokens"));
-            }
-            if (object.has("results") && object.get("results").isJsonArray()) {
-                return parseWordArray(object.getAsJsonArray("results"));
-            }
-            return Collections.singletonList(parseWordObject(object,
-                    object.has("word") ? object.get("word").getAsString() : ""));
+        static RequestVariant post(String description, BiFunction<String, String, String> payloadFactory) {
+            return new RequestVariant(HttpMethod.POST, description, payloadFactory);
         }
-        throw new MorphologyException("Unexpected response format: " + body);
+        static RequestVariant get(String description, BiFunction<String, String, String> payloadFactory) {
+            return new RequestVariant(HttpMethod.GET, description, payloadFactory);
+        }
+    }
+
+    // -------------------- Parsing --------------------
+
+    /** Сначала JSON; если не похоже на JSON — HTML эвристикой. */
+    private WordMarkup parseFlexibleResponse(String fallbackWord, String body) {
+        try {
+            return parseWordResponseJson(fallbackWord, body);
+        } catch (MorphologyException ignored) {
+            List<WordMarkup> list = parseHtmlPairs(body);
+            if (!list.isEmpty()) {
+                for (WordMarkup wm : list) {
+                    if (wm.word().equalsIgnoreCase(fallbackWord.trim())) return wm;
+                }
+                return list.get(0);
+            }
+            throw new MorphologyException("Unexpected response (neither JSON nor recognizable HTML)");
+        }
+    }
+
+    private List<WordMarkup> parseFlexibleBatchResponse(String body) {
+        try {
+            return parseBatchResponseJson(body);
+        } catch (MorphologyException ignored) {
+            List<WordMarkup> list = parseHtmlPairs(body);
+            if (!list.isEmpty()) return list;
+            throw new MorphologyException("Unexpected response (neither JSON nor recognizable HTML)");
+        }
+    }
+
+    private WordMarkup parseWordResponseJson(String fallbackWord, String body) {
+        JsonElement el = parseJson(body);
+        if (!el.isJsonObject()) throw new MorphologyException("Unexpected JSON format");
+        return parseWordObject(el.getAsJsonObject(), fallbackWord);
+    }
+
+    private List<WordMarkup> parseBatchResponseJson(String body) {
+        JsonElement el = parseJson(body);
+        if (el.isJsonArray()) return parseWordArray(el.getAsJsonArray());
+        if (el.isJsonObject()) {
+            JsonObject obj = el.getAsJsonObject();
+            if (obj.has("tokens") && obj.get("tokens").isJsonArray()) return parseWordArray(obj.getAsJsonArray("tokens"));
+            if (obj.has("results") && obj.get("results").isJsonArray()) return parseWordArray(obj.getAsJsonArray("results"));
+            return Collections.singletonList(parseWordObject(obj, obj.has("word") ? obj.get("word").getAsString() : ""));
+        }
+        throw new MorphologyException("Unexpected JSON format");
     }
 
     private List<WordMarkup> parseWordArray(JsonArray array) {
-        List<WordMarkup> result = new ArrayList<>(array.size());
-        for (JsonElement element : array) {
-            if (element.isJsonObject()) {
-                result.add(parseWordObject(element.getAsJsonObject(), ""));
-            } else if (element.isJsonPrimitive()) {
-                String value = element.getAsString();
-                result.add(new WordMarkup(value, Collections.singletonList(value)));
+        List<WordMarkup> res = new ArrayList<>(array.size());
+        for (JsonElement el : array) {
+            if (el.isJsonObject()) res.add(parseWordObject(el.getAsJsonObject(), ""));
+            else if (el.isJsonPrimitive()) {
+                String value = el.getAsString();
+                res.add(new WordMarkup(value, Collections.singletonList(value)));
             }
         }
-        return result;
+        return res;
     }
 
-    private WordMarkup parseWordObject(JsonObject object, String fallbackWord) {
-        String surface = firstNonBlank(
-                asString(object, "word"),
-                asString(object, "token"),
-                asString(object, "surface"),
-                fallbackWord);
-        if (surface == null) {
-            throw new MorphologyException("Missing word field in response: " + object);
-        }
-
-        List<String> analyses = extractAnalyses(object);
-        if (analyses.isEmpty()) {
-            throw new MorphologyException("No analyses returned for word: " + surface);
-        }
+    private WordMarkup parseWordObject(JsonObject obj, String fallbackWord) {
+        String surface = firstNonBlank(asString(obj, "word"), asString(obj, "token"), asString(obj, "surface"), fallbackWord);
+        if (surface == null) throw new MorphologyException("Missing word field in JSON");
+        List<String> analyses = extractAnalyses(obj);
+        if (analyses.isEmpty()) throw new MorphologyException("No analyses returned for word: " + surface);
         return new WordMarkup(surface, analyses);
     }
 
-    private List<String> extractAnalyses(JsonObject object) {
-        Set<String> analyses = new LinkedHashSet<>();
-        if (object.has("analyses")) {
-            JsonElement element = object.get("analyses");
-            if (element.isJsonArray()) {
-                for (JsonElement entry : element.getAsJsonArray()) {
-                    if (entry.isJsonPrimitive()) {
-                        analyses.add(entry.getAsString());
-                    } else if (entry.isJsonObject()) {
-                        JsonObject obj = entry.getAsJsonObject();
-                        String value = firstNonBlank(asString(obj, "analysis"), asString(obj, "tag"));
-                        if (value != null && !value.isBlank()) {
-                            analyses.add(value);
-                        }
+    private List<String> extractAnalyses(JsonObject obj) {
+        Set<String> set = new LinkedHashSet<>();
+        if (obj.has("analyses")) {
+            JsonElement el = obj.get("analyses");
+            if (el.isJsonArray()) {
+                for (JsonElement e : el.getAsJsonArray()) {
+                    if (e.isJsonPrimitive()) set.add(e.getAsString());
+                    else if (e.isJsonObject()) {
+                        JsonObject o = e.getAsJsonObject();
+                        String v = firstNonBlank(asString(o, "analysis"), asString(o, "tag"));
+                        if (v != null && !v.isBlank()) set.add(v);
                     }
                 }
-            } else if (element.isJsonPrimitive()) {
-                analyses.add(element.getAsString());
+            } else if (el.isJsonPrimitive()) {
+                set.add(el.getAsString());
             }
         }
-        if (analyses.isEmpty()) {
-            String single = firstNonBlank(asString(object, "analysis"), asString(object, "tag"), asString(object, "markup"));
-            if (single != null && !single.isBlank()) {
-                analyses.add(single);
-            }
+        if (set.isEmpty()) {
+            String single = firstNonBlank(asString(obj, "analysis"), asString(obj, "tag"), asString(obj, "markup"));
+            if (single != null && !single.isBlank()) set.add(single);
         }
-        return Collections.unmodifiableList(new ArrayList<>(analyses));
+        return Collections.unmodifiableList(new ArrayList<>(set));
     }
 
     private JsonElement parseJson(String body) {
@@ -554,86 +506,77 @@ public class RemoteMorphologyClient {
         }
     }
 
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
+    // HTML fallback (эвристический, без зависимостей)
+    private List<WordMarkup> parseHtmlPairs(String html) {
+        if (html == null || html.isBlank()) return Collections.emptyList();
+        String noScript = html.replaceAll("(?is)<script.*?</script>", " ")
+                .replaceAll("(?is)<style.*?</style>", " ");
+        String text = noScript.replaceAll("(?i)<br\\s*/?>", "\n")
+                .replaceAll("(?is)</(p|li|tr|div|h\\d)>", "\n")
+                .replaceAll("(?is)<[^>]+>", " ")
+                .replaceAll("[\\t\\x0B\\f\\r]+", " ")
+                .replaceAll(" *\n *", "\n")
+                .trim();
+
+        Pattern linePat = Pattern.compile("(?m)^(\\S.{0,100}?)[\\s]*[—:-]{1,2}[\\s]*(\\S.+)$");
+        Matcher m = linePat.matcher(text);
+
+        Map<String, LinkedHashSet<String>> collected = new LinkedHashMap<>();
+        while (m.find()) {
+            String word = m.group(1).trim();
+            String analysis = m.group(2).trim();
+            if (word.isEmpty() || analysis.isEmpty()) continue;
+            collected.computeIfAbsent(word, k -> new LinkedHashSet<>()).add(analysis);
+        }
+
+        if (collected.isEmpty()) {
+            Pattern alt = Pattern.compile("«([^»]{1,100})»\\s*\\(([^)]+)\\)");
+            Matcher a = alt.matcher(text);
+            while (a.find()) {
+                String word = a.group(1).trim();
+                String analysis = a.group(2).trim();
+                if (word.isEmpty() || analysis.isEmpty()) continue;
+                collected.computeIfAbsent(word, k -> new LinkedHashSet<>()).add(analysis);
             }
         }
+
+        List<WordMarkup> out = new ArrayList<>();
+        for (Map.Entry<String, LinkedHashSet<String>> e : collected.entrySet()) {
+            out.add(new WordMarkup(e.getKey(), new ArrayList<>(e.getValue())));
+        }
+        return out;
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String v : values) if (v != null && !v.isBlank()) return v;
         return null;
     }
 
     private String asString(JsonObject object, String property) {
-        JsonElement element = object.get(property);
-        if (element == null) {
-            return null;
-        }
-        if (element.isJsonNull()) {
-            return null;
-        }
-        if (element.isJsonPrimitive()) {
-            return element.getAsString();
-        }
-        return null;
+        JsonElement el = object.get(property);
+        if (el == null || el.isJsonNull()) return null;
+        return el.isJsonPrimitive() ? el.getAsString() : null;
     }
 
-    private static String urlEncode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
-    }
-
-    private enum HttpMethod {
-        GET,
-        POST
-    }
-
-    private static final class RequestVariant {
-        private final HttpMethod method;
-        private final String description;
-        private final BiFunction<String, String, String> payloadFactory;
-
-        private RequestVariant(HttpMethod method,
-                               String description,
-                               BiFunction<String, String, String> payloadFactory) {
-            this.method = method;
-            this.description = description;
-            this.payloadFactory = payloadFactory;
-        }
-
-        static RequestVariant post(String description,
-                                   BiFunction<String, String, String> payloadFactory) {
-            return new RequestVariant(HttpMethod.POST, description, payloadFactory);
-        }
-
-        static RequestVariant get(String description,
-                                  BiFunction<String, String, String> payloadFactory) {
-            return new RequestVariant(HttpMethod.GET, description, payloadFactory);
-        }
-
-        String describeFailure(MorphologyException ex) {
-            return description + " -> " + ex.getMessage();
-        }
-    }
-
-    /**
-     * Value object describing a remote morphology result.
-     */
+    /** Value object describing a remote morphology result. */
     public static final class WordMarkup {
         private final String word;
         private final List<String> analyses;
-
         public WordMarkup(String word, List<String> analyses) {
             this.word = Objects.requireNonNull(word, "word");
             Objects.requireNonNull(analyses, "analyses");
             this.analyses = Collections.unmodifiableList(new ArrayList<>(analyses));
         }
-
-        public String word() {
-            return word;
-        }
-
-        public List<String> analyses() {
-            return analyses;
-        }
+        public String word() { return word; }
+        public List<String> analyses() { return analyses; }
     }
-}
 
+    private String describeBatch(String batch) {
+        String trimmed = batch.strip();
+        if (trimmed.length() > 40) {
+            trimmed = trimmed.substring(0, 37) + "…";
+        }
+        return "фрагмент \"" + trimmed + "\"";
+    }
+
+}
