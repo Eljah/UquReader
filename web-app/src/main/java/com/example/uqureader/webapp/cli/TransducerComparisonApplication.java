@@ -47,16 +47,19 @@ public final class TransducerComparisonApplication {
     }
 
     public static void main(String[] args) {
-        if (args == null || args.length < 4) {
+        if (args == null || args.length < 5) {
             printUsage();
             System.exit(1);
         }
 
-        ResolvedTransducer firstTransducer = resolveTransducer(args[0]);
-        ResolvedTransducer secondTransducer = resolveTransducer(args[1]);
-        Path output = Path.of(args[2]);
+        List<ResolvedTransducer> transducers = new ArrayList<>(3);
+        for (int i = 0; i < 3; i++) {
+            transducers.add(resolveTransducer(args[i]));
+        }
+
+        Path output = Path.of(args[3]);
         List<Path> texts = new ArrayList<>();
-        for (int i = 3; i < args.length; i++) {
+        for (int i = 4; i < args.length; i++) {
             texts.add(Path.of(args[i]));
         }
         if (texts.isEmpty()) {
@@ -65,9 +68,12 @@ public final class TransducerComparisonApplication {
         }
 
         try {
-            MorphologyAnalyzer firstAnalyzer = MorphologyAnalyzer.load(firstTransducer.path());
-            MorphologyAnalyzer secondAnalyzer = MorphologyAnalyzer.load(secondTransducer.path());
-            writeComparisonLog(firstAnalyzer, secondAnalyzer, firstTransducer, secondTransducer, output, texts);
+            List<LoadedTransducer> loadedTransducers = new ArrayList<>(transducers.size());
+            for (ResolvedTransducer transducer : transducers) {
+                MorphologyAnalyzer analyzer = MorphologyAnalyzer.load(transducer.path());
+                loadedTransducers.add(new LoadedTransducer(transducer, analyzer));
+            }
+            writeComparisonLog(loadedTransducers, output, texts);
             System.out.println("Comparison results written to " + output.toAbsolutePath());
         } catch (MorphologyException | IOException ex) {
             System.err.println("Failed to run transducer comparison: " + ex.getMessage());
@@ -79,10 +85,7 @@ public final class TransducerComparisonApplication {
         }
     }
 
-    private static void writeComparisonLog(MorphologyAnalyzer firstAnalyzer,
-                                           MorphologyAnalyzer secondAnalyzer,
-                                           ResolvedTransducer firstTransducer,
-                                           ResolvedTransducer secondTransducer,
+    private static void writeComparisonLog(List<LoadedTransducer> transducers,
                                            Path output,
                                            List<Path> texts) throws IOException {
         Objects.requireNonNull(output, "output");
@@ -90,33 +93,61 @@ public final class TransducerComparisonApplication {
             Files.createDirectories(output.getParent());
         }
 
-        String labelA = firstTransducer.label();
-        String labelB = secondTransducer.label();
+        for (Path text : texts) {
+            if (!Files.isRegularFile(text)) {
+                throw new MorphologyException("Text file not found: " + text.toAbsolutePath());
+            }
+        }
 
         StringBuilder builder = new StringBuilder();
         builder.append("Transducer comparison log").append(System.lineSeparator());
         builder.append("Generated: ")
                 .append(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .append(System.lineSeparator());
+        builder.append("Transducers:").append(System.lineSeparator());
+        for (LoadedTransducer transducer : transducers) {
+            builder.append("  - ")
+                    .append(transducer.resolved().label())
+                    .append(": ")
+                    .append(transducer.resolved().path().toAbsolutePath())
+                    .append(System.lineSeparator());
+        }
+        builder.append(System.lineSeparator());
+
+        for (int i = 0; i < transducers.size(); i++) {
+            for (int j = i + 1; j < transducers.size(); j++) {
+                appendPairComparison(builder, transducers.get(i), transducers.get(j), texts);
+                builder.append(System.lineSeparator());
+            }
+        }
+
+        Files.writeString(output, builder.toString(), StandardCharsets.UTF_8);
+    }
+
+    private static void appendPairComparison(StringBuilder builder,
+                                             LoadedTransducer first,
+                                             LoadedTransducer second,
+                                             List<Path> texts) throws IOException {
+        String labelA = first.resolved().label();
+        String labelB = second.resolved().label();
+
+        builder.append(String.format(Locale.ROOT, "=== Comparison: %s vs %s%n", labelA, labelB));
         builder.append("First transducer: ")
-                .append(firstTransducer.path().toAbsolutePath())
+                .append(first.resolved().path().toAbsolutePath())
                 .append(System.lineSeparator());
         builder.append("Second transducer: ")
-                .append(secondTransducer.path().toAbsolutePath())
+                .append(second.resolved().path().toAbsolutePath())
                 .append(System.lineSeparator())
                 .append(System.lineSeparator());
 
         for (Path text : texts) {
-            if (!Files.isRegularFile(text)) {
-                throw new MorphologyException("Text file not found: " + text.toAbsolutePath());
-            }
-            builder.append("=== Text: ")
+            builder.append("--- Text: ")
                     .append(text.toAbsolutePath())
                     .append(System.lineSeparator());
 
             String content = Files.readString(text, StandardCharsets.UTF_8);
-            AnalysisSummary firstSummary = summarise(firstAnalyzer, content);
-            AnalysisSummary secondSummary = summarise(secondAnalyzer, content);
+            AnalysisSummary firstSummary = summarise(first.analyzer(), content);
+            AnalysisSummary secondSummary = summarise(second.analyzer(), content);
 
             appendSummary(builder, labelA, firstSummary);
             appendSummary(builder, labelB, secondSummary);
@@ -124,8 +155,6 @@ public final class TransducerComparisonApplication {
             appendDifferences(builder, labelA, firstSummary, labelB, secondSummary);
             builder.append(System.lineSeparator());
         }
-
-        Files.writeString(output, builder.toString(), StandardCharsets.UTF_8);
     }
 
     private static ResolvedTransducer resolveTransducer(String argument) {
@@ -339,7 +368,7 @@ public final class TransducerComparisonApplication {
     private static void printUsage() {
         System.err.println("Usage: java "
                 + TransducerComparisonApplication.class.getName()
-                + " <first-transducer> <second-transducer> <output-log> <text> [<text> ...]");
+                + " <transducer-a> <transducer-b> <transducer-c> <output-log> <text> [<text> ...]");
         System.err.println("You can provide either a file path or one of the bundled aliases listed below:");
         for (BundledTransducer transducer : BUNDLED_TRANSDUCERS) {
             System.err.println(String.format(Locale.ROOT,
@@ -350,6 +379,9 @@ public final class TransducerComparisonApplication {
     }
 
     private record ResolvedTransducer(String label, Path path) {
+    }
+
+    private record LoadedTransducer(ResolvedTransducer resolved, MorphologyAnalyzer analyzer) {
     }
 
     private record BundledTransducer(String alias, String resourcePath) {
