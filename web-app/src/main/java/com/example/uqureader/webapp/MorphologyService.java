@@ -54,7 +54,7 @@ public class MorphologyService implements Closeable {
     }
 
     private JsonObject computeTokenAnalysis(String token) {
-        String analysis = analyzer.lookup(token);
+        String analysis = analyzer.analyseToken(token);
         JsonObject payload = new JsonObject();
         payload.addProperty("token", token);
         payload.addProperty("tag", analysis);

@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Transducer comparison" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.example.uqureader.webapp.cli.TransducerComparisonApplication" />
+    <module name="web-app" />
+    <option name="PROGRAM_PARAMETERS" value="$PROJECT_DIR$/web-app/src/main/resources/analyser-gt-desc.hfstol $PROJECT_DIR$/web-app/src/main/resources/tatar_last.hfstol $PROJECT_DIR$/data/transducer_comparison.log $PROJECT_DIR$/web-app/src/main/resources/texts/harri_potter_ham_lagnetle_bala.txt $PROJECT_DIR$/web-app/src/main/resources/texts/berenche_teatr.txt" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <shortenClasspath name="NONE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
