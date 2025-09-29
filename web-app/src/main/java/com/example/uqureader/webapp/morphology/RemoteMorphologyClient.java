@@ -48,6 +48,12 @@ public class RemoteMorphologyClient {
     private static final int DEFAULT_BATCH_LIMIT = 500;
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
+    private static final Duration[] RETRY_DELAYS = {
+            Duration.ofSeconds(2),
+            Duration.ofSeconds(5),
+            Duration.ofSeconds(10)
+    };
+    private static final int MAX_ATTEMPTS_PER_VARIANT = RETRY_DELAYS.length + 1;
 
     private static final String ORIGIN = "https://tugantel.tatar";
     private static final String REFERER = ORIGIN + "/new2022/morph/"; // важен слэш
@@ -316,16 +322,30 @@ public class RemoteMorphologyClient {
 
         for (URI ep : endpoints) {
             for (RequestVariant v : variants) {
-                HttpRequest req = buildRequest(ep, v, value, encoded);
-                try {
-                    String body = execute(req);
-                    return parser.apply(body);
-                } catch (MorphologyException ex) {
-                    failures.add(ep + " [" + v.description + "] -> " + ex.getMessage());
-                } catch (RuntimeException ex) {
-                    String msg = (ex.getMessage() == null || ex.getMessage().isBlank())
-                            ? ex.getClass().getSimpleName() : ex.getMessage();
-                    failures.add(ep + " [" + v.description + "] -> " + msg);
+                List<String> attemptFailures = new ArrayList<>();
+                for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_VARIANT; attempt++) {
+                    HttpRequest req = buildRequest(ep, v, value, encoded);
+                    try {
+                        String body = execute(req);
+                        return parser.apply(body);
+                    } catch (MorphologyException ex) {
+                        attemptFailures.add(formatAttemptFailure(attempt, ex.getMessage()));
+                        if (attempt < MAX_ATTEMPTS_PER_VARIANT) {
+                            warmupSession();
+                            sleepBeforeRetry(attempt);
+                        }
+                    } catch (RuntimeException ex) {
+                        String msg = (ex.getMessage() == null || ex.getMessage().isBlank())
+                                ? ex.getClass().getSimpleName() : ex.getMessage();
+                        attemptFailures.add(formatAttemptFailure(attempt, msg));
+                        if (attempt < MAX_ATTEMPTS_PER_VARIANT) {
+                            warmupSession();
+                            sleepBeforeRetry(attempt);
+                        }
+                    }
+                }
+                if (!attemptFailures.isEmpty()) {
+                    failures.add(ep + " [" + v.description + "] -> " + String.join("; ", attemptFailures));
                 }
             }
         }
@@ -333,6 +353,21 @@ public class RemoteMorphologyClient {
         String msg = "Удалённый сервис не принял запрос (" + ctx + ")";
         if (!failures.isEmpty()) msg += ": " + String.join("; ", failures);
         throw new MorphologyException(msg);
+    }
+
+    private String formatAttemptFailure(int attempt, String message) {
+        String details = (message == null || message.isBlank()) ? "неизвестная ошибка" : message;
+        return "попытка " + attempt + ": " + details;
+    }
+
+    private void sleepBeforeRetry(int attempt) {
+        Duration delay = RETRY_DELAYS[Math.min(RETRY_DELAYS.length - 1, attempt - 1)];
+        try {
+            Thread.sleep(delay.toMillis());
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new MorphologyException("Interrupted while waiting to retry request", ex);
+        }
     }
 
     private HttpRequest buildRequest(URI endpoint, RequestVariant variant, String raw, String encoded) {
