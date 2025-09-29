@@ -4,9 +4,13 @@ import com.example.uqureader.webapp.MorphologyException;
 import com.example.uqureader.webapp.morphology.MorphologyAnalyzer;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -26,6 +30,15 @@ import java.util.stream.Collectors;
  */
 public final class TransducerComparisonApplication {
 
+    private static final List<BundledTransducer> BUNDLED_TRANSDUCERS = List.of(
+            new BundledTransducer("analyser-gt-desc", "/analyser-gt-desc.hfstol"),
+            new BundledTransducer("tat-automorf", "/tat.automorf.hfstol"),
+            new BundledTransducer("tatar-last", "/tatar_last.hfstol")
+    );
+
+    private static final Map<String, BundledTransducer> BUNDLED_TRANSDUCER_LOOKUP =
+            createBundledTransducerLookup();
+
     private static final Set<String> STRUCTURAL_TAGS = Set.of(
             "NL", "Type1", "Type2", "Type3", "Type4", "Latin", "Sign"
     );
@@ -39,8 +52,8 @@ public final class TransducerComparisonApplication {
             System.exit(1);
         }
 
-        Path firstTransducer = Path.of(args[0]);
-        Path secondTransducer = Path.of(args[1]);
+        ResolvedTransducer firstTransducer = resolveTransducer(args[0]);
+        ResolvedTransducer secondTransducer = resolveTransducer(args[1]);
         Path output = Path.of(args[2]);
         List<Path> texts = new ArrayList<>();
         for (int i = 3; i < args.length; i++) {
@@ -52,8 +65,8 @@ public final class TransducerComparisonApplication {
         }
 
         try {
-            MorphologyAnalyzer firstAnalyzer = MorphologyAnalyzer.load(firstTransducer);
-            MorphologyAnalyzer secondAnalyzer = MorphologyAnalyzer.load(secondTransducer);
+            MorphologyAnalyzer firstAnalyzer = MorphologyAnalyzer.load(firstTransducer.path());
+            MorphologyAnalyzer secondAnalyzer = MorphologyAnalyzer.load(secondTransducer.path());
             writeComparisonLog(firstAnalyzer, secondAnalyzer, firstTransducer, secondTransducer, output, texts);
             System.out.println("Comparison results written to " + output.toAbsolutePath());
         } catch (MorphologyException | IOException ex) {
@@ -68,8 +81,8 @@ public final class TransducerComparisonApplication {
 
     private static void writeComparisonLog(MorphologyAnalyzer firstAnalyzer,
                                            MorphologyAnalyzer secondAnalyzer,
-                                           Path firstTransducer,
-                                           Path secondTransducer,
+                                           ResolvedTransducer firstTransducer,
+                                           ResolvedTransducer secondTransducer,
                                            Path output,
                                            List<Path> texts) throws IOException {
         Objects.requireNonNull(output, "output");
@@ -77,12 +90,8 @@ public final class TransducerComparisonApplication {
             Files.createDirectories(output.getParent());
         }
 
-        String labelA = firstTransducer.getFileName() != null
-                ? firstTransducer.getFileName().toString()
-                : firstTransducer.toString();
-        String labelB = secondTransducer.getFileName() != null
-                ? secondTransducer.getFileName().toString()
-                : secondTransducer.toString();
+        String labelA = firstTransducer.label();
+        String labelB = secondTransducer.label();
 
         StringBuilder builder = new StringBuilder();
         builder.append("Transducer comparison log").append(System.lineSeparator());
@@ -90,10 +99,10 @@ public final class TransducerComparisonApplication {
                 .append(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .append(System.lineSeparator());
         builder.append("First transducer: ")
-                .append(firstTransducer.toAbsolutePath())
+                .append(firstTransducer.path().toAbsolutePath())
                 .append(System.lineSeparator());
         builder.append("Second transducer: ")
-                .append(secondTransducer.toAbsolutePath())
+                .append(secondTransducer.path().toAbsolutePath())
                 .append(System.lineSeparator())
                 .append(System.lineSeparator());
 
@@ -117,6 +126,62 @@ public final class TransducerComparisonApplication {
         }
 
         Files.writeString(output, builder.toString(), StandardCharsets.UTF_8);
+    }
+
+    private static ResolvedTransducer resolveTransducer(String argument) {
+        if (argument == null || argument.isBlank()) {
+            throw new MorphologyException("Transducer argument must not be blank");
+        }
+
+        BundledTransducer bundled = BUNDLED_TRANSDUCER_LOOKUP.get(argument.toLowerCase(Locale.ROOT));
+        if (bundled != null) {
+            Path path = resolveBundledTransducer(bundled);
+            return new ResolvedTransducer(bundled.alias(), path);
+        }
+
+        Path path = Path.of(argument);
+        if (!Files.isRegularFile(path)) {
+            throw new MorphologyException("Morphology transducer not found: " + path.toAbsolutePath());
+        }
+        String label = path.getFileName() != null ? path.getFileName().toString() : path.toString();
+        return new ResolvedTransducer(label, path);
+    }
+
+    private static Path resolveBundledTransducer(BundledTransducer transducer) {
+        URL resource = TransducerComparisonApplication.class.getResource(transducer.resourcePath());
+        if (resource == null) {
+            throw new MorphologyException("Bundled transducer not found: " + transducer.fileName());
+        }
+        try {
+            if ("file".equals(resource.getProtocol())) {
+                Path path = Path.of(resource.toURI());
+                if (!Files.isRegularFile(path)) {
+                    throw new MorphologyException("Bundled transducer not found: " + transducer.fileName());
+                }
+                return path;
+            }
+            try (InputStream stream = TransducerComparisonApplication.class
+                    .getResourceAsStream(transducer.resourcePath())) {
+                if (stream == null) {
+                    throw new MorphologyException("Bundled transducer not found: " + transducer.fileName());
+                }
+                Path tempFile = Files.createTempFile("uqureader-transducer-", ".hfstol");
+                Files.copy(stream, tempFile, StandardCopyOption.REPLACE_EXISTING);
+                tempFile.toFile().deleteOnExit();
+                return tempFile;
+            }
+        } catch (IOException | URISyntaxException ex) {
+            throw new MorphologyException("Failed to access bundled transducer " + transducer.fileName(), ex);
+        }
+    }
+
+    private static Map<String, BundledTransducer> createBundledTransducerLookup() {
+        Map<String, BundledTransducer> lookup = new LinkedHashMap<>();
+        for (BundledTransducer transducer : BUNDLED_TRANSDUCERS) {
+            lookup.put(transducer.alias().toLowerCase(Locale.ROOT), transducer);
+            lookup.put(transducer.fileName().toLowerCase(Locale.ROOT), transducer);
+        }
+        return Map.copyOf(lookup);
     }
 
     private static void appendSummary(StringBuilder builder, String label, AnalysisSummary summary) {
@@ -275,6 +340,23 @@ public final class TransducerComparisonApplication {
         System.err.println("Usage: java "
                 + TransducerComparisonApplication.class.getName()
                 + " <first-transducer> <second-transducer> <output-log> <text> [<text> ...]");
+        System.err.println("You can provide either a file path or one of the bundled aliases listed below:");
+        for (BundledTransducer transducer : BUNDLED_TRANSDUCERS) {
+            System.err.println(String.format(Locale.ROOT,
+                    "  %s -> %s",
+                    transducer.alias(),
+                    transducer.fileName()));
+        }
+    }
+
+    private record ResolvedTransducer(String label, Path path) {
+    }
+
+    private record BundledTransducer(String alias, String resourcePath) {
+        String fileName() {
+            int separator = resourcePath.lastIndexOf('/');
+            return separator >= 0 ? resourcePath.substring(separator + 1) : resourcePath;
+        }
     }
 
     private static final class AnalysisSummary {
