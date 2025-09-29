@@ -23,7 +23,9 @@ public final class TatarMorphologyAnnotator {
     private final PrintStream out;
     private final PrintStream err;
 
-    public TatarMorphologyAnnotator(RemoteMorphologyClient client, PrintStream out, PrintStream err) {
+    public TatarMorphologyAnnotator(RemoteMorphologyClient client,
+                                    PrintStream out,
+                                    PrintStream err) {
         this.client = Objects.requireNonNull(client, "client");
         this.out = Objects.requireNonNull(out, "out");
         this.err = Objects.requireNonNull(err, "err");
