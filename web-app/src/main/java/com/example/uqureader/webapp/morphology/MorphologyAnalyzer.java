@@ -107,13 +107,17 @@ public final class MorphologyAnalyzer {
     }
 
     public static MorphologyAnalyzer load(Path transducerPath) {
+        return load(transducerPath, true);
+    }
+
+    public static MorphologyAnalyzer load(Path transducerPath, boolean useFallback) {
         Objects.requireNonNull(transducerPath, "transducerPath");
         if (!Files.isRegularFile(transducerPath)) {
             throw new MorphologyException("Morphology transducer not found: " + transducerPath.toAbsolutePath());
         }
         try (InputStream stream = Files.newInputStream(transducerPath)) {
             HfstTransducer transducer = HfstTransducer.read(stream);
-            Map<String, String> fallback = loadFallbackDictionary();
+            Map<String, String> fallback = useFallback ? loadFallbackDictionary() : Collections.emptyMap();
             return new MorphologyAnalyzer(transducer, fallback, true);
         } catch (IOException ex) {
             throw new MorphologyException("Failed to load morphology transducer from " + transducerPath.toAbsolutePath(), ex);
