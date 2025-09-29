@@ -229,16 +229,36 @@ public class RemoteMorphologyClient {
     }
 
     public List<WordMarkup> analyzeText(String text) {
+        return analyzeText(text, BatchProgressListener.noOp());
+    }
+
+    public List<WordMarkup> analyzeText(String text, BatchProgressListener listener) {
         Objects.requireNonNull(text, "text");
+        BatchProgressListener progress = (listener == null) ? BatchProgressListener.noOp() : listener;
         List<String> batches = splitIntoBatches(text);
+        if (batches.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         List<WordMarkup> out = new ArrayList<>();
-        for (String batch : batches) {
+        int total = batches.size();
+        for (int i = 0; i < total; i++) {
+            String batch = batches.get(i);
+            progress.onBatchStart(i + 1, total, batch);
             List<WordMarkup> part = attemptEndpointsAndVariants(
                     batch, TEXT_VARIANTS, this::parseFlexibleBatchResponse, describeBatch(batch)
             );
             out.addAll(part);
         }
         return Collections.unmodifiableList(out);
+    }
+
+    public interface BatchProgressListener {
+        void onBatchStart(int index, int total, String fragment);
+
+        static BatchProgressListener noOp() {
+            return (index, total, fragment) -> { };
+        }
     }
 
     // -------------------- batching --------------------
