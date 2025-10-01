@@ -254,6 +254,7 @@ public class RemoteMorphologyClient {
             progress.onBatchStart(i + 1, total, sanitized);
             List<WordMarkup> part = attemptEndpointsAndVariants(
                     sanitized, TEXT_VARIANTS, this::parseFlexibleBatchResponse, describeBatch(sanitized)
+
             );
             out.addAll(part);
         }
