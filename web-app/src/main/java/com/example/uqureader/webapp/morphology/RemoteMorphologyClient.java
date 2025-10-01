@@ -237,7 +237,11 @@ public class RemoteMorphologyClient {
     public List<WordMarkup> analyzeText(String text, BatchProgressListener listener) {
         Objects.requireNonNull(text, "text");
         BatchProgressListener progress = (listener == null) ? BatchProgressListener.noOp() : listener;
-        List<String> batches = splitIntoBatches(text);
+        String normalized = sanitizeForRequest(text);
+        if (normalized.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<String> batches = splitIntoBatches(normalized);
         if (batches.isEmpty()) {
             return Collections.emptyList();
         }
@@ -246,10 +250,11 @@ public class RemoteMorphologyClient {
         int total = batches.size();
         for (int i = 0; i < total; i++) {
             String batch = batches.get(i);
-            progress.onBatchStart(i + 1, total, batch);
             String sanitized = sanitizeForRequest(batch);
+            progress.onBatchStart(i + 1, total, sanitized);
             List<WordMarkup> part = attemptEndpointsAndVariants(
-                    sanitized, TEXT_VARIANTS, this::parseFlexibleBatchResponse, describeBatch(batch)
+                    sanitized, TEXT_VARIANTS, this::parseFlexibleBatchResponse, describeBatch(sanitized)
+
             );
             out.addAll(part);
         }
