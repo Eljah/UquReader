@@ -76,6 +76,7 @@ public class RemoteMorphologyClient {
     private static final List<RequestVariant> TEXT_VARIANTS = List.of(
             RequestVariant.post("text", (raw, enc) -> "text=" + enc)
     );
+    private static final Pattern WHITESPACE_NORMALIZER = Pattern.compile("\\s+");
 
     private final HttpClient httpClient;
     private final List<URI> endpoints;
@@ -223,8 +224,9 @@ public class RemoteMorphologyClient {
 
     public WordMarkup analyzeWord(String word) {
         Objects.requireNonNull(word, "word");
+        String sanitized = sanitizeForRequest(word);
         return attemptEndpointsAndVariants(
-                word, WORD_VARIANTS, b -> parseFlexibleResponse(word, b), "слово \"" + word + "\""
+                sanitized, WORD_VARIANTS, b -> parseFlexibleResponse(sanitized, b), "слово \"" + sanitized + "\""
         );
     }
 
@@ -235,7 +237,11 @@ public class RemoteMorphologyClient {
     public List<WordMarkup> analyzeText(String text, BatchProgressListener listener) {
         Objects.requireNonNull(text, "text");
         BatchProgressListener progress = (listener == null) ? BatchProgressListener.noOp() : listener;
-        List<String> batches = splitIntoBatches(text);
+        String normalized = sanitizeForRequest(text);
+        if (normalized.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<String> batches = splitIntoBatches(normalized);
         if (batches.isEmpty()) {
             return Collections.emptyList();
         }
@@ -244,9 +250,10 @@ public class RemoteMorphologyClient {
         int total = batches.size();
         for (int i = 0; i < total; i++) {
             String batch = batches.get(i);
-            progress.onBatchStart(i + 1, total, batch);
+            String sanitized = sanitizeForRequest(batch);
+            progress.onBatchStart(i + 1, total, sanitized);
             List<WordMarkup> part = attemptEndpointsAndVariants(
-                    batch, TEXT_VARIANTS, this::parseFlexibleBatchResponse, describeBatch(batch)
+                    sanitized, TEXT_VARIANTS, this::parseFlexibleBatchResponse, describeBatch(sanitized)
             );
             out.addAll(part);
         }
@@ -337,14 +344,15 @@ public class RemoteMorphologyClient {
                                               List<RequestVariant> variants,
                                               Function<String, T> parser,
                                               String ctx) {
-        String encoded = urlEncode(value);
+        String sanitized = sanitizeForRequest(value);
+        String encoded = urlEncode(sanitized);
         List<String> failures = new ArrayList<>();
 
         for (URI ep : endpoints) {
             for (RequestVariant v : variants) {
                 List<String> attemptFailures = new ArrayList<>();
                 for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_VARIANT; attempt++) {
-                    HttpRequest req = buildRequest(ep, v, value, encoded);
+                    HttpRequest req = buildRequest(ep, v, sanitized, encoded);
                     try {
                         String body = execute(req);
                         return parser.apply(body);
@@ -444,6 +452,17 @@ public class RemoteMorphologyClient {
 
     private static String urlEncode(String v) {
         return URLEncoder.encode(v, StandardCharsets.UTF_8);
+    }
+
+    private static String sanitizeForRequest(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return "";
+        }
+        return WHITESPACE_NORMALIZER.matcher(trimmed).replaceAll(" ");
     }
 
     private enum HttpMethod { GET, POST }
