@@ -102,11 +102,12 @@ public final class NaiveMorphologyPostProcessor {
                     String analysis = line.substring(tabIndex + 1);
                     if (requiresCompletion(analysis)) {
                         unknownCount++;
-                        String replacement = buildReplacement(token);
-                        if (!"NR".equals(replacement)) {
+                        Replacement replacement = buildReplacement(token);
+                        if (replacement.hasAnalyses()) {
                             replacedCount++;
+                            logFoundWord(token, replacement);
                         }
-                        processed = token + '\t' + replacement;
+                        processed = token + '\t' + replacement.text();
                     }
                 }
                 writer.write(processed);
@@ -118,7 +119,7 @@ public final class NaiveMorphologyPostProcessor {
                 file, unknownCount, replacedCount, output);
     }
 
-    private String buildReplacement(String token) {
+    private Replacement buildReplacement(String token) {
         List<NaiveTatarSuffixAnalyzer.Analysis> analyses = analyzer.analyze(token);
         List<String> formatted = new ArrayList<>(analyses.size());
         for (NaiveTatarSuffixAnalyzer.Analysis analysis : analyses) {
@@ -128,14 +129,21 @@ public final class NaiveMorphologyPostProcessor {
             }
         }
         if (formatted.isEmpty()) {
-            return "NR";
+            return Replacement.noReplacement();
         }
         StringJoiner joiner = new StringJoiner(";");
         for (String entry : formatted) {
             joiner.add(entry);
         }
         String joined = joiner.toString();
-        return joined.isEmpty() ? "NR" : joined + ';';
+        if (joined.isEmpty()) {
+            return Replacement.noReplacement();
+        }
+        return Replacement.withAnalyses(joined + ';', formatted);
+    }
+
+    private void logFoundWord(String token, Replacement replacement) {
+        out.printf("  найдено: %s -> %s%n", token, replacement.text());
     }
 
     private static boolean requiresCompletion(String analysis) {
@@ -164,6 +172,35 @@ public final class NaiveMorphologyPostProcessor {
                 + "com.example.uqureader.webapp.cli.NaiveMorphologyPostProcessor <файл.morph.tsv> [<файл.morph.tsv> ...]");
         err.println("Для каждого указанного файла будет создан соседний <имя>.morph2.tsv "
                 + "с наивными разборами вместо пометок NR.");
+    }
+
+    private static final class Replacement {
+
+        private static final Replacement NONE = new Replacement("NR", List.of());
+
+        private final String text;
+        private final List<String> analyses;
+
+        private Replacement(String text, List<String> analyses) {
+            this.text = text;
+            this.analyses = List.copyOf(analyses);
+        }
+
+        static Replacement noReplacement() {
+            return NONE;
+        }
+
+        static Replacement withAnalyses(String text, List<String> analyses) {
+            return new Replacement(text, analyses);
+        }
+
+        String text() {
+            return text;
+        }
+
+        boolean hasAnalyses() {
+            return !analyses.isEmpty();
+        }
     }
 }
 
