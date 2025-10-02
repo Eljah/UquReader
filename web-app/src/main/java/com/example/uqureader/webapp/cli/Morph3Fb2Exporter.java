@@ -61,6 +61,26 @@ public final class Morph3Fb2Exporter {
             return 1;
         }
 
+        if (args.length == 1 && !isOption(args[0])) {
+            Path single = Path.of(args[0]);
+            if (looksLikeOriginalFile(single)) {
+                Path morphCandidate = Path.of(single.toString() + ".morph3.tsv");
+                if (!Files.exists(morphCandidate)) {
+                    err.printf("Связанный файл морфологии не найден: %s%n", morphCandidate);
+                    return 2;
+                }
+                return runSinglePair(morphCandidate, single);
+            }
+        }
+
+        if (args.length == 2 && !isOption(args[0]) && !isOption(args[1])) {
+            Path morph = Path.of(args[0]);
+            Path original = Path.of(args[1]);
+            if (looksLikeMorphFile(morph) && looksLikeOriginalFile(original)) {
+                return runSinglePair(morph, original);
+            }
+        }
+
         Path originalDir = null;
         List<Path> files = new ArrayList<>();
         for (int i = 0; i < args.length; i++) {
@@ -102,7 +122,7 @@ public final class Morph3Fb2Exporter {
         int failures = 0;
         for (Path file : files) {
             try {
-                processFile(file, originalDir);
+                processFile(file, originalDir, null);
             } catch (IOException ex) {
                 failures++;
                 err.printf("Не удалось обработать файл %s: %s%n", file, ex.getMessage());
@@ -120,23 +140,76 @@ public final class Morph3Fb2Exporter {
         return 0;
     }
 
+    private int runSinglePair(Path morphFile, Path originalFile) {
+        if (!Files.exists(morphFile)) {
+            err.printf("Файл морфологии не найден: %s%n", morphFile);
+            return 2;
+        }
+        if (!Files.isRegularFile(morphFile)) {
+            err.printf("Не является файлом морфологии: %s%n", morphFile);
+            return 2;
+        }
+        if (!Files.exists(originalFile)) {
+            err.printf("Оригинальный текст не найден: %s%n", originalFile);
+            return 2;
+        }
+        if (!Files.isRegularFile(originalFile)) {
+            err.printf("Путь не является файлом оригинального текста: %s%n", originalFile);
+            return 2;
+        }
+
+        try {
+            processFile(morphFile, null, originalFile);
+        } catch (IOException ex) {
+            err.printf("Не удалось обработать файл %s: %s%n", morphFile, ex.getMessage());
+            return 3;
+        } catch (IllegalStateException ex) {
+            err.printf("Ошибка совмещения текста и морфологии для %s: %s%n", morphFile, ex.getMessage());
+            return 3;
+        }
+        return 0;
+    }
+
+    private boolean isOption(String arg) {
+        return arg != null && arg.startsWith("-");
+    }
+
+    private boolean looksLikeMorphFile(Path path) {
+        if (path == null) {
+            return false;
+        }
+        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        return name.endsWith(".morph3.tsv");
+    }
+
+    private boolean looksLikeOriginalFile(Path path) {
+        if (path == null) {
+            return false;
+        }
+        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        return name.endsWith(".txt");
+    }
+
     private void printUsage() {
         err.println("Использование: java -cp web-app-<версия>.jar "
                 + "com.example.uqureader.webapp.cli.Morph3Fb2Exporter [--original-dir <каталог>] "
                 + "<файл.morph3.tsv> [<файл.morph3.tsv> ...]");
+        err.println("Также можно указать пару файлов: <файл.morph3.tsv> <оригинал.txt>" +
+                " или один путь к оригиналу <оригинал.txt>, если файл морфологии" +
+                " находится рядом с расширением .morph3.tsv.");
         err.println("Инструмент создаёт fb2-файл рядом с исходной морфоразметкой," +
                 " добавляя перевод и теги для каждого токена.");
         err.println("Если оригинальные тексты находятся в отдельном каталоге, задайте его через --original-dir.");
     }
 
-    private void processFile(Path morphFile, Path originalDir) throws IOException {
+    private void processFile(Path morphFile, Path originalDir, Path explicitOriginal) throws IOException {
         List<MorphToken> tokens = readMorphFile(morphFile);
         if (tokens.isEmpty()) {
             err.printf("Предупреждение: файл %s пуст — пропущен.%n", morphFile);
             return;
         }
 
-        Path original = locateOriginalFile(morphFile, originalDir);
+        Path original = explicitOriginal != null ? explicitOriginal : locateOriginalFile(morphFile, originalDir);
         String originalText = Files.readString(original, StandardCharsets.UTF_8);
         List<Paragraph> paragraphs = alignTokensWithText(tokens, originalText);
 
@@ -207,7 +280,11 @@ public final class Morph3Fb2Exporter {
                 candidates.add(explicitDir.resolve(name));
             }
         }
-
+        for (Path candidate : candidates) {
+            if (Files.exists(candidate) && Files.isRegularFile(candidate)) {
+                return candidate;
+            }
+        }
         throw new IllegalStateException("Оригинальный файл " + baseName + " для " + morphFile + " не найден.");
     }
 
