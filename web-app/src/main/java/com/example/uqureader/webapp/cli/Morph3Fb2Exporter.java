@@ -660,9 +660,12 @@ public final class Morph3Fb2Exporter {
                 if (!translation.isEmpty()) {
                     writer.write(" translation=\"" + escapeAttribute(translation) + "\"");
                 }
-                writer.write(">");
-                writer.write(escapeText(wordItem.surface()));
-                writer.write("</m:w>");
+                String surface = wordItem.surface();
+                if (!surface.isEmpty()) {
+                    writer.write(" surface=\"" + escapeAttribute(surface) + "\"");
+                }
+                writer.write("/>");
+                writer.write(escapeText(surface));
             }
         }
         writer.write("</p>\n");
