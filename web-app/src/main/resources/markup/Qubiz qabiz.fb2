@@ -9,9 +9,9 @@
     </title-info>
     <document-info>
       <program-used>UquReader Morph3Fb2Exporter</program-used>
-      <date value="2025-10-02">2025-10-02</date>
-      <source-url>web-app/src/main/resources/markup/qubiz_qabiz.txt</source-url>
-      <src-ocr>web-app/src/main/resources/markup/qubiz_qabiz.txt.morph3.tsv</src-ocr>
+      <date value="2025-10-03">2025-10-03</date>
+      <source-url>web-app\src\main\resources\markup\qubiz_qabiz.txt</source-url>
+      <src-ocr>web-app\src\main\resources\markup\qubiz_qabiz.txt.morph3.tsv</src-ocr>
     </document-info>
   </description>
   <body>
