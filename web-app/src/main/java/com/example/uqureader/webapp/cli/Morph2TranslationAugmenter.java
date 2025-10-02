@@ -125,7 +125,6 @@ public final class Morph2TranslationAugmenter {
                              PreparedStatement lookup,
                              Map<String, List<DictionaryEntry>> dictionaryCache) throws IOException {
         List<String> lines = new ArrayList<>();
-        boolean modified = false;
         int tokens = 0;
         int tokensWithTranslations = 0;
         int translationsWritten = 0;
@@ -140,9 +139,6 @@ public final class Morph2TranslationAugmenter {
                 } catch (SQLException ex) {
                     throw new IOException("Ошибка обращения к словарю: " + ex.getMessage(), ex);
                 }
-                if (!line.equals(augmented.value())) {
-                    modified = true;
-                }
                 if (augmented.translationCount() > 0) {
                     tokensWithTranslations++;
                     translationsWritten += augmented.translationCount();
@@ -151,19 +147,19 @@ public final class Morph2TranslationAugmenter {
             }
         }
 
-        if (modified) {
-            try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
-                for (int i = 0; i < lines.size(); i++) {
-                    if (i > 0) {
-                        writer.newLine();
-                    }
-                    writer.write(lines.get(i));
+        Path output = deriveOutputPath(file);
+        try (BufferedWriter writer = Files.newBufferedWriter(output, StandardCharsets.UTF_8)) {
+            for (int i = 0; i < lines.size(); i++) {
+                if (i > 0) {
+                    writer.newLine();
                 }
+                writer.write(lines.get(i));
             }
         }
 
-        out.printf("# %s — обработано токенов: %d, с переводами: %d, записано переводов: %d%n",
+        out.printf("# %s → %s — обработано токенов: %d, с переводами: %d, записано переводов: %d%n",
                 file,
+                output,
                 tokens,
                 tokensWithTranslations,
                 translationsWritten);
@@ -361,7 +357,11 @@ public final class Morph2TranslationAugmenter {
         if (!filtered.isEmpty()) {
             return new ArrayList<>(filtered);
         }
-        return new ArrayList<>(all);
+        boolean anyTagged = entries.stream().anyMatch(entry -> entry.tags() != null && !entry.tags().isEmpty());
+        if (!anyTagged) {
+            return new ArrayList<>(all);
+        }
+        return Collections.emptyList();
     }
 
     private boolean matchesPos(String pos, Set<String> tags) {
@@ -398,7 +398,7 @@ public final class Morph2TranslationAugmenter {
     private void printUsage() {
         err.println("Использование: java -cp web-app-<версия>.jar "
                 + "com.example.uqureader.webapp.cli.Morph2TranslationAugmenter [--dictionary <путь к БД>] <файл.morph2.tsv> [<файл.morph2.tsv> ...]");
-        err.println("Каждый указанный файл будет дополнен колонкой с переводами для обнаруженных основ.");
+        err.println("Каждый указанный файл будет сохранён в новый *.morph3 файл с переводами для обнаруженных основ.");
     }
 
     private record AugmentedLine(String value, int translationCount) {
@@ -462,6 +462,18 @@ public final class Morph2TranslationAugmenter {
         map.put("DET", List.of("det*"));
         map.put("AUX", List.of("aux*", "vbser"));
         POS_EQUIVALENTS = Collections.unmodifiableMap(map);
+    }
+
+    private Path deriveOutputPath(Path input) {
+        String fileName = input.getFileName().toString();
+        int idx = fileName.lastIndexOf(".morph2");
+        if (idx >= 0) {
+            int end = idx + ".morph2".length();
+            String suffix = fileName.substring(end);
+            String base = fileName.substring(0, idx);
+            return input.resolveSibling(base + ".morph3" + suffix);
+        }
+        return input.resolveSibling(fileName + ".morph3");
     }
 }
 
