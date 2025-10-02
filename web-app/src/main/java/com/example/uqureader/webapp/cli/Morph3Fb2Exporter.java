@@ -181,23 +181,30 @@ public final class Morph3Fb2Exporter {
             throw new IllegalStateException("Не удалось определить базовое имя для файла " + morphFile);
         }
 
+        List<String> possibleNames = new ArrayList<>();
+        possibleNames.add(baseName);
+        String lowerBase = baseName.toLowerCase(Locale.ROOT);
+        if (!lowerBase.endsWith(".txt")) {
+            possibleNames.add(baseName + ".txt");
+        }
+
         Set<Path> candidates = new LinkedHashSet<>();
         Path parent = morphFile.getParent();
         if (parent != null) {
-            candidates.add(parent.resolve(baseName));
+            for (String name : possibleNames) {
+                candidates.add(parent.resolve(name));
+            }
             Path resources = parent.getParent();
             if (resources != null) {
-                candidates.add(resources.resolve(baseName));
-                candidates.add(resources.resolve("texts").resolve(baseName));
+                for (String name : possibleNames) {
+                    candidates.add(resources.resolve(name));
+                    candidates.add(resources.resolve("texts").resolve(name));
+                }
             }
         }
         if (explicitDir != null) {
-            candidates.add(explicitDir.resolve(baseName));
-        }
-
-        for (Path candidate : candidates) {
-            if (Files.exists(candidate) && Files.isRegularFile(candidate)) {
-                return candidate;
+            for (String name : possibleNames) {
+                candidates.add(explicitDir.resolve(name));
             }
         }
 
