@@ -1,0 +1,21 @@
+{
+  "maxStrips": 4,
+  "rules": [
+    { "forms": ["га","кә","ка","гә"],      "tag": "Case=Dat",  "repeatable": false, "order": 10 },
+    { "forms": ["да","дә"],                "tag": "Case=Loc",  "repeatable": false, "order": 10 },
+    { "forms": ["дан","дән","тан","тән"],  "tag": "Case=Abl",  "repeatable": false, "order": 10 },
+    { "forms": ["ның","нең"],              "tag": "Case=Gen",  "repeatable": false, "order": 10 },
+    { "forms": ["ны","не"],                "tag": "Case=Acc",  "repeatable": false, "order": 10 },
+
+    { "forms": ["лар","ләр"],              "tag": "Number=Plur","repeatable": false,"order": 20 },
+
+    { "forms": ["ым","ем"],                "tag": "Poss=1Sg",  "repeatable": false, "order": 30 },
+    { "forms": ["ың","ең"],                "tag": "Poss=2Sg",  "repeatable": false, "order": 30 },
+    { "forms": ["ы","е","сы","се"],        "tag": "Poss=3Sg",  "repeatable": false, "order": 30 },
+    { "forms": ["ыбыз","ебез","сыбыз","себез"], "tag":"Poss=1Pl","repeatable": false,"order": 30 },
+    { "forms": ["ыгыз","егез","сигез","сегез"], "tag":"Poss=2Pl","repeatable": false,"order": 30 },
+
+    // частица -да/-дә — ОТДЕЛЬНО от Case=Loc, более ПОЗДНИЙ порядок
+    { "forms": ["да","дә"],                "tag": "Part=DA",    "repeatable": true,  "order": 40 }
+  ]
+}
