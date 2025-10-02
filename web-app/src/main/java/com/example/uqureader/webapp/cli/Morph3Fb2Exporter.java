@@ -326,6 +326,12 @@ public final class Morph3Fb2Exporter {
         if (Character.isLetterOrDigit(ch) || ch == '\'' || ch == '\u2019' || ch == '\u02BC') {
             return true;
         }
+        if (ch == '\u2026') {
+            return true;
+        }
+        if (ch == '.' && hasNeighbouringEllipsisDot(text, index)) {
+            return true;
+        }
         if ((ch == '-' || ch == '\u2014' || ch == '\u2013') && index + 1 < text.length()) {
             char next = text.charAt(index + 1);
             if (Character.isLetterOrDigit(next)) {
@@ -333,6 +339,13 @@ public final class Morph3Fb2Exporter {
             }
         }
         return false;
+    }
+
+    private boolean hasNeighbouringEllipsisDot(String text, int index) {
+        if (index > 0 && text.charAt(index - 1) == '.') {
+            return true;
+        }
+        return index + 1 < text.length() && text.charAt(index + 1) == '.';
     }
 
     private MatchResult findMatchingToken(List<MorphToken> tokens, int startIndex, String surface) {
