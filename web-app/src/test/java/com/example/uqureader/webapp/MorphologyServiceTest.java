@@ -40,7 +40,7 @@ class MorphologyServiceTest {
     @Test
     void analyzeTextMatchesBundledMarkup() throws IOException {
         String text = readResource("/texts/berenche_teatr.txt");
-        String expectedMarkup = readResource("/markup/berenche_teatr_markup.txt");
+        String expectedMarkup = readResource("/markup/berenche_teatr.txt.morph.tsv");
 
         JsonObject analysis = service.analyzeText(text);
         Assertions.assertEquals(6378, analysis.get("tokens_count").getAsInt());

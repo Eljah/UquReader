@@ -53,6 +53,9 @@ public final class MorphologyAnalyzer {
     private static final Set<String> QUOTES = Set.of("“", "”", "\"", "'", "»", "«", "≪", "≫", "„", "‘");
 
     private static final String[] FALLBACK_MARKUP_RESOURCES = {
+            "/markup/berenche_teatr.txt.morph.tsv",
+            "/markup/harri_potter_ham_lagnetle_bala.txt.morph.tsv",
+            "/markup/qubiz_qabiz.txt.morph.tsv",
             "/markup/berenche_teatr_markup.txt",
             "/markup/harri_potter_ham_lagnetle_bala_markup.txt"
     };
@@ -72,28 +75,11 @@ public final class MorphologyAnalyzer {
     }
 
     public static MorphologyAnalyzer loadDefault() {
-        InputStream stream = null;
         try {
-            String systemProperty = System.getProperty("morphology.transducer.path");
-            if (systemProperty != null && !systemProperty.isBlank()) {
-                stream = java.nio.file.Files.newInputStream(java.nio.file.Path.of(systemProperty));
-            }
-            if (stream == null) {
-                String envPath = System.getenv("MORPHOLOGY_TRANSDUCER");
-                if (envPath != null && !envPath.isBlank()) {
-                    stream = java.nio.file.Files.newInputStream(java.nio.file.Path.of(envPath));
-                }
-            }
-            if (stream == null) {
-                Path bundledTransducer = Path.of("web-app", "src", "main", "resources", "analyser-gt-desc.hfstol");
-                if (Files.exists(bundledTransducer)) {
-                    stream = Files.newInputStream(bundledTransducer);
-                }
-            }
             HfstTransducer transducer = null;
-            if (stream != null) {
-                try (InputStream in = stream) {
-                    transducer = HfstTransducer.read(in);
+            try (InputStream stream = openDefaultTransducerStream()) {
+                if (stream != null) {
+                    transducer = HfstTransducer.read(stream);
                 }
             }
             Map<String, String> fallback = loadFallbackDictionary();
@@ -104,6 +90,66 @@ public final class MorphologyAnalyzer {
         } catch (IOException ex) {
             throw new MorphologyException("Failed to initialise morphology analyser", ex);
         }
+    }
+
+    private static InputStream openDefaultTransducerStream() throws IOException {
+        InputStream stream = openTransducerFromProperty();
+        if (stream != null) {
+            return stream;
+        }
+        stream = openTransducerFromEnvironment();
+        if (stream != null) {
+            return stream;
+        }
+        stream = openBundledTransducer("analyser-gt-desc.hfstol");
+        if (stream != null) {
+            return stream;
+        }
+        stream = openBundledTransducer("tat.automorf.hfstol");
+        if (stream != null) {
+            return stream;
+        }
+        return openBundledTransducer("tatar_last.hfstol");
+    }
+
+    private static InputStream openTransducerFromProperty() throws IOException {
+        String systemProperty = System.getProperty("morphology.transducer.path");
+        if (systemProperty == null || systemProperty.isBlank()) {
+            return null;
+        }
+        Path path = Path.of(systemProperty);
+        if (!Files.isRegularFile(path)) {
+            throw new MorphologyException("Morphology transducer not found: " + path.toAbsolutePath());
+        }
+        return Files.newInputStream(path);
+    }
+
+    private static InputStream openTransducerFromEnvironment() throws IOException {
+        String envPath = System.getenv("MORPHOLOGY_TRANSDUCER");
+        if (envPath == null || envPath.isBlank()) {
+            return null;
+        }
+        Path path = Path.of(envPath);
+        if (!Files.isRegularFile(path)) {
+            throw new MorphologyException("Morphology transducer not found: " + path.toAbsolutePath());
+        }
+        return Files.newInputStream(path);
+    }
+
+    private static InputStream openBundledTransducer(String fileName) throws IOException {
+        InputStream classpathStream = MorphologyAnalyzer.class.getResourceAsStream("/" + fileName);
+        if (classpathStream != null) {
+            return classpathStream;
+        }
+        Path root = Path.of("src", "main", "resources", fileName);
+        if (Files.isRegularFile(root)) {
+            return Files.newInputStream(root);
+        }
+        Path moduleRoot = Path.of("web-app", "src", "main", "resources", fileName);
+        if (Files.isRegularFile(moduleRoot)) {
+            return Files.newInputStream(moduleRoot);
+        }
+        return null;
     }
 
     public static MorphologyAnalyzer load(Path transducerPath) {
@@ -179,7 +225,7 @@ public final class MorphologyAnalyzer {
                 if (Files.isDirectory(directory)) {
                     try (var paths = Files.list(directory)) {
                         paths.filter(path -> Files.isRegularFile(path)
-                                && path.getFileName().toString().endsWith(".txt"))
+                                && isMarkupFile(path.getFileName().toString()))
                                 .forEach(path -> readMarkupResource("/markup/" + path.getFileName(), dictionary));
                     }
                 }
@@ -193,6 +239,10 @@ public final class MorphologyAnalyzer {
             }
         }
         return dictionary;
+    }
+
+    private static boolean isMarkupFile(String fileName) {
+        return fileName.endsWith(".txt") || fileName.endsWith(".tsv") || fileName.endsWith(".morph.tsv");
     }
 
     private static void readMarkupResource(String resource, Map<String, String> dictionary) {
