@@ -70,7 +70,39 @@ public class NaiveTatarSuffixAnalyzer {
         @Override public String toString() {
             return stem + "\t" + String.join("+", tags) + "  [" + String.join("-", removedAffixes) + "]";
         }
+
+        /**
+         * Formats the analysis using HFST-style notation so that the output resembles the results
+         * of the primary analyser. The notation is intentionally simple: it assumes a nominal
+         * lemma, adds plural/possessive/case tags when detected and falls back to nominative when
+         * no explicit case affix is present.
+         */
+        public String toHfstNotation() {
+            return formatAsHfst(this);
+        }
     }
+
+    private static final Map<String, String> HFST_CASE_TAGS = Map.of(
+            "Case=Dat", "DIR(ГА)",
+            "Case=Loc", "LOC(ДА)",
+            "Case=Abl", "ABL(ДАн)",
+            "Case=Gen", "GEN(нЫң)",
+            "Case=Acc", "ACC(нЫ)"
+    );
+
+    private static final Map<String, String> HFST_POSSESSIVE_TAGS = Map.of(
+            "Poss=1Sg", "POSS_1SG(Ым)",
+            "Poss=2Sg", "POSS_2SG(Ың)",
+            "Poss=3Sg", "POSS_3(СЫ)",
+            "Poss=1Pl", "POSS_1PL(ЫбЫз)",
+            "Poss=2Pl", "POSS_2PL(ЫгЫз)"
+    );
+
+    private static final String HFST_PARTICLE_DA = "PART(ДА)";
+    private static final String HFST_PART_OF_SPEECH = "N";
+    private static final String HFST_NUMBER_SINGULAR = "Sg";
+    private static final String HFST_NUMBER_PLURAL = "PL(ЛАр)";
+    private static final String HFST_CASE_NOMINATIVE = "Nom";
 
     // -------------------- Состояние поиска (бэктрекинг) --------------------
 
@@ -263,6 +295,43 @@ public class NaiveTatarSuffixAnalyzer {
     }
 
     // -------------------- Утилиты --------------------
+
+    private static String formatAsHfst(Analysis analysis) {
+        List<String> features = new ArrayList<>();
+        features.add(HFST_PART_OF_SPEECH);
+
+        boolean plural = false;
+        String possessive = null;
+        String caseTag = null;
+        boolean particleDa = false;
+
+        for (String tag : analysis.tags) {
+            if ("Number=Plur".equals(tag)) {
+                plural = true;
+            } else if (HFST_POSSESSIVE_TAGS.containsKey(tag)) {
+                possessive = HFST_POSSESSIVE_TAGS.get(tag);
+            } else if (HFST_CASE_TAGS.containsKey(tag)) {
+                caseTag = HFST_CASE_TAGS.get(tag);
+            } else if ("Part=DA".equals(tag)) {
+                particleDa = true;
+            }
+        }
+
+        features.add(plural ? HFST_NUMBER_PLURAL : HFST_NUMBER_SINGULAR);
+        if (possessive != null) {
+            features.add(possessive);
+        }
+        if (caseTag != null) {
+            features.add(caseTag);
+        } else {
+            features.add(HFST_CASE_NOMINATIVE);
+        }
+        if (particleDa) {
+            features.add(HFST_PARTICLE_DA);
+        }
+
+        return analysis.stem + "+" + String.join("+", features);
+    }
 
     private static final Pattern CYRILLIC = Pattern.compile("[а-яәөүҗңһёА-ЯӘӨҮҖҢҺЁ]+");
 
