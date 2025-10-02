@@ -174,10 +174,47 @@ public class NaiveTatarSuffixAnalyzer {
     public static NaiveTatarSuffixAnalyzer defaultTatar(int defaultMaxStrips) {
         List<AffixRule> base = new ArrayList<>();
 
+        final int ORD_VERB = 5;
         final int ORD_CASE = 10;
         final int ORD_NUM  = 20;
         final int ORD_POSS = 30;
         final int ORD_PART = 40;
+
+        // Причастие прошедшего времени (-ган/-гән/-кан/-кән).
+        base.add(rule(List.of("ган", "кән", "гән", "кан"), "VForm=PartPast", false, ORD_VERB));
+
+        // Прошедшее время (-ды/-де/-ты/-те).
+        base.add(rule(List.of("ды", "де", "ты", "те"), "Tense=Past", false, ORD_VERB));
+
+        // Деепричастие со значением «после того как» (-гач/-гәч/-кач/-кәч).
+        base.add(rule(List.of("гач", "гәч", "кач", "кәч"), "Converb=After", false, ORD_VERB));
+
+        // Условное наклонение (-са/-сә).
+        base.add(rule(List.of("са", "сә"), "Mood=Cnd", false, ORD_VERB));
+
+        // До тех пор пока (-ганчы/-гәнче/-канчы/-кәнче).
+        base.add(rule(List.of("ганчы", "гәнче", "канчы", "кәнче"), "Converb=Until", false, ORD_VERB));
+
+        // Деепричастие (-чы/-че).
+        base.add(rule(List.of("чы", "че"), "Converb=While", false, ORD_VERB));
+
+        // Вежливое побуждение (-чы/-че).
+        base.add(rule(List.of("чы", "че"), "Mood=PoliteReq", false, ORD_VERB));
+
+        // Будущее время / причастие (-ачак/-әчәк/-чак/-чәк).
+        base.add(rule(List.of("ачак", "әчәк", "чак", "чәк"), "Tense=Fut", false, ORD_VERB));
+
+        // Будущее простое (-ыр/-ер/-р).
+        base.add(rule(List.of("ыр", "ер", "р"), "Tense=FutSimple", false, ORD_VERB));
+
+        // Оттенок отрицательного пожелания (-магае/-мәгәе).
+        base.add(rule(List.of("магае", "мәгәе"), "Mood=NegWish", false, ORD_VERB));
+
+        // Побудительное наклонение 3 л. (-сын/-сен).
+        base.add(rule(List.of("сын", "сен"), "Mood=Imp3", false, ORD_VERB));
+
+        // Оттенок долженствования (-гере/-гыры).
+        base.add(rule(List.of("гере", "гыры"), "Mood=Necess", false, ORD_VERB));
 
         // Дательный (гармония/варианты):
         base.add(rule(List.of("га","кә","ка","гә"), "Case=Dat", false, ORD_CASE));

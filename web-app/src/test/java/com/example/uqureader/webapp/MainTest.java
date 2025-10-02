@@ -28,7 +28,7 @@ class MainTest {
     @Test
     void mainPrintsMarkupForFullText() throws Exception {
         String sampleText = readResource("/texts/berenche_teatr.txt");
-        String expectedMarkup = readResource("/markup/berenche_teatr_markup.txt");
+        String expectedMarkup = readResource("/markup/berenche_teatr.txt.morph.tsv");
 
         PrintStream originalOut = System.out;
         InputStream originalIn = System.in;
