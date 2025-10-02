@@ -1,6 +1,7 @@
 package com.example.uqureader.webapp.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -48,6 +49,7 @@ class Morph3Fb2ExporterTest {
         assertEquals(0, exitCode, "Экспорт должен завершиться без ошибок");
         assertTrue(Files.exists(OUTPUT_FILE), "Должен быть создан fb2-файл");
         assertTrue(Files.size(OUTPUT_FILE) > 0, "Сгенерированный fb2-файл не должен быть пустым");
+        assertInlineWordMarkup();
     }
 
     @Test
@@ -61,5 +63,14 @@ class Morph3Fb2ExporterTest {
         assertEquals(0, exitCode, "Экспорт должен завершиться без ошибок");
         assertTrue(Files.exists(OUTPUT_FILE), "Должен быть создан fb2-файл");
         assertTrue(Files.size(OUTPUT_FILE) > 0, "Сгенерированный fb2-файл не должен быть пустым");
+        assertInlineWordMarkup();
+    }
+
+    private void assertInlineWordMarkup() throws Exception {
+        String content = Files.readString(OUTPUT_FILE, StandardCharsets.UTF_8);
+        assertTrue(content.contains("surface=\"КУБЫЗ\"/>КУБЫЗ"),
+                "Слова должны идти сразу после морфологической разметки");
+        assertFalse(content.contains("</m:w>"),
+                "Разметка слов должна быть самозакрывающейся, чтобы не вызывать переносы строк");
     }
 }
