@@ -967,11 +967,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView != null) {
             readerView.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
         }
-        if (pagePreviousButton != null) {
-            pagePreviousButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
-        }
-        if (pageNextButton != null) {
-            pageNextButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        if (!show) {
+            updatePageControls();
         }
     }
 

@@ -55,9 +55,10 @@
             android:id="@+id/pagePreviousButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/reader_nav_button_background"
             android:contentDescription="@string/reader_page_previous"
             android:padding="8dp"
+            android:tint="@color/reader_letter_highlight"
             android:src="@drawable/ic_page_previous" />
 
         <View
@@ -69,9 +70,10 @@
             android:id="@+id/pageNextButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/reader_nav_button_background"
             android:contentDescription="@string/reader_page_next"
             android:padding="8dp"
+            android:tint="@color/reader_letter_highlight"
             android:src="@drawable/ic_page_next" />
     </LinearLayout>
 
