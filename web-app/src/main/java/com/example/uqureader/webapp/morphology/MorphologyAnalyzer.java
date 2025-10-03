@@ -242,7 +242,12 @@ public final class MorphologyAnalyzer {
     }
 
     private static boolean isMarkupFile(String fileName) {
-        return fileName.endsWith(".txt") || fileName.endsWith(".tsv") || fileName.endsWith(".morph.tsv");
+        if (fileName.endsWith(".tsv")) {
+            return !(fileName.contains("morph2")
+                    || fileName.contains("morph3")
+                    || fileName.contains("_old"));
+        }
+        return fileName.endsWith(".txt");
     }
 
     private static void readMarkupResource(String resource, Map<String, String> dictionary) {
@@ -278,9 +283,26 @@ public final class MorphologyAnalyzer {
             dictionary.put(token, analysis);
             return;
         }
-        if (isNonLexical(existing) && !isNonLexical(analysis)) {
+        if (Objects.equals(existing, analysis)) {
+            return;
+        }
+        boolean existingNonLexical = isNonLexical(existing);
+        boolean newNonLexical = isNonLexical(analysis);
+        if (existingNonLexical && !newNonLexical) {
+            dictionary.put(token, analysis);
+            return;
+        }
+        if (!existingNonLexical && newNonLexical) {
+            return;
+        }
+        if (!existingNonLexical && !newNonLexical
+                && hasTranslation(analysis) && !hasTranslation(existing)) {
             dictionary.put(token, analysis);
         }
+    }
+
+    private static boolean hasTranslation(String analysis) {
+        return analysis.indexOf(':') >= 0;
     }
 
     private static boolean isNonLexical(String analysis) {
