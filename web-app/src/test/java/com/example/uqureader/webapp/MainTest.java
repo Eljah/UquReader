@@ -44,7 +44,7 @@ class MainTest {
         }
 
         String actual = capture.toString(StandardCharsets.UTF_8.name());
-        assertEquals(expectedMarkup, actual);
+        LargeTextAssertions.assertLargeTextEquals(expectedMarkup, actual);
     }
 
     @Test
@@ -71,7 +71,8 @@ class MainTest {
             }
             assertEquals(200, connection.getResponseCode());
             JsonObject expected = service.analyzeText(sampleText);
-            assertEquals(expected, gson.fromJson(response, JsonObject.class));
+            JsonObject actual = gson.fromJson(response, JsonObject.class);
+            LargeTextAssertions.assertJsonEquals(expected, actual);
         } finally {
             server.stop(0);
             service.close();

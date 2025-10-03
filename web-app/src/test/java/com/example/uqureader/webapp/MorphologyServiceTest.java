@@ -48,7 +48,7 @@ class MorphologyServiceTest {
         Assertions.assertEquals(936, analysis.get("sentenes_count").getAsInt());
 
         String actualMarkup = service.markup(text);
-        Assertions.assertEquals(expectedMarkup, actualMarkup);
+        LargeTextAssertions.assertLargeTextEquals(expectedMarkup, actualMarkup);
 
         JsonArray sentences = analysis.getAsJsonArray("sentences");
         Assertions.assertFalse(sentences.isEmpty());
