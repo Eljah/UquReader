@@ -18,7 +18,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 5;
+    private static final int APP_DB_VERSION = 6;
 
     private static final String TAG = "DbHelper";
     private static final String PREFS_NAME = "com.example.ttreader.DB_PREFS";
@@ -44,6 +44,7 @@ public class DbHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS memory_idx ON memory(lemma, IFNULL(feature_key,'~'))");
         createUsageTables(db);
         createDeviceStatsTables(db);
+        createReadingStateTable(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -69,6 +70,9 @@ public class DbHelper extends SQLiteOpenHelper {
             } catch (Exception ignored) {
                 // Column may already exist on some devices.
             }
+        }
+        if (oldVersion < 6) {
+            createReadingStateTable(db);
         }
     }
 
@@ -242,6 +246,20 @@ public class DbHelper extends SQLiteOpenHelper {
                 " sample_count INTEGER NOT NULL DEFAULT 0,\n" +
                 " avg_reaction_delay_ms REAL NOT NULL DEFAULT 0,\n" +
                 " last_seen_ms INTEGER NOT NULL DEFAULT 0\n" +
+                ")");
+    }
+
+    private void createReadingStateTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS reading_state(\n" +
+                " language_pair TEXT NOT NULL,\n" +
+                " work_id TEXT NOT NULL,\n" +
+                " last_mode TEXT NOT NULL DEFAULT '',\n" +
+                " visual_page INTEGER NOT NULL DEFAULT 0,\n" +
+                " visual_char_index INTEGER NOT NULL DEFAULT 0,\n" +
+                " voice_sentence_index INTEGER NOT NULL DEFAULT -1,\n" +
+                " voice_char_index INTEGER NOT NULL DEFAULT -1,\n" +
+                " updated_ms INTEGER NOT NULL DEFAULT 0,\n" +
+                " PRIMARY KEY(language_pair, work_id)\n" +
                 ")");
     }
 

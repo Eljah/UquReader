@@ -32,6 +32,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
@@ -45,7 +46,9 @@ import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.DeviceIdentity;
 import com.example.ttreader.data.DeviceStatsDao;
 import com.example.ttreader.data.MemoryDao;
+import com.example.ttreader.data.ReadingStateDao;
 import com.example.ttreader.data.UsageStatsDao;
+import com.example.ttreader.model.ReadingState;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
@@ -74,19 +77,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final String PREFS_READER_STATE = "com.example.ttreader.reader_state";
     private static final String KEY_LAST_WORK = "reader.last.work";
 
-    private static String keyWindowStart(String workId) {
-        return "reader.window." + (workId == null ? "" : workId);
-    }
-
-    private static String keySpeechChar(String workId) {
-        return "reader.speech." + (workId == null ? "" : workId);
-    }
-
-    private static String keyFocusChar(String workId) {
-        return "reader.focus." + (workId == null ? "" : workId);
-    }
-
-    private static final int APPROX_WINDOW_PADDING_CHARS = 1000;
     private static final int APPROX_CHARS_PER_PAGE = 1000;
     private static final class WorkInfo {
         final String id;
@@ -130,14 +120,20 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private MemoryDao memoryDao;
     private UsageStatsDao usageStatsDao;
     private DeviceStatsDao deviceStatsDao;
+    private ReadingStateDao readingStateDao;
     private ScrollView readerScrollView;
     private ReaderView readerView;
     private ProgressBar readerLoadingIndicator;
-    private SharedPreferences readingPrefs;
+    private ImageButton pagePreviousButton;
+    private ImageButton pageNextButton;
+    private ReadingState currentReadingState;
+    private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
     private final Runnable persistReadingRunnable = this::persistReadingStateNow;
-    private int pendingWindowStart = 0;
+    private int pendingVisualChar = 0;
+    private int pendingVisualPage = 0;
     private int pendingSpeechChar = -1;
+    private String pendingLastMode = ReadingState.MODE_VISUAL;
     private boolean readingStateDirty = false;
     private boolean restoringReadingState = false;
     private Toolbar toolbar;
@@ -290,10 +286,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         memoryDao = new MemoryDao(db);
         usageStatsDao = new UsageStatsDao(db);
         deviceStatsDao = new DeviceStatsDao(db);
+        readingStateDao = new ReadingStateDao(db);
 
-        readingPrefs = getSharedPreferences(PREFS_READER_STATE, MODE_PRIVATE);
-        if (readingPrefs != null) {
-            String lastWorkId = readingPrefs.getString(KEY_LAST_WORK, null);
+        readerPrefs = getSharedPreferences(PREFS_READER_STATE, MODE_PRIVATE);
+        if (readerPrefs != null) {
+            String lastWorkId = readerPrefs.getString(KEY_LAST_WORK, null);
             WorkInfo saved = findWorkById(lastWorkId);
             if (saved != null) {
                 currentWork = saved;
@@ -317,17 +314,29 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerScrollView = findViewById(R.id.readerScrollView);
         readerView = findViewById(R.id.readerView);
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
+        pagePreviousButton = findViewById(R.id.pagePreviousButton);
+        pageNextButton = findViewById(R.id.pageNextButton);
         readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
         readerView.attachScrollView(readerScrollView);
         readerView.setWindowChangeListener(this::handleReaderWindowChanged);
 
         if (readerScrollView != null) {
+            readerScrollView.setOnTouchListener((v, event) -> true);
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
             observer.addOnScrollChangedListener(() ->
                     readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
             readerScrollView.post(() ->
                     readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
         }
+
+        if (pagePreviousButton != null) {
+            pagePreviousButton.setOnClickListener(v -> goToPreviousPage());
+        }
+        if (pageNextButton != null) {
+            pageNextButton.setOnClickListener(v -> goToNextPage());
+        }
+
+        updatePageControls();
 
         ensureDefaultWork();
         applyLanguagePair(LANGUAGE_PAIR_TT_RU);
@@ -676,19 +685,23 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return "";
         }
         String base = work.getFullName(this);
-        if (readingPrefs == null) {
+        if (readingStateDao == null) {
             return base;
         }
-        Integer readingChar = getStoredFocusChar(work);
-        if (readingChar == null) {
-            Integer windowStart = getStoredWindowStart(work);
-            if (windowStart != null) {
-                readingChar = Math.max(0, windowStart + APPROX_WINDOW_PADDING_CHARS);
-            }
+        ReadingState state = readingStateDao.getState(currentLanguagePair, work.id);
+        if (state == null) {
+            return base;
         }
-        Integer listeningChar = getStoredSpeechChar(work);
-        Integer readingPage = readingChar != null ? approxPageForChar(readingChar) : null;
-        Integer listeningPage = listeningChar != null ? approxPageForChar(listeningChar) : null;
+        Integer readingPage = null;
+        if (state.visualPage > 0) {
+            readingPage = state.visualPage;
+        } else if (state.visualCharIndex >= 0) {
+            readingPage = approxPageForChar(state.visualCharIndex);
+        }
+        Integer listeningPage = null;
+        if (state.voiceCharIndex >= 0) {
+            listeningPage = approxPageForChar(state.voiceCharIndex);
+        }
         if (readingPage == null && listeningPage == null) {
             return base;
         }
@@ -721,41 +734,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (color != 0) {
             builder.setSpan(new ForegroundColorSpan(color), start, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
-    }
-
-    private Integer getStoredWindowStart(WorkInfo work) {
-        if (readingPrefs == null || work == null) {
-            return null;
-        }
-        String key = keyWindowStart(work.id);
-        if (!readingPrefs.contains(key)) {
-            return null;
-        }
-        return Math.max(0, readingPrefs.getInt(key, 0));
-    }
-
-    private Integer getStoredSpeechChar(WorkInfo work) {
-        if (readingPrefs == null || work == null) {
-            return null;
-        }
-        String key = keySpeechChar(work.id);
-        if (!readingPrefs.contains(key)) {
-            return null;
-        }
-        int value = readingPrefs.getInt(key, -1);
-        return value >= 0 ? value : null;
-    }
-
-    private Integer getStoredFocusChar(WorkInfo work) {
-        if (readingPrefs == null || work == null) {
-            return null;
-        }
-        String key = keyFocusChar(work.id);
-        if (!readingPrefs.contains(key)) {
-            return null;
-        }
-        int value = readingPrefs.getInt(key, -1);
-        return value >= 0 ? value : null;
     }
 
     private int approxPageForChar(int charIndex) {
@@ -822,9 +800,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void reloadReaderForCurrentSelection() {
         WorkInfo work = getCurrentWork();
         if (readerView == null || work == null) return;
+        if (readingStateDao != null) {
+            currentReadingState = readingStateDao.getState(currentLanguagePair, work.id);
+        }
         readerView.setUsageContext(currentLanguagePair, work.id);
+        shouldContinueSpeech = currentReadingState != null
+                && currentReadingState.isVoiceMode()
+                && currentReadingState.voiceCharIndex >= 0;
         int initialChar = resolveInitialCharIndex(work);
-        pendingWindowStart = initialChar;
+        pendingVisualChar = initialChar;
+        pendingVisualPage = approxPageForChar(initialChar);
         pendingSpeechChar = -1;
         restoringReadingState = true;
         showReaderLoading(true);
@@ -833,6 +818,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             updateSentenceRanges();
             int speechChar = resolveSavedSpeechChar(work);
             int focusChar = resolveSavedFocusChar(work);
+            if (currentReadingState != null) {
+                pendingLastMode = currentReadingState.isVoiceMode()
+                        ? ReadingState.MODE_VOICE
+                        : ReadingState.MODE_VISUAL;
+            }
             restoringReadingState = false;
             int anchor;
             if (speechChar >= 0) {
@@ -856,8 +846,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     }
                     readerView.highlightLetter(speechChar);
                 }
+                if (currentReadingState != null && currentReadingState.isVoiceMode()) {
+                    shouldContinueSpeech = true;
+                }
             } else if (focusChar >= 0) {
                 adjustSentenceIndexForChar(focusChar);
+                shouldContinueSpeech = false;
+            } else {
+                shouldContinueSpeech = false;
             }
             showReaderLoading(false);
         });
@@ -865,34 +861,85 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private int resolveInitialCharIndex(WorkInfo work) {
-        if (readingPrefs == null || work == null) {
-            return 0;
+        if (currentReadingState != null && currentReadingState.visualCharIndex >= 0) {
+            return currentReadingState.visualCharIndex;
         }
-        return Math.max(0, readingPrefs.getInt(keyWindowStart(work.id), 0));
+        return 0;
     }
 
     private int resolveSavedSpeechChar(WorkInfo work) {
-        if (readingPrefs == null || work == null) {
-            return -1;
+        if (currentReadingState != null && currentReadingState.voiceCharIndex >= 0) {
+            return currentReadingState.voiceCharIndex;
         }
-        return readingPrefs.getInt(keySpeechChar(work.id), -1);
+        return -1;
     }
 
     private int resolveSavedFocusChar(WorkInfo work) {
-        if (readingPrefs == null || work == null) {
-            return -1;
+        if (currentReadingState != null && currentReadingState.visualCharIndex >= 0) {
+            return currentReadingState.visualCharIndex;
         }
-        String key = keyFocusChar(work.id);
-        if (!readingPrefs.contains(key)) {
-            return -1;
-        }
-        return Math.max(0, readingPrefs.getInt(key, -1));
+        return -1;
     }
 
     private void handleReaderWindowChanged(int start, int end) {
-        pendingWindowStart = Math.max(0, start);
+        pendingVisualChar = Math.max(0, start);
+        if (readerView != null) {
+            int viewportStart = readerView.getViewportStartChar();
+            if (viewportStart >= 0) {
+                pendingVisualChar = viewportStart;
+            }
+            pendingVisualPage = approxPageForChar(pendingVisualChar);
+        } else {
+            pendingVisualPage = approxPageForChar(pendingVisualChar);
+        }
+        pendingLastMode = ReadingState.MODE_VISUAL;
+        if (readerView != null) {
+            readerView.post(() -> {
+                int viewportStart = readerView.getViewportStartChar();
+                if (viewportStart >= 0) {
+                    pendingVisualChar = viewportStart;
+                    pendingVisualPage = approxPageForChar(pendingVisualChar);
+                }
+                updatePageControls();
+            });
+        } else {
+            updatePageControls();
+        }
         if (!restoringReadingState) {
             schedulePersistReadingState();
+        }
+    }
+
+    private void updatePageControls() {
+        if (pagePreviousButton != null) {
+            boolean enabled = readerView != null && readerView.hasPreviousPage();
+            pagePreviousButton.setEnabled(enabled);
+            pagePreviousButton.setAlpha(enabled ? 1f : 0.3f);
+        }
+        if (pageNextButton != null) {
+            boolean enabled = readerView != null && readerView.hasNextPage();
+            pageNextButton.setEnabled(enabled);
+            pageNextButton.setAlpha(enabled ? 1f : 0.3f);
+        }
+    }
+
+    private void goToPreviousPage() {
+        if (readerView == null) {
+            return;
+        }
+        int target = readerView.findPreviousPageStart();
+        if (target >= 0) {
+            readerView.scrollToGlobalChar(target);
+        }
+    }
+
+    private void goToNextPage() {
+        if (readerView == null) {
+            return;
+        }
+        int target = readerView.findNextPageStart();
+        if (target >= 0) {
+            readerView.scrollToGlobalChar(target);
         }
     }
 
@@ -908,21 +955,30 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readingStateHandler.removeCallbacks(persistReadingRunnable);
         readingStateDirty = false;
         WorkInfo work = getCurrentWork();
-        if (readingPrefs == null || work == null) {
+        if (work == null) {
             return;
         }
-        SharedPreferences.Editor editor = readingPrefs.edit();
-        editor.putString(KEY_LAST_WORK, work.id);
-        editor.putInt(keyWindowStart(work.id), Math.max(0, pendingWindowStart));
-        int focusChar = resolveFocusCharIndex();
-        if (focusChar >= 0) {
-            editor.putInt(keyFocusChar(work.id), focusChar);
+        if (readerPrefs != null) {
+            readerPrefs.edit().putString(KEY_LAST_WORK, work.id).apply();
         }
+        if (readingStateDao == null) {
+            return;
+        }
+        int safeVisualPage = Math.max(1, pendingVisualPage);
+        int safeVisualChar = Math.max(0, pendingVisualChar);
         int speechChar = pendingSpeechChar >= 0 ? pendingSpeechChar : -1;
-        if (speechChar >= 0) {
-            editor.putInt(keySpeechChar(work.id), speechChar);
-        }
-        editor.apply();
+        int speechSentence = speechChar >= 0 ? Math.max(0, currentSentenceIndex) : -1;
+        boolean voiceIsLast = ReadingState.MODE_VOICE.equals(pendingLastMode) && speechChar >= 0;
+        boolean visualIsLast = !voiceIsLast;
+        long now = System.currentTimeMillis();
+        readingStateDao.updateVisualState(currentLanguagePair, work.id, safeVisualPage,
+                safeVisualChar, now, visualIsLast);
+        readingStateDao.updateVoiceState(currentLanguagePair, work.id, speechSentence,
+                speechChar, now, voiceIsLast);
+        String mode = voiceIsLast ? ReadingState.MODE_VOICE : ReadingState.MODE_VISUAL;
+        currentReadingState = new ReadingState(currentLanguagePair, work.id, mode,
+                safeVisualPage, safeVisualChar, speechSentence, speechChar, now);
+        pendingLastMode = mode;
     }
 
     private void showReaderLoading(boolean show) {
@@ -932,10 +988,19 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerScrollView != null) {
             readerScrollView.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
         }
+        if (pagePreviousButton != null) {
+            pagePreviousButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        }
+        if (pageNextButton != null) {
+            pageNextButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        }
     }
 
     private void updatePendingSpeechChar(int charIndex) {
         pendingSpeechChar = charIndex;
+        if (charIndex >= 0) {
+            pendingLastMode = ReadingState.MODE_VOICE;
+        }
         if (!restoringReadingState) {
             schedulePersistReadingState();
         }
@@ -957,6 +1022,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         persistReadingStateNow();
         stopSpeech();
+        if (readingStateDao != null) {
+            currentReadingState = readingStateDao.getState(currentLanguagePair, work.id);
+        } else {
+            currentReadingState = null;
+        }
         currentWork = work;
         reloadReaderForCurrentSelection();
     }
@@ -1001,6 +1071,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         languagePairInitialized = true;
         stopSpeech();
         currentLanguagePair = languagePair;
+        if (readingStateDao != null && currentWork != null) {
+            currentReadingState = readingStateDao.getState(currentLanguagePair, currentWork.id);
+        } else {
+            currentReadingState = null;
+        }
         reloadReaderForCurrentSelection();
         updateLanguagePairDisplay();
     }

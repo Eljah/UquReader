@@ -75,4 +75,6 @@
     <string name="rhvoice_voice_open_app">Открыть RHVoice</string>
     <string name="rhvoice_voice_download">Страница голоса Talgat</string>
     <string name="rhvoice_no_handler">Не удалось открыть ссылку для установки RHVoice.</string>
+    <string name="reader_page_previous">Предыдущая страница</string>
+    <string name="reader_page_next">Следующая страница</string>
 </resources>
