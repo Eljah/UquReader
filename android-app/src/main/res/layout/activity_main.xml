@@ -26,7 +26,8 @@
         <ScrollView
             android:id="@+id/readerScrollView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:fillViewport="true">
 
             <com.example.ttreader.reader.ReaderView
                 android:id="@+id/readerView"
@@ -34,6 +35,32 @@
                 android:layout_height="wrap_content"
                 android:padding="16dp" />
         </ScrollView>
+
+        <ImageButton
+            android:id="@+id/pagePreviousButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|start"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/reader_page_previous"
+            android:padding="8dp"
+            android:src="@drawable/ic_page_previous"
+            android:tint="@color/reader_letter_highlight" />
+
+        <ImageButton
+            android:id="@+id/pageNextButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/reader_page_next"
+            android:padding="8dp"
+            android:src="@drawable/ic_page_next"
+            android:tint="@color/reader_letter_highlight" />
 
         <ProgressBar
             android:id="@+id/readerLoadingIndicator"

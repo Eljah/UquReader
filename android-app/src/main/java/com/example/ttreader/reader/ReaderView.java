@@ -74,6 +74,8 @@ public class ReaderView extends TextView {
     private ScrollView attachedScrollView;
     private int lastViewportScroll = 0;
     private int lastViewportHeight = 0;
+    private int viewportStartChar = 0;
+    private int viewportEndChar = 0;
     private SentenceOutlineSpan activeSentenceSpan;
     private ForegroundColorSpan activeLetterSpan;
     private int activeSentenceStart = -1;
@@ -216,6 +218,8 @@ public class ReaderView extends TextView {
         activeSentenceStart = -1;
         activeSentenceEnd = -1;
         activeLetterIndex = -1;
+        viewportStartChar = 0;
+        viewportEndChar = 0;
     }
 
     public void loadFromDocumentAsset(String assetName) {
@@ -444,6 +448,44 @@ public class ReaderView extends TextView {
         logVisibleExposures();
     }
 
+    public boolean hasPreviousPage() {
+        return viewportStartChar > 0;
+    }
+
+    public boolean hasNextPage() {
+        if (currentDocument == null || currentDocument.text == null) {
+            return false;
+        }
+        return viewportEndChar < currentDocument.text.length();
+    }
+
+    public int getViewportStartChar() {
+        return viewportStartChar;
+    }
+
+    public int getViewportEndChar() {
+        return viewportEndChar;
+    }
+
+    public int findNextPageStart() {
+        if (!hasNextPage()) {
+            return -1;
+        }
+        return Math.max(viewportStartChar + 1, viewportEndChar);
+    }
+
+    public int findPreviousPageStart() {
+        if (!hasPreviousPage()) {
+            return -1;
+        }
+        int span = Math.max(1, viewportEndChar - viewportStartChar);
+        int candidate = viewportStartChar - span;
+        if (candidate < 0) {
+            candidate = 0;
+        }
+        return candidate;
+    }
+
     private void ensureWindowForViewport(int scrollY, int viewportHeight) {
         if (currentDocument == null || currentDocument.text == null) {
             return;
@@ -460,6 +502,8 @@ public class ReaderView extends TextView {
         int localBottom = clamp(layout.getLineEnd(bottomLine), 0, contentLength);
         int globalTop = visibleStart + localTop;
         int globalBottom = visibleStart + localBottom;
+        viewportStartChar = globalTop;
+        viewportEndChar = Math.max(globalTop, globalBottom);
         if (globalTop < visibleStart + WINDOW_THRESHOLD_CHARS && visibleStart > 0) {
             displayWindowAround(Math.max(0, globalTop - WINDOW_PADDING_CHARS / 2), globalTop, true);
         } else if (globalBottom > visibleEnd - WINDOW_THRESHOLD_CHARS && visibleEnd < getDocumentLength()) {
