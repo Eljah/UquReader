@@ -24,18 +24,11 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <ScrollView
-            android:id="@+id/readerScrollView"
+        <com.example.ttreader.reader.ReaderView
+            android:id="@+id/readerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
-
-            <com.example.ttreader.reader.ReaderView
-                android:id="@+id/readerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp" />
-        </ScrollView>
+            android:padding="16dp" />
 
         <ProgressBar
             android:id="@+id/readerLoadingIndicator"
