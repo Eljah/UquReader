@@ -628,6 +628,9 @@ public final class Morph3Fb2Exporter {
             writer.write("      <source-url>" + escapeText(original.toString()) + "</source-url>\n");
             writer.write("      <src-ocr>" + escapeText(morphFile.toString()) + "</src-ocr>\n");
             writer.write("    </document-info>\n");
+            writer.write("    <stylesheet type=\"text/css\"><![CDATA[\n");
+            writer.write("      .morph { }\n");
+            writer.write("    ]]></stylesheet>\n");
             writer.write("  </description>\n");
             writer.write("  <body>\n");
             writer.write("    <section>\n");
@@ -651,21 +654,22 @@ public final class Morph3Fb2Exporter {
                 writer.write(escapeText(textItem.text()));
             } else if (item instanceof WordItem wordItem) {
                 MorphToken token = wordItem.token();
-                writer.write("<m:w");
+                writer.write("<style name=\"morph\"");
                 String analysis = token.analysis().trim();
                 if (!analysis.isEmpty()) {
-                    writer.write(" analysis=\"" + escapeAttribute(analysis) + "\"");
+                    writer.write(" m:analysis=\"" + escapeAttribute(analysis) + "\"");
                 }
                 String translation = token.translation().trim();
                 if (!translation.isEmpty()) {
-                    writer.write(" translation=\"" + escapeAttribute(translation) + "\"");
+                    writer.write(" m:translation=\"" + escapeAttribute(translation) + "\"");
                 }
                 String surface = wordItem.surface();
                 if (!surface.isEmpty()) {
-                    writer.write(" surface=\"" + escapeAttribute(surface) + "\"");
+                    writer.write(" m:surface=\"" + escapeAttribute(surface) + "\"");
                 }
-                writer.write("/>");
+                writer.write(">");
                 writer.write(escapeText(surface));
+                writer.write("</style>");
             }
         }
         writer.write("</p>\n");
