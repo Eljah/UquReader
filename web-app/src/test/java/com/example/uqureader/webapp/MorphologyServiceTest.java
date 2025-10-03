@@ -34,7 +34,7 @@ class MorphologyServiceTest {
     void analyzeTokenReturnsKnownTag() {
         JsonObject actual = service.analyzeToken("Комедия");
         Assertions.assertEquals("Комедия", actual.get("token").getAsString());
-        Assertions.assertEquals("комедия+N+Sg+Nom;", actual.get("tag").getAsString());
+        Assertions.assertEquals("комедия+N+Sg+Nom;комедия[N]: комедия;", actual.get("tag").getAsString());
     }
 
     @Test
