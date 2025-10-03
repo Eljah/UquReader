@@ -19,48 +19,16 @@
         android:subtitle="@null" />
 
     <FrameLayout
+        android:id="@+id/readerContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <ScrollView
-            android:id="@+id/readerScrollView"
+        <com.example.ttreader.reader.ReaderView
+            android:id="@+id/readerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
-
-            <com.example.ttreader.reader.ReaderView
-                android:id="@+id/readerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="16dp" />
-        </ScrollView>
-
-        <ImageButton
-            android:id="@+id/pagePreviousButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="bottom|start"
-            android:layout_marginStart="16dp"
-            android:layout_marginBottom="16dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/reader_page_previous"
-            android:padding="8dp"
-            android:src="@drawable/ic_page_previous"
-            android:tint="@color/reader_letter_highlight" />
-
-        <ImageButton
-            android:id="@+id/pageNextButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="16dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/reader_page_next"
-            android:padding="8dp"
-            android:src="@drawable/ic_page_next"
-            android:tint="@color/reader_letter_highlight" />
+            android:padding="16dp" />
 
         <ProgressBar
             android:id="@+id/readerLoadingIndicator"
@@ -70,5 +38,43 @@
             android:layout_gravity="center"
             android:visibility="gone" />
     </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/pageNavigationBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:colorBackground"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
+
+        <ImageButton
+            android:id="@+id/pagePreviousButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/reader_nav_button_background"
+            android:contentDescription="@string/reader_page_previous"
+            android:padding="8dp"
+            android:tint="@color/reader_letter_highlight"
+            android:src="@drawable/ic_page_previous" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/pageNextButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/reader_nav_button_background"
+            android:contentDescription="@string/reader_page_next"
+            android:padding="8dp"
+            android:tint="@color/reader_letter_highlight"
+            android:src="@drawable/ic_page_next" />
+    </LinearLayout>
 
 </LinearLayout>
