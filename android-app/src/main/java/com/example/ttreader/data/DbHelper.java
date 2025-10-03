@@ -18,7 +18,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 6;
+    private static final int APP_DB_VERSION = 7;
 
     private static final String TAG = "DbHelper";
     private static final String PREFS_NAME = "com.example.ttreader.DB_PREFS";
@@ -45,6 +45,7 @@ public class DbHelper extends SQLiteOpenHelper {
         createUsageTables(db);
         createDeviceStatsTables(db);
         createReadingStateTable(db);
+        createPageLayoutTable(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -73,6 +74,9 @@ public class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 6) {
             createReadingStateTable(db);
+        }
+        if (oldVersion < 7) {
+            createPageLayoutTable(db);
         }
     }
 
@@ -261,6 +265,26 @@ public class DbHelper extends SQLiteOpenHelper {
                 " updated_ms INTEGER NOT NULL DEFAULT 0,\n" +
                 " PRIMARY KEY(language_pair, work_id)\n" +
                 ")");
+    }
+
+    private void createPageLayoutTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS page_layout(\n" +
+                " language_pair TEXT NOT NULL,\n" +
+                " work_id TEXT NOT NULL,\n" +
+                " viewport_width INTEGER NOT NULL,\n" +
+                " viewport_height INTEGER NOT NULL,\n" +
+                " text_size_px INTEGER NOT NULL,\n" +
+                " page_index INTEGER NOT NULL,\n" +
+                " total_pages INTEGER NOT NULL,\n" +
+                " start_char INTEGER NOT NULL,\n" +
+                " end_char INTEGER NOT NULL,\n" +
+                " start_word INTEGER,\n" +
+                " end_word INTEGER,\n" +
+                " updated_ms INTEGER NOT NULL,\n" +
+                " PRIMARY KEY(language_pair, work_id, viewport_width, viewport_height, text_size_px, page_index)\n" +
+                ")");
+        db.execSQL("CREATE INDEX IF NOT EXISTS page_layout_lookup\n" +
+                " ON page_layout(language_pair, work_id, viewport_width, viewport_height, text_size_px)");
     }
 
     private void createUsageStatsV1(SQLiteDatabase db) {

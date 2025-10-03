@@ -124,7 +124,12 @@ public final class Fb2MorphParser {
                     }
                     if (TAG_PARAGRAPH.equals(endName)) {
                         insideParagraph = false;
-                        prefix.setLength(0);
+                        if (insideBody) {
+                            prefix.append('\n');
+                            flushPrefix(tokens, prefix);
+                        } else {
+                            prefix.setLength(0);
+                        }
                     } else if (TAG_BODY.equals(endName)) {
                         insideBody = false;
                     }
@@ -134,6 +139,7 @@ public final class Fb2MorphParser {
             }
             event = parser.next();
         }
+        flushPrefix(tokens, prefix);
         return tokens;
     }
 
@@ -154,6 +160,17 @@ public final class Fb2MorphParser {
 
     private static String safeTrim(String value) {
         return value == null ? null : value.trim();
+    }
+
+    private static void flushPrefix(List<Token> tokens, StringBuilder prefix) {
+        if (prefix.length() == 0) {
+            return;
+        }
+        Token token = new Token();
+        token.prefix = prefix.toString();
+        token.surface = "";
+        tokens.add(token);
+        prefix.setLength(0);
     }
 
     private static final class MorphStyle {
