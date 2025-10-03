@@ -68,9 +68,9 @@ class Morph3Fb2ExporterTest {
 
     private void assertInlineWordMarkup() throws Exception {
         String content = Files.readString(OUTPUT_FILE, StandardCharsets.UTF_8);
-        assertTrue(content.contains("surface=\"КУБЫЗ\"/>КУБЫЗ"),
-                "Слова должны идти сразу после морфологической разметки");
-        assertFalse(content.contains("</m:w>"),
-                "Разметка слов должна быть самозакрывающейся, чтобы не вызывать переносы строк");
+        assertTrue(content.contains("<style name=\"morph\" m:analysis=\"кубыз+N+Sg+Nom;\" m:surface=\"КУБЫЗ\">КУБЫЗ</style>"),
+                "Слова должны оставаться внутри инлайновой разметки");
+        assertFalse(content.contains("<m:w"),
+                "Самостоятельные элементы m:w больше не должны использоваться, чтобы не провоцировать переносы строк");
     }
 }

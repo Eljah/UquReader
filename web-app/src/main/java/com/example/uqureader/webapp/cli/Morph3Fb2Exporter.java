@@ -628,6 +628,9 @@ public final class Morph3Fb2Exporter {
             writer.write("      <source-url>" + escapeText(original.toString()) + "</source-url>\n");
             writer.write("      <src-ocr>" + escapeText(morphFile.toString()) + "</src-ocr>\n");
             writer.write("    </document-info>\n");
+            writer.write("    <stylesheet type=\"text/css\"><![CDATA[\n");
+            writer.write("      .morph { }\n");
+            writer.write("    ]]></stylesheet>\n");
             writer.write("  </description>\n");
             writer.write("  <body>\n");
             writer.write("    <section>\n");
@@ -650,22 +653,45 @@ public final class Morph3Fb2Exporter {
             if (item instanceof TextItem textItem) {
                 writer.write(escapeText(textItem.text()));
             } else if (item instanceof WordItem wordItem) {
-                MorphToken token = wordItem.token();
-                writer.write("<m:w");
-                String analysis = token.analysis().trim();
-                if (!analysis.isEmpty()) {
-                    writer.write(" analysis=\"" + escapeAttribute(analysis) + "\"");
-                }
-                String translation = token.translation().trim();
-                if (!translation.isEmpty()) {
-                    writer.write(" translation=\"" + escapeAttribute(translation) + "\"");
-                }
                 String surface = wordItem.surface();
-                if (!surface.isEmpty()) {
-                    writer.write(" surface=\"" + escapeAttribute(surface) + "\"");
+                if (surface.isEmpty()) {
+                    continue;
                 }
-                writer.write("/>");
-                writer.write(escapeText(surface));
+
+                int start = 0;
+                int end = surface.length();
+                while (start < end && Character.isWhitespace(surface.charAt(start))) {
+                    start++;
+                }
+                while (end > start && Character.isWhitespace(surface.charAt(end - 1))) {
+                    end--;
+                }
+
+                if (start > 0) {
+                    writer.write(escapeText(surface.substring(0, start)));
+                }
+
+                String core = surface.substring(start, end);
+                if (!core.isEmpty()) {
+                    MorphToken token = wordItem.token();
+                    writer.write("<style name=\"morph\"");
+                    String analysis = token.analysis().trim();
+                    if (!analysis.isEmpty()) {
+                        writer.write(" m:analysis=\"" + escapeAttribute(analysis) + "\"");
+                    }
+                    String translation = token.translation().trim();
+                    if (!translation.isEmpty()) {
+                        writer.write(" m:translation=\"" + escapeAttribute(translation) + "\"");
+                    }
+                    writer.write(" m:surface=\"" + escapeAttribute(core) + "\"");
+                    writer.write(">");
+                    writer.write(escapeText(core));
+                    writer.write("</style>");
+                }
+
+                if (end < surface.length()) {
+                    writer.write(escapeText(surface.substring(end)));
+                }
             }
         }
         writer.write("</p>\n");
