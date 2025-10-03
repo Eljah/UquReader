@@ -20,7 +20,7 @@ import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.Morphology;
 import com.example.ttreader.model.Token;
-import com.example.ttreader.util.JsonlParser;
+import com.example.ttreader.util.MorphDocumentParser;
 
 import java.io.File;
 import java.text.BreakIterator;
@@ -218,15 +218,15 @@ public class ReaderView extends TextView {
         activeLetterIndex = -1;
     }
 
-    public void loadFromJsonlAsset(String assetName) {
-        loadFromJsonlAsset(assetName, pendingInitialCharIndex, null);
+    public void loadFromDocumentAsset(String assetName) {
+        loadFromDocumentAsset(assetName, pendingInitialCharIndex, null);
     }
 
-    public void loadFromJsonlAsset(String assetName, Runnable onLoaded) {
-        loadFromJsonlAsset(assetName, pendingInitialCharIndex, onLoaded);
+    public void loadFromDocumentAsset(String assetName, Runnable onLoaded) {
+        loadFromDocumentAsset(assetName, pendingInitialCharIndex, onLoaded);
     }
 
-    public void loadFromJsonlAsset(String assetName, int initialCharIndex, Runnable onLoaded) {
+    public void loadFromDocumentAsset(String assetName, int initialCharIndex, Runnable onLoaded) {
         final String requestedAsset = assetName;
         final Runnable completion = onLoaded;
         final int sequence = contentSequence.incrementAndGet();
@@ -267,6 +267,21 @@ public class ReaderView extends TextView {
         synchronized (loadTaskLock) {
             pendingLoadTask = newTask;
         }
+    }
+
+    @Deprecated
+    public void loadFromJsonlAsset(String assetName) {
+        loadFromDocumentAsset(assetName);
+    }
+
+    @Deprecated
+    public void loadFromJsonlAsset(String assetName, Runnable onLoaded) {
+        loadFromDocumentAsset(assetName, onLoaded);
+    }
+
+    @Deprecated
+    public void loadFromJsonlAsset(String assetName, int initialCharIndex, Runnable onLoaded) {
+        loadFromDocumentAsset(assetName, initialCharIndex, onLoaded);
     }
 
     @Override protected void onDetachedFromWindow() {
@@ -635,7 +650,7 @@ public class ReaderView extends TextView {
         if (assetName == null || assetName.isEmpty()) {
             return new LoadResult("", Collections.emptyList(), Collections.emptyList());
         }
-        List<Token> tokens = JsonlParser.readTokensFromAssets(getContext(), assetName);
+        List<Token> tokens = MorphDocumentParser.loadFromAssets(getContext(), assetName);
         if (Thread.currentThread().isInterrupted()) {
             throw new InterruptedException();
         }

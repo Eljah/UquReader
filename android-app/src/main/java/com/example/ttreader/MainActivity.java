@@ -58,7 +58,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -111,16 +110,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
-    private final List<WorkInfo> availableWorks = Arrays.asList(
-            new WorkInfo("sample_book.ttmorph", "sample_book.ttmorph.jsonl",
-                    R.string.work_name_kubyzkabyz_full, R.string.work_name_kubyzkabyz_short),
-            new WorkInfo("berenche_teatr.ttmorph", "berenche_teatr.ttmorph.jsonl",
-                    R.string.work_name_berenche_teatr_full, R.string.work_name_berenche_teatr_short),
-            new WorkInfo("yazgy_jillar.ttmorph", "yazgy_jillar.ttmorph.jsonl",
-                    R.string.work_name_yazgy_jillar_full, R.string.work_name_yazgy_jillar_short),
-            new WorkInfo("harri_potter_ham_lagnetle_bala.ttmorph", "harri_potter_ham_lagnetle_bala.ttmorph.jsonl",
-                    R.string.work_name_harri_potter_ham_lagnetle_bala_full,
-                    R.string.work_name_harri_potter_ham_lagnetle_bala_short)
+    private final List<WorkInfo> availableWorks = Collections.singletonList(
+            new WorkInfo("qubiz_qabiz", "qabiz_qubiz.fb2",
+                    R.string.work_name_kubyzkabyz_full, R.string.work_name_kubyzkabyz_short)
     );
     private static final String RHVOICE_PACKAGE = "com.github.olga_yakovleva.rhvoice.android";
     private static final String TALGAT_NAME_KEYWORD = "talgat";
@@ -837,7 +829,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         restoringReadingState = true;
         showReaderLoading(true);
         readerView.clearContent();
-        readerView.loadFromJsonlAsset(work.asset, initialChar, () -> {
+        readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
             updateSentenceRanges();
             int speechChar = resolveSavedSpeechChar(work);
             int focusChar = resolveSavedFocusChar(work);
