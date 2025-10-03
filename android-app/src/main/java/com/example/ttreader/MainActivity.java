@@ -31,12 +31,10 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
@@ -46,6 +44,7 @@ import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.DeviceIdentity;
 import com.example.ttreader.data.DeviceStatsDao;
 import com.example.ttreader.data.MemoryDao;
+import com.example.ttreader.data.PageLayoutDao;
 import com.example.ttreader.data.ReadingStateDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.ReadingState;
@@ -76,8 +75,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final int MENU_WORK_ID_BASE = 100;
     private static final String PREFS_READER_STATE = "com.example.ttreader.reader_state";
     private static final String KEY_LAST_WORK = "reader.last.work";
-
-    private static final int APPROX_CHARS_PER_PAGE = 1000;
     private static final class WorkInfo {
         final String id;
         final String asset;
@@ -121,7 +118,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private UsageStatsDao usageStatsDao;
     private DeviceStatsDao deviceStatsDao;
     private ReadingStateDao readingStateDao;
-    private ScrollView readerScrollView;
+    private PageLayoutDao pageLayoutDao;
     private ReaderView readerView;
     private ProgressBar readerLoadingIndicator;
     private ImageButton pagePreviousButton;
@@ -287,6 +284,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         usageStatsDao = new UsageStatsDao(db);
         deviceStatsDao = new DeviceStatsDao(db);
         readingStateDao = new ReadingStateDao(db);
+        pageLayoutDao = new PageLayoutDao(db);
 
         readerPrefs = getSharedPreferences(PREFS_READER_STATE, MODE_PRIVATE);
         if (readerPrefs != null) {
@@ -311,23 +309,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
 
-        readerScrollView = findViewById(R.id.readerScrollView);
         readerView = findViewById(R.id.readerView);
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
         pagePreviousButton = findViewById(R.id.pagePreviousButton);
         pageNextButton = findViewById(R.id.pageNextButton);
-        readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
-        readerView.attachScrollView(readerScrollView);
+        readerView.setup(dbHelper, memoryDao, usageStatsDao, pageLayoutDao, this);
         readerView.setWindowChangeListener(this::handleReaderWindowChanged);
-
-        if (readerScrollView != null) {
-            readerScrollView.setOnTouchListener((v, event) -> true);
-            ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
-            observer.addOnScrollChangedListener(() ->
-                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
-            readerScrollView.post(() ->
-                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
-        }
 
         if (pagePreviousButton != null) {
             pagePreviousButton.setOnClickListener(v -> goToPreviousPage());
@@ -737,11 +724,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private int approxPageForChar(int charIndex) {
-        if (charIndex < 0) {
-            return 1;
+        if (readerView != null && readerView.isPageLayoutReady()) {
+            int index = readerView.findPageIndexForChar(charIndex);
+            if (index >= 0) {
+                return index + 1;
+            }
         }
-        int pageSize = Math.max(1, APPROX_CHARS_PER_PAGE);
-        return (charIndex / pageSize) + 1;
+        return Math.max(1, pendingVisualPage > 0 ? pendingVisualPage : 1);
     }
 
     private void updateLanguagePairIcon() {
@@ -882,29 +871,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void handleReaderWindowChanged(int start, int end) {
-        pendingVisualChar = Math.max(0, start);
-        if (readerView != null) {
+        if (readerView != null && readerView.isPageLayoutReady()) {
             int viewportStart = readerView.getViewportStartChar();
-            if (viewportStart >= 0) {
-                pendingVisualChar = viewportStart;
-            }
-            pendingVisualPage = approxPageForChar(pendingVisualChar);
+            pendingVisualChar = Math.max(0, viewportStart);
+            int pageIndex = readerView.getCurrentPageIndex();
+            pendingVisualPage = Math.max(1, pageIndex + 1);
         } else {
+            pendingVisualChar = Math.max(0, start);
             pendingVisualPage = approxPageForChar(pendingVisualChar);
         }
         pendingLastMode = ReadingState.MODE_VISUAL;
-        if (readerView != null) {
-            readerView.post(() -> {
-                int viewportStart = readerView.getViewportStartChar();
-                if (viewportStart >= 0) {
-                    pendingVisualChar = viewportStart;
-                    pendingVisualPage = approxPageForChar(pendingVisualChar);
-                }
-                updatePageControls();
-            });
-        } else {
-            updatePageControls();
-        }
+        updatePageControls();
         if (!restoringReadingState) {
             schedulePersistReadingState();
         }
@@ -912,19 +889,21 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void updatePageControls() {
         if (pagePreviousButton != null) {
-            boolean enabled = readerView != null && readerView.hasPreviousPage();
+            boolean enabled = readerView != null && readerView.isPageLayoutReady()
+                    && readerView.hasPreviousPage();
             pagePreviousButton.setEnabled(enabled);
             pagePreviousButton.setAlpha(enabled ? 1f : 0.3f);
         }
         if (pageNextButton != null) {
-            boolean enabled = readerView != null && readerView.hasNextPage();
+            boolean enabled = readerView != null && readerView.isPageLayoutReady()
+                    && readerView.hasNextPage();
             pageNextButton.setEnabled(enabled);
             pageNextButton.setAlpha(enabled ? 1f : 0.3f);
         }
     }
 
     private void goToPreviousPage() {
-        if (readerView == null) {
+        if (readerView == null || !readerView.isPageLayoutReady()) {
             return;
         }
         int target = readerView.findPreviousPageStart();
@@ -934,7 +913,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void goToNextPage() {
-        if (readerView == null) {
+        if (readerView == null || !readerView.isPageLayoutReady()) {
             return;
         }
         int target = readerView.findNextPageStart();
@@ -985,14 +964,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerLoadingIndicator != null) {
             readerLoadingIndicator.setVisibility(show ? View.VISIBLE : View.GONE);
         }
-        if (readerScrollView != null) {
-            readerScrollView.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        if (readerView != null) {
+            readerView.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
         }
-        if (pagePreviousButton != null) {
-            pagePreviousButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
-        }
-        if (pageNextButton != null) {
-            pageNextButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        if (!show) {
+            updatePageControls();
         }
     }
 
@@ -1127,24 +1103,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void scrollToSpan(TokenSpan span, int attempt) {
-        if (readerView == null || readerScrollView == null || span == null) return;
-        readerView.ensureWindowContains(span.getStartIndex());
-        android.text.Layout layout = readerView.getLayout();
-        CharSequence text = readerView.getText();
-        if ((layout == null || text == null) && attempt < 5) {
+        if (readerView == null || span == null) return;
+        if (!readerView.isPageLayoutReady() && attempt < 10) {
             readerView.postDelayed(() -> scrollToSpan(span, attempt + 1), 50);
             return;
-        } else if (layout == null || text == null) {
-            return;
         }
-        int textLength = text.length();
-        int localStart = readerView.toLocalCharIndex(span.getStartIndex());
-        int clampedStart = Math.max(0, Math.min(localStart, textLength));
-        int line = layout.getLineForOffset(clampedStart);
-        int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
-        readerScrollView.smoothScrollTo(0, y);
-        readerScrollView.post(() ->
-                readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
+        readerView.scrollToGlobalChar(span.getStartIndex());
     }
 
     private void dismissTokenSheet(boolean restoreFocus) {
@@ -1325,19 +1289,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void scrollSentenceIntoView(ReaderView.SentenceRange sentence) {
-        if (sentence == null || readerView == null || readerScrollView == null) return;
+        if (sentence == null || readerView == null) return;
         readerView.post(() -> {
             TokenSpan span = readerView.findSpanForCharIndex(sentence.start);
             if (span != null) {
                 scrollToSpan(span, 0);
             } else {
-                android.text.Layout layout = readerView.getLayout();
-                CharSequence text = readerView.getText();
-                if (layout == null || text == null) return;
-                int index = Math.max(0, Math.min(sentence.start, text.length()));
-                int line = layout.getLineForOffset(index);
-                int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
-                readerScrollView.smoothScrollTo(0, y);
+                readerView.scrollToGlobalChar(sentence.start);
             }
         });
     }
