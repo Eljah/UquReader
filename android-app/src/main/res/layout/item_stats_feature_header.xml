@@ -3,8 +3,8 @@
     android:id="@+id/statsFeatureHeaderText"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:text="@string/stats_feature_header"
-    android:textStyle="bold"
-    android:textSize="18sp"
     android:paddingTop="16dp"
-    android:paddingBottom="8dp" />
+    android:paddingBottom="8dp"
+    android:text="@string/stats_feature_header"
+    android:textAllCaps="true"
+    android:textAppearance="@style/TextAppearance.UquReader.Title" />

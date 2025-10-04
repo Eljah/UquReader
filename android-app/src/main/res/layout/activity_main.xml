@@ -2,19 +2,23 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/app_background"
     android:orientation="vertical">
 
     <android.widget.Toolbar
         android:id="@+id/topToolbar"
         android:layout_width="match_parent"
         android:layout_height="?android:attr/actionBarSize"
-        android:background="?android:colorBackground"
+        android:layout_marginBottom="8dp"
+        android:popupTheme="@android:style/ThemeOverlay.Material.Light"
+        android:theme="@android:style/ThemeOverlay.Material.Dark"
+        android:background="@color/app_primary"
         android:elevation="4dp"
         android:gravity="center_vertical"
         android:logo="@mipmap/ic_launcher"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:popupTheme="@android:style/ThemeOverlay.Material.Light"
+        style="@style/Widget.UquReader.Toolbar"
         android:title="@null"
         android:subtitle="@null" />
 
@@ -27,13 +31,16 @@
             android:id="@+id/readerScrollView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:padding="24dp">
 
             <com.example.ttreader.reader.ReaderView
                 android:id="@+id/readerView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp" />
+                android:background="@drawable/reader_page_background"
+                android:padding="24dp"
+                android:textColor="@color/reader_text_primary" />
         </ScrollView>
 
         <ImageButton

@@ -1,4 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar" />
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/app_primary</item>
+        <item name="android:colorPrimaryDark">@color/app_primary_dark</item>
+        <item name="android:colorAccent">@color/app_accent_red</item>
+        <item name="android:colorControlNormal">@color/toolbar_icon_tint</item>
+        <item name="android:colorControlHighlight">@color/app_control_highlight</item>
+        <item name="android:colorEdgeEffect">@color/app_accent_red</item>
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:textColor">@color/app_text_primary</item>
+        <item name="android:textColorPrimary">@color/app_text_primary</item>
+        <item name="android:textColorSecondary">@color/app_text_secondary</item>
+        <item name="android:navigationBarColor">@color/app_primary_dark</item>
+        <item name="android:statusBarColor">@color/app_primary_dark</item>
+    </style>
+
+    <style name="TextAppearance.UquReader.Title" parent="@android:style/TextAppearance.Material.Headline">
+        <item name="android:textColor">@color/app_primary</item>
+        <item name="android:fontFamily">sans-serif-condensed</item>
+        <item name="android:letterSpacing">0.05</item>
+    </style>
+
+    <style name="TextAppearance.UquReader.Subheading" parent="@android:style/TextAppearance.Material.Subhead">
+        <item name="android:textColor">@color/app_accent_blue</item>
+        <item name="android:fontFamily">sans-serif-condensed</item>
+        <item name="android:letterSpacing">0.04</item>
+    </style>
+
+    <style name="TextAppearance.UquReader.Body" parent="@android:style/TextAppearance.Material.Body1">
+        <item name="android:textColor">@color/app_text_primary</item>
+        <item name="android:fontFamily">serif</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+
+    <style name="TextAppearance.UquReader.Body.Small" parent="@android:style/TextAppearance.Material.Body2">
+        <item name="android:textColor">@color/app_text_secondary</item>
+        <item name="android:fontFamily">serif</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+
+    <style name="Widget.UquReader.Toolbar" parent="@android:style/Widget.Material.Toolbar">
+        <item name="android:background">@color/app_primary</item>
+        <item name="android:logo">@mipmap/ic_launcher</item>
+        <item name="android:contentInsetStartWithNavigation">16dp</item>
+    </style>
 </resources>

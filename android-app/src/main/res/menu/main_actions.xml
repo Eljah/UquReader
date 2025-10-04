@@ -3,37 +3,44 @@
     <item
         android:id="@+id/action_toggle_speech"
         android:icon="@drawable/ic_voice"
+        android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/speech_toggle_content_start"
         android:showAsAction="always" />
     <item
         android:id="@+id/action_stop_speech"
         android:icon="@drawable/ic_stop"
+        android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/speech_stop_content"
         android:showAsAction="always" />
     <item
         android:id="@+id/action_language_pair"
         android:actionLayout="@layout/menu_action_language_pair"
         android:icon="@drawable/ic_language_menu"
+        android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/language_pair_button_unset"
         android:showAsAction="always" />
     <item
         android:id="@+id/action_select_work"
         android:icon="@drawable/ic_menu_work"
+        android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/work_menu_title"
         android:showAsAction="always" />
     <item
         android:id="@+id/action_language_stats"
         android:icon="@drawable/ic_stats_language"
+        android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/stats_button_language"
         android:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_work_stats"
         android:icon="@drawable/ic_stats_work"
+        android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/stats_button_work"
         android:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_device_stats"
         android:icon="@drawable/ic_stats_bluetooth"
+        android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/stats_button_device"
         android:showAsAction="ifRoom" />
     <item

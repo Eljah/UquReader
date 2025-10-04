@@ -6,5 +6,6 @@
     android:gravity="center_horizontal"
     android:paddingTop="24dp"
     android:paddingBottom="24dp"
-    android:textAppearance="?android:attr/textAppearanceMedium"
-    android:text="@string/stats_filter_empty" />
+    android:text="@string/stats_filter_empty"
+    android:textAppearance="@style/TextAppearance.UquReader.Body"
+    android:textColor="@color/app_text_secondary" />

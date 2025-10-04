@@ -1,6 +1,20 @@
 <resources>
-    <color name="reader_sentence_outline">#4CAF50</color>
-    <color name="reader_letter_highlight">#2E7D32</color>
-    <color name="work_menu_progress_reading">#FF000000</color>
+    <color name="app_background">#F5EEDB</color>
+    <color name="app_surface">#E2C171</color>
+    <color name="app_surface_muted">#F1E4C4</color>
+    <color name="app_primary">#24324D</color>
+    <color name="app_primary_dark">#1B253A</color>
+    <color name="app_accent_red">#C24432</color>
+    <color name="app_accent_blue">#2B4F7F</color>
+    <color name="app_text_primary">#2B2623</color>
+    <color name="app_text_secondary">#5B5047</color>
+    <color name="toolbar_icon_tint">#F7F0DF</color>
+    <color name="app_control_highlight">#33C24432</color>
+
+    <color name="reader_sentence_outline">@color/app_primary</color>
+    <color name="reader_letter_highlight">@color/app_accent_red</color>
+    <color name="reader_text_primary">@color/app_text_primary</color>
+
+    <color name="work_menu_progress_reading">@color/app_primary</color>
     <color name="work_menu_progress_listening">@color/reader_letter_highlight</color>
 </resources>
