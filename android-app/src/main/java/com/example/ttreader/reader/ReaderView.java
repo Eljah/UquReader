@@ -1,6 +1,7 @@
 package com.example.ttreader.reader;
 
 import android.content.Context;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -114,6 +115,11 @@ public class ReaderView extends TextView {
         sentenceOutlineStrokeWidth = 2f * density;
         sentenceOutlineCornerRadius = 6f * density;
         setMovementMethod(movementMethod);
+        setTextColor(resolveColorResource(com.example.ttreader.R.color.reader_text_primary));
+        setTypeface(Typeface.SERIF);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            setLetterSpacing(0.01f);
+        }
     }
 
     private MovementMethod createMovementMethod() {
