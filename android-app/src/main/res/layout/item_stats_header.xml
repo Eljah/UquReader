@@ -2,8 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginBottom="16dp"
+    android:background="@drawable/vintage_card"
     android:orientation="vertical"
-    android:paddingBottom="12dp">
+    android:padding="20dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,11 +18,13 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:background="@drawable/vintage_input"
             android:hint="@string/stats_filter_hint"
             android:imeOptions="actionDone"
             android:inputType="text"
             android:maxLines="1"
-            android:padding="8dp" />
+            android:textAppearance="@style/TextAppearance.UquReader.Body"
+            android:textColorHint="@color/app_text_secondary" />
 
         <HorizontalScrollView
             android:layout_width="wrap_content"
@@ -42,7 +46,8 @@
                     android:contentDescription="@string/stats_sort_alpha_asc"
                     android:padding="6dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_sort_alpha_up" />
+                    android:src="@drawable/ic_sort_alpha_up"
+                    android:tint="@color/app_primary" />
 
                 <ImageButton
                     android:id="@+id/buttonSortAlphaDesc"
@@ -52,7 +57,8 @@
                     android:contentDescription="@string/stats_sort_alpha_desc"
                     android:padding="6dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_sort_alpha_down" />
+                    android:src="@drawable/ic_sort_alpha_down"
+                    android:tint="@color/app_primary" />
 
                 <ImageButton
                     android:id="@+id/buttonSortLookupCountDesc"
@@ -62,7 +68,8 @@
                     android:contentDescription="@string/stats_sort_lookup_count_desc"
                     android:padding="6dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_sort_lookup_down" />
+                    android:src="@drawable/ic_sort_lookup_down"
+                    android:tint="@color/app_primary" />
 
                 <ImageButton
                     android:id="@+id/buttonSortLookupTimeDesc"
@@ -72,7 +79,8 @@
                     android:contentDescription="@string/stats_sort_lookup_time_desc"
                     android:padding="6dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_sort_time_down" />
+                    android:src="@drawable/ic_sort_time_down"
+                    android:tint="@color/app_primary" />
 
                 <ImageButton
                     android:id="@+id/buttonSortLookupTimeAsc"
@@ -82,7 +90,8 @@
                     android:contentDescription="@string/stats_sort_lookup_time_asc"
                     android:padding="6dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_sort_time_up" />
+                    android:src="@drawable/ic_sort_time_up"
+                    android:tint="@color/app_primary" />
 
                 <ImageButton
                     android:id="@+id/buttonSortLookupCountAsc"
@@ -92,7 +101,8 @@
                     android:contentDescription="@string/stats_sort_lookup_count_asc"
                     android:padding="6dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_sort_lookup_up" />
+                    android:src="@drawable/ic_sort_lookup_up"
+                    android:tint="@color/app_primary" />
 
                 <ImageButton
                     android:id="@+id/buttonSortExposureCountDesc"
@@ -102,7 +112,8 @@
                     android:contentDescription="@string/stats_sort_exposure_count_desc"
                     android:padding="6dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_sort_exposure_down" />
+                    android:src="@drawable/ic_sort_exposure_down"
+                    android:tint="@color/app_primary" />
 
                 <ImageButton
                     android:id="@+id/buttonSortExposureCountAsc"
@@ -112,7 +123,8 @@
                     android:contentDescription="@string/stats_sort_exposure_count_asc"
                     android:padding="6dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_sort_exposure_up" />
+                    android:src="@drawable/ic_sort_exposure_up"
+                    android:tint="@color/app_primary" />
 
             </LinearLayout>
         </HorizontalScrollView>
@@ -122,17 +134,17 @@
         android:id="@+id/statsAxisDescription"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp" />
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp"
+        android:textAppearance="@style/TextAppearance.UquReader.Body.Small" />
 
     <TextView
         android:id="@+id/statsLemmaHeader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
         android:text="@string/stats_lemma_header"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:paddingBottom="8dp" />
+        android:textAllCaps="true"
+        android:textAppearance="@style/TextAppearance.UquReader.Title" />
 
 </LinearLayout>
