@@ -7,6 +7,8 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.core.content.ContextCompat;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,7 +43,9 @@ public class UsageTimelineView extends View {
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setStrokeCap(Paint.Cap.ROUND);
         linePaint.setStrokeWidth(strokeWidth);
-        setColor(0xFF388E3C); // default green shade
+        int defaultColor = ContextCompat.getColor(getContext(),
+                com.example.ttreader.R.color.app_accent_blue);
+        setColor(defaultColor);
     }
 
     public void setColor(int color) {

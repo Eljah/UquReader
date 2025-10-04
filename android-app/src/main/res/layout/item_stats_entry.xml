@@ -2,27 +2,29 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginBottom="16dp"
+    android:background="@drawable/vintage_card"
     android:orientation="vertical"
-    android:paddingBottom="12dp">
+    android:padding="20dp">
 
     <TextView
         android:id="@+id/statsTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textStyle="bold"
-        android:textSize="16sp"/>
+        android:textAppearance="@style/TextAppearance.UquReader.Subheading" />
 
     <TextView
         android:id="@+id/statsExposure"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:paddingTop="4dp"/>
+        android:paddingTop="4dp"
+        android:textAppearance="@style/TextAppearance.UquReader.Body" />
 
     <com.example.ttreader.widget.UsageTimelineView
         android:id="@+id/statsExposureTimeline"
         android:layout_width="match_parent"
         android:layout_height="36dp"
-        android:paddingTop="4dp"/>
+        android:paddingTop="4dp" />
 
     <LinearLayout
         android:id="@+id/statsExposureTimelineLabels"
@@ -35,7 +37,7 @@
             android:id="@+id/statsExposureTimelineStart"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"/>
+            android:textAppearance="@style/TextAppearance.UquReader.Body.Small" />
 
         <TextView
             android:id="@+id/statsExposureTimelineEnd"
@@ -43,20 +45,21 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="end"
-            android:textAppearance="?android:attr/textAppearanceSmall"/>
+            android:textAppearance="@style/TextAppearance.UquReader.Body.Small" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/statsLookup"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:paddingTop="2dp"/>
+        android:paddingTop="12dp"
+        android:textAppearance="@style/TextAppearance.UquReader.Body" />
 
     <com.example.ttreader.widget.UsageTimelineView
         android:id="@+id/statsLookupTimeline"
         android:layout_width="match_parent"
         android:layout_height="36dp"
-        android:paddingTop="4dp"/>
+        android:paddingTop="4dp" />
 
     <LinearLayout
         android:id="@+id/statsLookupTimelineLabels"
@@ -69,7 +72,7 @@
             android:id="@+id/statsLookupTimelineStart"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"/>
+            android:textAppearance="@style/TextAppearance.UquReader.Body.Small" />
 
         <TextView
             android:id="@+id/statsLookupTimelineEnd"
@@ -77,7 +80,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="end"
-            android:textAppearance="?android:attr/textAppearanceSmall"/>
+            android:textAppearance="@style/TextAppearance.UquReader.Body.Small" />
     </LinearLayout>
 
 </LinearLayout>
