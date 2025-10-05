@@ -927,6 +927,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pendingLastMode = ReadingState.MODE_VISUAL;
         if (readerView != null) {
             readerView.post(() -> {
+                resetReaderScrollOffset();
                 int viewportStart = readerView.getViewportStartChar();
                 if (viewportStart >= 0) {
                     pendingVisualChar = viewportStart;
@@ -1056,17 +1057,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int right = readerBasePaddingRight;
         int bottom = readerBasePaddingBottom;
         int panelHeight = computeBottomPanelHeight();
-        int viewportInset = panelHeight;
-        if (readerBottomPanel != null) {
-            ViewGroup.LayoutParams panelParams = readerBottomPanel.getLayoutParams();
-            if (panelParams != null && panelParams.height != panelHeight) {
-                panelParams.height = panelHeight;
-                readerBottomPanel.setLayoutParams(panelParams);
-            }
-            readerBottomPanel.setVisibility(panelHeight > 0 ? View.VISIBLE : View.GONE);
-        } else {
-            bottom += panelHeight;
-        }
+        int overlayClearance = 0;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
             int overlayHeight = Math.max(0, pageControls.getHeight());
             int overlayMargin = 0;
@@ -1076,11 +1067,23 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
             int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
             int overlayReach = overlayHeight + overlayMargin + extra;
-            int additional = Math.max(0, overlayReach - panelHeight);
-            bottom += additional;
-            viewportInset += additional;
+            overlayClearance = Math.max(0, overlayReach - panelHeight);
         }
-        readerViewportBottomInset = viewportInset;
+
+        int desiredPanelHeight = panelHeight + overlayClearance;
+        readerViewportBottomInset = desiredPanelHeight;
+
+        if (readerBottomPanel != null) {
+            ViewGroup.LayoutParams panelParams = readerBottomPanel.getLayoutParams();
+            if (panelParams != null && panelParams.height != desiredPanelHeight) {
+                panelParams.height = desiredPanelHeight;
+                readerBottomPanel.setLayoutParams(panelParams);
+            }
+            readerBottomPanel.setVisibility(desiredPanelHeight > 0 ? View.VISIBLE : View.GONE);
+        } else {
+            bottom += desiredPanelHeight;
+        }
+
         if (readerView.getPaddingLeft() != left
                 || readerView.getPaddingTop() != top
                 || readerView.getPaddingRight() != right
@@ -1088,6 +1091,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerView.setPadding(left, top, right, bottom);
             readerView.invalidate();
         }
+
         dispatchReaderViewportChanged();
     }
 
@@ -1113,8 +1117,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView == null || readerScrollView == null) {
             return;
         }
-        int height = Math.max(0, readerScrollView.getHeight() - readerViewportBottomInset);
-        readerView.setViewportHeight(height);
+        int scrollPaddingTop = readerScrollView.getPaddingTop();
+        int scrollPaddingBottom = readerScrollView.getPaddingBottom();
+        int height = readerScrollView.getHeight() - scrollPaddingTop - scrollPaddingBottom
+                - readerViewportBottomInset;
+        readerView.setViewportHeight(Math.max(0, height));
+    }
+
+    private void resetReaderScrollOffset() {
+        if (readerScrollView != null) {
+            readerScrollView.scrollTo(0, 0);
+        }
     }
 
     private void updatePendingSpeechChar(int charIndex) {
