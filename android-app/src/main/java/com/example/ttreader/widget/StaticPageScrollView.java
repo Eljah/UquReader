@@ -46,13 +46,4 @@ public class StaticPageScrollView extends ScrollView {
         // Disable fling to avoid any inertial motion when pages change programmatically.
     }
 
-    @Override
-    public void smoothScrollTo(int x, int y) {
-        scrollTo(x, y);
-    }
-
-    @Override
-    public void smoothScrollBy(int dx, int dy) {
-        scrollBy(dx, dy);
-    }
 }
