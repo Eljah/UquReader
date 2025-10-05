@@ -32,6 +32,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
@@ -138,6 +139,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int readerBasePaddingBottom;
     private int readerViewportBottomInset;
     private boolean readerViewportDispatchScheduled;
+    private final List<Runnable> pendingViewportReadyActions = new ArrayList<>();
+    private boolean awaitingViewportMeasurement;
+    private boolean readerViewportReady;
+    private boolean readerBottomInsetLocked;
+    private int readerLockedBottomInset;
+    private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
+    private boolean flushingViewportActions;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -340,8 +348,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerBasePaddingBottom = readerView.getPaddingBottom();
             readerView.setup(dbHelper, memoryDao, usageStatsDao, paginationDao, this);
             readerView.setWindowChangeListener(this::handleReaderWindowChanged);
-            readerView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
-                    updateReaderBottomInset());
         }
 
         if (readerScrollView != null) {
@@ -361,8 +367,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
 
         if (pageControls != null) {
-            pageControls.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
-                    updateReaderBottomInset());
             pageControls.post(this::updateReaderBottomInset);
         } else {
             updateReaderBottomInset();
@@ -850,7 +854,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         restoringReadingState = true;
         showReaderLoading(true);
         readerView.clearContent();
-        readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
+        runWhenReaderViewportReady(() -> readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
             updateSentenceRanges();
             int speechChar = resolveSavedSpeechChar(work);
             int focusChar = resolveSavedFocusChar(work);
@@ -892,7 +896,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 shouldContinueSpeech = false;
             }
             showReaderLoading(false);
-        });
+        }));
         updateWorkMenuDisplay();
     }
 
@@ -1073,30 +1077,49 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             int overlayReach = overlayHeight + overlayMargin + extra;
             overlayClearance = Math.max(0, overlayReach - panelHeight);
         }
-
         int desiredPanelHeight = panelHeight + overlayClearance;
-        readerViewportBottomInset = desiredPanelHeight;
+        if (readerBottomInsetLocked) {
+            if (desiredPanelHeight < readerLockedBottomInset) {
+                desiredPanelHeight = readerLockedBottomInset;
+            } else if (desiredPanelHeight > readerLockedBottomInset) {
+                readerLockedBottomInset = desiredPanelHeight;
+            }
+        }
 
+        boolean panelChanged = false;
         if (readerBottomPanel != null) {
             ViewGroup.LayoutParams panelParams = readerBottomPanel.getLayoutParams();
             if (panelParams != null && panelParams.height != desiredPanelHeight) {
                 panelParams.height = desiredPanelHeight;
                 readerBottomPanel.setLayoutParams(panelParams);
+                panelChanged = true;
             }
             readerBottomPanel.setVisibility(desiredPanelHeight > 0 ? View.VISIBLE : View.GONE);
         } else {
             bottom += desiredPanelHeight;
         }
 
-        if (readerView.getPaddingLeft() != left
+        boolean paddingChanged = readerView.getPaddingLeft() != left
                 || readerView.getPaddingTop() != top
                 || readerView.getPaddingRight() != right
-                || readerView.getPaddingBottom() != bottom) {
+                || readerView.getPaddingBottom() != bottom;
+        if (paddingChanged) {
             readerView.setPadding(left, top, right, bottom);
-            readerView.invalidate();
         }
 
-        dispatchReaderViewportChanged();
+        boolean insetChanged = readerViewportBottomInset != desiredPanelHeight;
+        if (insetChanged) {
+            readerViewportBottomInset = desiredPanelHeight;
+        }
+
+        if (!readerBottomInsetLocked && desiredPanelHeight > 0) {
+            readerBottomInsetLocked = true;
+            readerLockedBottomInset = desiredPanelHeight;
+        }
+
+        if (insetChanged || panelChanged || paddingChanged) {
+            dispatchReaderViewportChanged();
+        }
     }
 
     private int computeBottomPanelHeight() {
@@ -1115,6 +1138,72 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return minPanel;
         }
         return Math.max(minPanel, lineHeight * 2);
+    }
+
+    private void runWhenReaderViewportReady(Runnable action) {
+        if (action == null) {
+            return;
+        }
+        if (readerScrollView == null || readerView == null) {
+            action.run();
+            return;
+        }
+        if (readerViewportReady && readerScrollView.getHeight() > 0 && readerView.getWidth() > 0) {
+            updateReaderBottomInset();
+            action.run();
+            return;
+        }
+        pendingViewportReadyActions.add(action);
+        if (awaitingViewportMeasurement) {
+            return;
+        }
+        awaitingViewportMeasurement = true;
+        viewportReadyListener = new ViewTreeObserver.OnPreDrawListener() {
+            @Override public boolean onPreDraw() {
+                if (readerScrollView == null || readerView == null) {
+                    return true;
+                }
+                if (readerScrollView.getHeight() <= 0 || readerView.getWidth() <= 0) {
+                    return true;
+                }
+                removeViewportReadyListener();
+                readerViewportReady = true;
+                updateReaderBottomInset();
+                dispatchReaderViewportChanged();
+                flushPendingViewportReadyActions();
+                return true;
+            }
+        };
+        readerScrollView.getViewTreeObserver().addOnPreDrawListener(viewportReadyListener);
+    }
+
+    private void removeViewportReadyListener() {
+        if (viewportReadyListener != null && readerScrollView != null) {
+            ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
+            if (observer.isAlive()) {
+                observer.removeOnPreDrawListener(viewportReadyListener);
+            }
+        }
+        viewportReadyListener = null;
+        awaitingViewportMeasurement = false;
+    }
+
+    private void flushPendingViewportReadyActions() {
+        if (pendingViewportReadyActions.isEmpty() || flushingViewportActions) {
+            return;
+        }
+        flushingViewportActions = true;
+        try {
+            List<Runnable> callbacks = new ArrayList<>(pendingViewportReadyActions);
+            pendingViewportReadyActions.clear();
+            for (Runnable callback : callbacks) {
+                if (callback != null) {
+                    callback.run();
+                }
+            }
+        } finally {
+            flushingViewportActions = false;
+        }
     }
 
     private void scheduleReaderViewportDispatch() {
@@ -1141,9 +1230,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         int height = scrollHeight - scrollPaddingTop - scrollPaddingBottom - readerViewportBottomInset;
         if (height <= 0) {
-            readerView.setViewportHeight(0);
             scheduleReaderViewportDispatch();
             return;
+        }
+        if (!readerViewportReady && awaitingViewportMeasurement) {
+            readerViewportReady = true;
+            removeViewportReadyListener();
+            flushPendingViewportReadyActions();
         }
         readerView.setViewportHeight(height);
     }
