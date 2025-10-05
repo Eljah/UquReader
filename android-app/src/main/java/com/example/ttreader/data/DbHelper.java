@@ -18,7 +18,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 6;
+    private static final int APP_DB_VERSION = 7;
 
     private static final String TAG = "DbHelper";
     private static final String PREFS_NAME = "com.example.ttreader.DB_PREFS";
@@ -45,6 +45,7 @@ public class DbHelper extends SQLiteOpenHelper {
         createUsageTables(db);
         createDeviceStatsTables(db);
         createReadingStateTable(db);
+        createPaginationTable(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -73,6 +74,9 @@ public class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 6) {
             createReadingStateTable(db);
+        }
+        if (oldVersion < 7) {
+            createPaginationTable(db);
         }
     }
 
@@ -272,6 +276,23 @@ public class DbHelper extends SQLiteOpenHelper {
                 " count INTEGER NOT NULL DEFAULT 0,\n" +
                 " last_seen_ms INTEGER NOT NULL,\n" +
                 " PRIMARY KEY(lemma, pos, feature_code, event_type)\n" +
+                ")");
+    }
+
+    private void createPaginationTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS visual_pagination(\n" +
+                " language_pair TEXT NOT NULL,\n" +
+                " work_id TEXT NOT NULL,\n" +
+                " content_width INTEGER NOT NULL,\n" +
+                " content_height INTEGER NOT NULL,\n" +
+                " text_size REAL NOT NULL,\n" +
+                " line_spacing_extra REAL NOT NULL,\n" +
+                " line_spacing_multiplier REAL NOT NULL,\n" +
+                " letter_spacing REAL NOT NULL,\n" +
+                " document_signature INTEGER NOT NULL,\n" +
+                " page_breaks TEXT NOT NULL,\n" +
+                " updated_ms INTEGER NOT NULL,\n" +
+                " PRIMARY KEY(language_pair, work_id)\n" +
                 ")");
     }
 }
