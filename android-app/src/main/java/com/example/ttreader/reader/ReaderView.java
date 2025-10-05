@@ -453,6 +453,13 @@ public class ReaderView extends TextView {
             return;
         }
         PaginationSpec currentSpec = captureCurrentSpec();
+        if (currentSpec != null && activePaginationSpec != null
+                && activePaginationSpec.matchesDimensions(currentSpec) && !pages.isEmpty()) {
+            Log.d(TAG, "markPaginationDirty: dimensions unchanged with populated pages; skipping clear");
+            paginationDirty = false;
+            paginationLocked = true;
+            return;
+        }
         if (paginationLocked && activePaginationSpec != null && currentSpec != null
                 && activePaginationSpec.matchesDimensions(currentSpec)) {
             Log.d(TAG, "markPaginationDirty: skip same spec " + activePaginationSpec.contentWidth
@@ -493,6 +500,10 @@ public class ReaderView extends TextView {
             pendingNotifyWindowChange = false;
             Log.d(TAG, "markPaginationDirty: cleared pending target");
         }
+    }
+
+    public boolean ensurePaginationReady() {
+        return ensurePagination();
     }
 
     private boolean shouldIgnoreViewportChange(int newViewportHeight) {
@@ -825,18 +836,22 @@ public class ReaderView extends TextView {
     }
 
     public boolean hasPreviousPage() {
+        ensurePaginationReady();
         return currentPageIndex > 0;
     }
 
     public boolean hasNextPage() {
+        ensurePaginationReady();
         return currentPageIndex + 1 < pages.size();
     }
 
     public int getCurrentPageIndex() {
+        ensurePaginationReady();
         return Math.max(0, Math.min(currentPageIndex, pages.size() - 1));
     }
 
     public int getTotalPageCount() {
+        ensurePaginationReady();
         return pages.size();
     }
 
@@ -853,14 +868,20 @@ public class ReaderView extends TextView {
     }
 
     public int findNextPageStart() {
-        if (!hasNextPage()) {
+        if (!ensurePaginationReady()) {
+            return -1;
+        }
+        if (currentPageIndex + 1 >= pages.size()) {
             return -1;
         }
         return pages.get(currentPageIndex + 1).start;
     }
 
     public int findPreviousPageStart() {
-        if (!hasPreviousPage()) {
+        if (!ensurePaginationReady()) {
+            return -1;
+        }
+        if (currentPageIndex <= 0) {
             return -1;
         }
         return pages.get(currentPageIndex - 1).start;

@@ -150,6 +150,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int readerPageBaseMarginBottom;
     private int lastOverlayClearance;
     private int lastKnownOverlayHeight = -1;
+    private int resolvedOverlayHeight = -1;
     private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
     private boolean flushingViewportActions;
     private boolean overlayInsetRetryScheduled;
@@ -386,6 +387,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 int newHeight = Math.max(0, bottom - top);
                 if (pageControls.getVisibility() != View.VISIBLE) {
                     newHeight = 0;
+                }
+                if (newHeight > 0 && resolvedOverlayHeight != newHeight) {
+                    resolvedOverlayHeight = newHeight;
                 }
                 if (lastKnownOverlayHeight != newHeight) {
                     lastKnownOverlayHeight = newHeight;
@@ -1128,6 +1132,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: awaiting overlay measurement");
             } else {
                 overlayInsetRetryScheduled = false;
+                if (resolvedOverlayHeight <= 0) {
+                    resolvedOverlayHeight = overlayHeight;
+                }
+                if (resolvedOverlayHeight > 0) {
+                    overlayHeight = resolvedOverlayHeight;
+                }
                 int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
                 overlayClearance = Math.max(0, overlayHeight + extra);
                 lastKnownOverlayHeight = overlayHeight;
@@ -1187,8 +1197,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
 
         if (overlayChanged || readerPaddingChanged || containerMarginChanged || insetChanged) {
-            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: dispatch viewport change");
-            dispatchReaderViewportChanged();
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: schedule viewport change");
+            scheduleReaderViewportDispatch();
         }
         Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: end");
     }
