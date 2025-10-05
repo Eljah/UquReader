@@ -3,4 +3,5 @@
     <color name="reader_letter_highlight">#2E7D32</color>
     <color name="work_menu_progress_reading">#FF000000</color>
     <color name="work_menu_progress_listening">@color/reader_letter_highlight</color>
+    <color name="reader_card_background">#FFF9C4</color>
 </resources>
