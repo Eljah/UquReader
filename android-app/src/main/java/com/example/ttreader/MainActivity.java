@@ -32,7 +32,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
-import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
@@ -48,6 +47,7 @@ import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.DeviceIdentity;
 import com.example.ttreader.data.DeviceStatsDao;
 import com.example.ttreader.data.MemoryDao;
+import com.example.ttreader.data.PaginationDao;
 import com.example.ttreader.data.ReadingStateDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.ReadingState;
@@ -74,6 +74,7 @@ import java.util.Set;
 
 public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
     private static final String TAG = "MainActivity";
+    private static final String LAYOUT_LOG_TAG = "ReaderLayoutTrace";
     private static final String LANGUAGE_PAIR_TT_RU = "tt-ru";
     private static final int MENU_WORK_ID_BASE = 100;
     private static final String PREFS_READER_STATE = "com.example.ttreader.reader_state";
@@ -123,19 +124,33 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private UsageStatsDao usageStatsDao;
     private DeviceStatsDao deviceStatsDao;
     private ReadingStateDao readingStateDao;
+    private PaginationDao paginationDao;
     private ScrollView readerScrollView;
+    private View readerPageContainer;
     private ReaderView readerView;
     private ProgressBar readerLoadingIndicator;
     private ImageButton pagePreviousButton;
     private ImageButton pageNextButton;
     private View pageControls;
     private TextView pageNumberText;
-    private View readerBottomPanel;
     private int readerBasePaddingLeft;
     private int readerBasePaddingTop;
     private int readerBasePaddingRight;
     private int readerBasePaddingBottom;
+    private View readerOverlaySpacer;
+    private int readerOverlaySpacerBaseHeight;
     private int readerViewportBottomInset;
+    private int lastDispatchedViewportHeight = -1;
+    private boolean readerViewportDispatchScheduled;
+    private final List<Runnable> pendingViewportReadyActions = new ArrayList<>();
+    private boolean awaitingViewportMeasurement;
+    private boolean readerViewportReady;
+    private int lastOverlayClearance;
+    private int lastKnownOverlayHeight = -1;
+    private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
+    private boolean flushingViewportActions;
+    private boolean overlayInsetRetryScheduled;
+    private boolean readerWindowInitialized;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -297,6 +312,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         usageStatsDao = new UsageStatsDao(db);
         deviceStatsDao = new DeviceStatsDao(db);
         readingStateDao = new ReadingStateDao(db);
+        paginationDao = new PaginationDao(db);
 
         readerPrefs = getSharedPreferences(PREFS_READER_STATE, MODE_PRIVATE);
         if (readerPrefs != null) {
@@ -322,33 +338,51 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
 
         readerScrollView = findViewById(R.id.readerScrollView);
+        readerPageContainer = findViewById(R.id.readerPageContainer);
+        readerOverlaySpacer = findViewById(R.id.readerOverlaySpacer);
         readerView = findViewById(R.id.readerView);
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
         pagePreviousButton = findViewById(R.id.pagePreviousButton);
         pageNextButton = findViewById(R.id.pageNextButton);
         pageControls = findViewById(R.id.pageControls);
         pageNumberText = findViewById(R.id.pageNumberText);
-        readerBottomPanel = findViewById(R.id.readerBottomPanel);
 
         if (readerView != null) {
             readerBasePaddingLeft = readerView.getPaddingLeft();
             readerBasePaddingTop = readerView.getPaddingTop();
             readerBasePaddingRight = readerView.getPaddingRight();
             readerBasePaddingBottom = readerView.getPaddingBottom();
-            readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
-            readerView.attachScrollView(readerScrollView);
+            readerView.setup(dbHelper, memoryDao, usageStatsDao, paginationDao, this);
             readerView.setWindowChangeListener(this::handleReaderWindowChanged);
-            readerView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
-                    updateReaderBottomInset());
         }
 
         if (readerScrollView != null) {
             readerScrollView.setVerticalFadingEdgeEnabled(false);
             readerScrollView.setFadingEdgeLength(0);
             readerScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
-            observer.addOnScrollChangedListener(() -> dispatchReaderViewportChanged());
-            readerScrollView.post(this::dispatchReaderViewportChanged);
+            readerScrollView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+                if (bottom - top != oldBottom - oldTop) {
+                    dispatchReaderViewportChanged();
+                }
+            });
+            scheduleReaderViewportDispatch();
+        }
+
+        if (readerOverlaySpacer != null && readerOverlaySpacer.getLayoutParams() != null) {
+            readerOverlaySpacerBaseHeight = readerOverlaySpacer.getLayoutParams().height;
+        }
+
+        if (pageControls != null) {
+            pageControls.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+                int newHeight = Math.max(0, bottom - top);
+                if (pageControls.getVisibility() != View.VISIBLE) {
+                    newHeight = 0;
+                }
+                if (lastKnownOverlayHeight != newHeight) {
+                    lastKnownOverlayHeight = newHeight;
+                    updateReaderBottomInset();
+                }
+            });
         }
 
         if (pagePreviousButton != null) {
@@ -359,8 +393,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
 
         if (pageControls != null) {
-            pageControls.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
-                    updateReaderBottomInset());
             pageControls.post(this::updateReaderBottomInset);
         } else {
             updateReaderBottomInset();
@@ -767,6 +799,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private int approxPageForChar(int charIndex) {
+        if (readerView != null && readerView.getDocumentLength() > 0) {
+            int index = readerView.getPageIndexForChar(Math.max(0, charIndex));
+            return index + 1;
+        }
         if (charIndex < 0) {
             return 1;
         }
@@ -843,8 +879,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pendingSpeechChar = -1;
         restoringReadingState = true;
         showReaderLoading(true);
+        readerWindowInitialized = false;
+        lastDispatchedViewportHeight = -1;
+        lastOverlayClearance = -1;
         readerView.clearContent();
-        readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
+        runWhenReaderViewportReady(() -> readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
             updateSentenceRanges();
             int speechChar = resolveSavedSpeechChar(work);
             int focusChar = resolveSavedFocusChar(work);
@@ -886,7 +925,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 shouldContinueSpeech = false;
             }
             showReaderLoading(false);
-        });
+        }));
         updateWorkMenuDisplay();
     }
 
@@ -918,24 +957,34 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (viewportStart >= 0) {
                 pendingVisualChar = viewportStart;
             }
-            pendingVisualPage = approxPageForChar(pendingVisualChar);
+            pendingVisualPage = readerView.getCurrentPageIndex() + 1;
         } else {
             pendingVisualPage = approxPageForChar(pendingVisualChar);
         }
         pendingLastMode = ReadingState.MODE_VISUAL;
         if (readerView != null) {
             readerView.post(() -> {
+                Log.d(LAYOUT_LOG_TAG, "handleReaderWindowChanged: window=" + start + "-" + end
+                        + " viewportStart=" + readerView.getViewportStartChar()
+                        + " page=" + (readerView.getCurrentPageIndex() + 1)
+                        + "/" + readerView.getTotalPageCount());
+                if (!readerWindowInitialized) {
+                    readerWindowInitialized = true;
+                    resetReaderScrollOffset();
+                }
                 int viewportStart = readerView.getViewportStartChar();
                 if (viewportStart >= 0) {
                     pendingVisualChar = viewportStart;
+                }
+                if (readerView != null) {
+                    pendingVisualPage = readerView.getCurrentPageIndex() + 1;
+                } else {
                     pendingVisualPage = approxPageForChar(pendingVisualChar);
                 }
                 updatePageControls();
-                updateReaderBottomInset();
             });
         } else {
             updatePageControls();
-            updateReaderBottomInset();
         }
         if (!restoringReadingState) {
             schedulePersistReadingState();
@@ -945,24 +994,38 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void updatePageControls() {
         if (pagePreviousButton != null) {
             boolean enabled = readerView != null && readerView.hasPreviousPage();
-            pagePreviousButton.setEnabled(enabled);
-            pagePreviousButton.setAlpha(enabled ? 1f : 0.3f);
+            if (pagePreviousButton.isEnabled() != enabled) {
+                pagePreviousButton.setEnabled(enabled);
+            }
+            float targetAlpha = enabled ? 1f : 0.3f;
+            if (pagePreviousButton.getAlpha() != targetAlpha) {
+                pagePreviousButton.setAlpha(targetAlpha);
+            }
         }
         if (pageNextButton != null) {
             boolean enabled = readerView != null && readerView.hasNextPage();
-            pageNextButton.setEnabled(enabled);
-            pageNextButton.setAlpha(enabled ? 1f : 0.3f);
+            if (pageNextButton.isEnabled() != enabled) {
+                pageNextButton.setEnabled(enabled);
+            }
+            float targetAlpha = enabled ? 1f : 0.3f;
+            if (pageNextButton.getAlpha() != targetAlpha) {
+                pageNextButton.setAlpha(targetAlpha);
+            }
         }
         if (pageNumberText != null) {
             if (readerView != null && readerView.getDocumentLength() > 0) {
-                int current = Math.max(1, pendingVisualPage);
-                int total = Math.max(1, (readerView.getDocumentLength() + APPROX_CHARS_PER_PAGE - 1) / APPROX_CHARS_PER_PAGE);
-                if (current > total) {
-                    current = total;
+                int current = readerView.getCurrentPageIndex() + 1;
+                int total = Math.max(1, readerView.getTotalPageCount());
+                String formatted = String.format(Locale.getDefault(), "%d / %d", current, total);
+                CharSequence existing = pageNumberText.getText();
+                if (!TextUtils.equals(existing, formatted)) {
+                    pageNumberText.setText(formatted);
                 }
-                pageNumberText.setText(String.format(Locale.getDefault(), "%d / %d", current, total));
             } else {
-                pageNumberText.setText("—");
+                CharSequence dash = "—";
+                if (!TextUtils.equals(pageNumberText.getText(), dash)) {
+                    pageNumberText.setText(dash);
+                }
             }
         }
     }
@@ -1052,66 +1115,196 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int top = readerBasePaddingTop;
         int right = readerBasePaddingRight;
         int bottom = readerBasePaddingBottom;
-        int panelHeight = computeBottomPanelHeight();
-        int viewportInset = panelHeight;
-        if (readerBottomPanel != null) {
-            ViewGroup.LayoutParams panelParams = readerBottomPanel.getLayoutParams();
-            if (panelParams != null && panelParams.height != panelHeight) {
-                panelParams.height = panelHeight;
-                readerBottomPanel.setLayoutParams(panelParams);
-            }
-            readerBottomPanel.setVisibility(panelHeight > 0 ? View.VISIBLE : View.GONE);
-        } else {
-            bottom += panelHeight;
-        }
+
+        Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: begin overlayVisible="
+                + (pageControls != null && pageControls.getVisibility() == View.VISIBLE));
+
+        int overlayClearance = 0;
+        boolean awaitingMeasurement = false;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
-            int overlayHeight = Math.max(0, pageControls.getHeight());
-            int overlayMargin = 0;
-            ViewGroup.LayoutParams lp = pageControls.getLayoutParams();
-            if (lp instanceof ViewGroup.MarginLayoutParams) {
-                overlayMargin = ((ViewGroup.MarginLayoutParams) lp).bottomMargin;
+            int overlayHeight = Math.max(pageControls.getHeight(), pageControls.getMeasuredHeight());
+            if (overlayHeight <= 0) {
+                if (!overlayInsetRetryScheduled) {
+                    overlayInsetRetryScheduled = true;
+                    pageControls.post(() -> {
+                        overlayInsetRetryScheduled = false;
+                        Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: retry after pending measurement");
+                        updateReaderBottomInset();
+                    });
+                }
+                awaitingMeasurement = true;
+                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: awaiting overlay measurement");
+            } else {
+                overlayInsetRetryScheduled = false;
+                int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
+                overlayClearance = Math.max(0, overlayHeight + extra);
+                lastKnownOverlayHeight = overlayHeight;
+                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: overlayHeight=" + overlayHeight
+                        + " extra=" + extra + " clearance=" + overlayClearance);
             }
-            int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
-            int overlayReach = overlayHeight + overlayMargin + extra;
-            int additional = Math.max(0, overlayReach - panelHeight);
-            bottom += additional;
-            viewportInset += additional;
+        } else {
+            overlayInsetRetryScheduled = false;
+            lastKnownOverlayHeight = 0;
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: controls hidden");
         }
-        readerViewportBottomInset = viewportInset;
-        if (readerView.getPaddingLeft() != left
+
+        if (awaitingMeasurement) {
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: exit awaiting measurement");
+            return;
+        }
+
+        boolean overlayChanged = overlayClearance != lastOverlayClearance;
+        if (overlayChanged) {
+            lastOverlayClearance = overlayClearance;
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: overlay clearance changed -> " + overlayClearance);
+        }
+
+        boolean readerPaddingChanged = readerView.getPaddingLeft() != left
                 || readerView.getPaddingTop() != top
                 || readerView.getPaddingRight() != right
-                || readerView.getPaddingBottom() != bottom) {
+                || readerView.getPaddingBottom() != bottom;
+        if (readerPaddingChanged) {
             readerView.setPadding(left, top, right, bottom);
-            readerView.invalidate();
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: reader padding -> L" + left
+                    + " T" + top + " R" + right + " B" + bottom);
         }
-        dispatchReaderViewportChanged();
-    }
 
-    private int computeBottomPanelHeight() {
-        if (readerView == null) {
-            return 0;
-        }
-        int minPanel = getResources().getDimensionPixelSize(R.dimen.reader_bottom_panel_min_height);
-        int lineHeight = readerView.getLineHeight();
-        if (lineHeight <= 0) {
-            float textSize = readerView.getTextSize();
-            if (textSize > 0f) {
-                lineHeight = Math.round(textSize * 1.2f);
+        boolean spacerChanged = false;
+        if (readerOverlaySpacer != null && readerOverlaySpacer.getLayoutParams() != null) {
+            int targetHeight = Math.max(0, readerOverlaySpacerBaseHeight + overlayClearance);
+            if (readerOverlaySpacer.getLayoutParams().height != targetHeight) {
+                readerOverlaySpacer.getLayoutParams().height = targetHeight;
+                readerOverlaySpacer.requestLayout();
+                spacerChanged = true;
+                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: spacer height -> " + targetHeight);
             }
         }
-        if (lineHeight <= 0) {
-            return minPanel;
+
+        readerViewportBottomInset = overlayClearance;
+
+        if (overlayChanged || readerPaddingChanged || spacerChanged) {
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: dispatch viewport change");
+            dispatchReaderViewportChanged();
         }
-        return Math.max(minPanel, lineHeight * 2);
+        Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: end");
+    }
+
+    private void runWhenReaderViewportReady(Runnable action) {
+        if (action == null) {
+            return;
+        }
+        if (readerScrollView == null || readerView == null) {
+            action.run();
+            return;
+        }
+        if (readerViewportReady && readerScrollView.getHeight() > 0 && readerView.getWidth() > 0) {
+            updateReaderBottomInset();
+            action.run();
+            return;
+        }
+        pendingViewportReadyActions.add(action);
+        if (awaitingViewportMeasurement) {
+            return;
+        }
+        awaitingViewportMeasurement = true;
+        viewportReadyListener = new ViewTreeObserver.OnPreDrawListener() {
+            @Override public boolean onPreDraw() {
+                if (readerScrollView == null || readerView == null) {
+                    return true;
+                }
+                if (readerScrollView.getHeight() <= 0 || readerView.getWidth() <= 0) {
+                    return true;
+                }
+                removeViewportReadyListener();
+                readerViewportReady = true;
+                updateReaderBottomInset();
+                dispatchReaderViewportChanged();
+                flushPendingViewportReadyActions();
+                return true;
+            }
+        };
+        readerScrollView.getViewTreeObserver().addOnPreDrawListener(viewportReadyListener);
+    }
+
+    private void removeViewportReadyListener() {
+        if (viewportReadyListener != null && readerScrollView != null) {
+            ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
+            if (observer.isAlive()) {
+                observer.removeOnPreDrawListener(viewportReadyListener);
+            }
+        }
+        viewportReadyListener = null;
+        awaitingViewportMeasurement = false;
+    }
+
+    private void flushPendingViewportReadyActions() {
+        if (pendingViewportReadyActions.isEmpty() || flushingViewportActions) {
+            return;
+        }
+        flushingViewportActions = true;
+        try {
+            List<Runnable> callbacks = new ArrayList<>(pendingViewportReadyActions);
+            pendingViewportReadyActions.clear();
+            for (Runnable callback : callbacks) {
+                if (callback != null) {
+                    callback.run();
+                }
+            }
+        } finally {
+            flushingViewportActions = false;
+        }
+    }
+
+    private void scheduleReaderViewportDispatch() {
+        if (readerScrollView == null || readerViewportDispatchScheduled) {
+            return;
+        }
+        readerViewportDispatchScheduled = true;
+        readerScrollView.post(() -> {
+            readerViewportDispatchScheduled = false;
+            dispatchReaderViewportChanged();
+        });
     }
 
     private void dispatchReaderViewportChanged() {
         if (readerView == null || readerScrollView == null) {
             return;
         }
-        int height = Math.max(0, readerScrollView.getHeight() - readerViewportBottomInset);
-        readerView.onViewportChanged(readerScrollView.getScrollY(), height);
+        if (overlayInsetRetryScheduled) {
+            scheduleReaderViewportDispatch();
+            return;
+        }
+        int scrollPaddingTop = readerScrollView.getPaddingTop();
+        int scrollPaddingBottom = readerScrollView.getPaddingBottom();
+        int scrollHeight = readerScrollView.getHeight();
+        if (scrollHeight <= 0) {
+            scheduleReaderViewportDispatch();
+            return;
+        }
+        int height = scrollHeight - scrollPaddingTop - scrollPaddingBottom - readerViewportBottomInset;
+        if (height <= 0) {
+            scheduleReaderViewportDispatch();
+            return;
+        }
+        if (!readerViewportReady && awaitingViewportMeasurement) {
+            readerViewportReady = true;
+            removeViewportReadyListener();
+            flushPendingViewportReadyActions();
+        }
+        if (height == lastDispatchedViewportHeight) {
+            return;
+        }
+        lastDispatchedViewportHeight = height;
+        Log.d(LAYOUT_LOG_TAG, "dispatchReaderViewportChanged: scrollHeight=" + scrollHeight
+                + " paddingTop=" + scrollPaddingTop + " paddingBottom=" + scrollPaddingBottom
+                + " bottomInset=" + readerViewportBottomInset + " -> viewportHeight=" + height);
+        readerView.setViewportHeight(height);
+    }
+
+    private void resetReaderScrollOffset() {
+        if (readerScrollView != null) {
+            readerScrollView.scrollTo(0, 0);
+        }
     }
 
     private void updatePendingSpeechChar(int charIndex) {
@@ -1245,23 +1438,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void scrollToSpan(TokenSpan span, int attempt) {
-        if (readerView == null || readerScrollView == null || span == null) return;
-        readerView.ensureWindowContains(span.getStartIndex());
-        android.text.Layout layout = readerView.getLayout();
-        CharSequence text = readerView.getText();
-        if ((layout == null || text == null) && attempt < 5) {
-            readerView.postDelayed(() -> scrollToSpan(span, attempt + 1), 50);
-            return;
-        } else if (layout == null || text == null) {
-            return;
-        }
-        int textLength = text.length();
-        int localStart = readerView.toLocalCharIndex(span.getStartIndex());
-        int clampedStart = Math.max(0, Math.min(localStart, textLength));
-        int line = layout.getLineForOffset(clampedStart);
-        int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
-        readerScrollView.scrollTo(0, y);
-        readerScrollView.post(this::dispatchReaderViewportChanged);
+        if (readerView == null || span == null) return;
+        readerView.scrollToGlobalChar(span.getStartIndex());
     }
 
     private void dismissTokenSheet(boolean restoreFocus) {
@@ -1442,21 +1620,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void scrollSentenceIntoView(ReaderView.SentenceRange sentence) {
-        if (sentence == null || readerView == null || readerScrollView == null) return;
-        readerView.post(() -> {
-            TokenSpan span = readerView.findSpanForCharIndex(sentence.start);
-            if (span != null) {
-                scrollToSpan(span, 0);
-            } else {
-                android.text.Layout layout = readerView.getLayout();
-                CharSequence text = readerView.getText();
-                if (layout == null || text == null) return;
-                int index = Math.max(0, Math.min(sentence.start, text.length()));
-                int line = layout.getLineForOffset(index);
-                int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
-                readerScrollView.scrollTo(0, y);
-            }
-        });
+        if (sentence == null || readerView == null) return;
+        readerView.post(() -> readerView.scrollToGlobalChar(sentence.start));
     }
 
     private void startProgressUpdates() {

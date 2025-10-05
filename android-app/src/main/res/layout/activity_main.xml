@@ -37,29 +37,36 @@
             android:requiresFadingEdge="none">
 
             <LinearLayout
-                android:id="@+id/readerPageContainer"
+                android:id="@+id/readerScrollContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                android:layout_marginTop="24dp"
-                android:layout_marginEnd="24dp"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/reader_page_background"
                 android:orientation="vertical">
 
-                <com.example.ttreader.reader.ReaderView
-                    android:id="@+id/readerView"
+                <LinearLayout
+                    android:id="@+id/readerPageContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@android:color/transparent"
-                    android:padding="24dp"
-                    android:textColor="@color/reader_text_primary" />
+                    android:layout_marginStart="24dp"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginEnd="24dp"
+                    android:layout_marginBottom="24dp"
+                    android:background="@drawable/reader_page_background"
+                    android:orientation="vertical">
+
+                    <com.example.ttreader.reader.ReaderView
+                        android:id="@+id/readerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@android:color/transparent"
+                        android:padding="24dp"
+                        android:textColor="@color/reader_text_primary" />
+                </LinearLayout>
 
                 <View
-                    android:id="@+id/readerBottomPanel"
+                    android:id="@+id/readerOverlaySpacer"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/reader_bottom_panel_min_height"
-                    android:background="@color/app_surface" />
+                    android:layout_height="0dp"
+                    android:background="@android:color/transparent" />
             </LinearLayout>
         </com.example.ttreader.widget.StaticPageScrollView>
 
