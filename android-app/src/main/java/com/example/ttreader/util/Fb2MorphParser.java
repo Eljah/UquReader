@@ -122,10 +122,19 @@ public final class Fb2MorphParser {
                     if (TAG_STYLE.equals(endName) && currentStyle != null && currentStyle.depth == 0) {
                         currentStyle = null;
                     }
-                    if (TAG_PARAGRAPH.equals(endName)) {
+                    if (insideBody && TAG_PARAGRAPH.equals(endName)) {
                         insideParagraph = false;
-                        prefix.setLength(0);
+                        if (prefix.length() > 0) {
+                            addSyntheticToken(tokens, prefix.toString(), "");
+                            prefix.setLength(0);
+                        }
+                        addSyntheticToken(tokens, "", "\n");
                     } else if (TAG_BODY.equals(endName)) {
+                        if (prefix.length() > 0) {
+                            addSyntheticToken(tokens, prefix.toString(), "");
+                            prefix.setLength(0);
+                        }
+                        insideParagraph = false;
                         insideBody = false;
                     }
                     break;
@@ -154,6 +163,16 @@ public final class Fb2MorphParser {
 
     private static String safeTrim(String value) {
         return value == null ? null : value.trim();
+    }
+
+    private static void addSyntheticToken(List<Token> tokens, String prefixText, String surfaceText) {
+        if (tokens == null) {
+            return;
+        }
+        Token token = new Token();
+        token.prefix = prefixText == null ? "" : prefixText;
+        token.surface = surfaceText == null ? "" : surfaceText;
+        tokens.add(token);
     }
 
     private static final class MorphStyle {

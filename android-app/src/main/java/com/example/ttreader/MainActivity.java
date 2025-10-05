@@ -32,6 +32,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
@@ -129,6 +130,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ImageButton pageNextButton;
     private View pageControls;
     private TextView pageNumberText;
+    private int readerBasePaddingLeft;
+    private int readerBasePaddingTop;
+    private int readerBasePaddingRight;
+    private int readerBasePaddingBottom;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -323,6 +328,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pageNumberText = findViewById(R.id.pageNumberText);
 
         if (readerView != null) {
+            readerBasePaddingLeft = readerView.getPaddingLeft();
+            readerBasePaddingTop = readerView.getPaddingTop();
+            readerBasePaddingRight = readerView.getPaddingRight();
+            readerBasePaddingBottom = readerView.getPaddingBottom();
             readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
             readerView.attachScrollView(readerScrollView);
             readerView.setWindowChangeListener(this::handleReaderWindowChanged);
@@ -351,6 +360,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         if (pageNextButton != null) {
             pageNextButton.setOnClickListener(v -> goToNextPage());
+        }
+
+        if (pageControls != null) {
+            pageControls.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
+                    updateReaderBottomInset());
+            pageControls.post(this::updateReaderBottomInset);
+        } else {
+            updateReaderBottomInset();
         }
 
         updatePageControls();
@@ -1025,6 +1042,34 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         if (pageNextButton != null) {
             pageNextButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        }
+        updateReaderBottomInset();
+    }
+
+    private void updateReaderBottomInset() {
+        if (readerView == null) {
+            return;
+        }
+        int left = readerBasePaddingLeft;
+        int top = readerBasePaddingTop;
+        int right = readerBasePaddingRight;
+        int bottom = readerBasePaddingBottom;
+        if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
+            int overlayHeight = Math.max(0, pageControls.getHeight());
+            int overlayMargin = 0;
+            ViewGroup.LayoutParams lp = pageControls.getLayoutParams();
+            if (lp instanceof ViewGroup.MarginLayoutParams) {
+                overlayMargin = ((ViewGroup.MarginLayoutParams) lp).bottomMargin;
+            }
+            int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
+            bottom = readerBasePaddingBottom + overlayHeight + overlayMargin + extra;
+        }
+        if (readerView.getPaddingLeft() != left
+                || readerView.getPaddingTop() != top
+                || readerView.getPaddingRight() != right
+                || readerView.getPaddingBottom() != bottom) {
+            readerView.setPadding(left, top, right, bottom);
+            readerView.invalidate();
         }
     }
 
