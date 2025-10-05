@@ -443,6 +443,16 @@ public class ReaderView extends TextView {
                 && activePaginationSpec.matchesDimensions(currentSpec)) {
             return;
         }
+        int preservedTarget = -1;
+        boolean hadPendingTarget = hasPendingTarget;
+        boolean preservedNotify = pendingNotifyWindowChange;
+        if (currentDocument.text != null && !currentDocument.text.isEmpty()) {
+            if (hasPendingTarget) {
+                preservedTarget = clamp(pendingTargetCharIndex, 0, currentDocument.text.length());
+            } else {
+                preservedTarget = clamp(visibleStart, 0, currentDocument.text.length());
+            }
+        }
         paginationDirty = true;
         paginationLocked = false;
         paginationCacheLoaded = false;
@@ -450,15 +460,13 @@ public class ReaderView extends TextView {
         if (!pages.isEmpty()) {
             pages.clear();
         }
-        if (!currentDocument.text.isEmpty()) {
-            int clampedVisibleStart = clamp(visibleStart, 0, currentDocument.text.length());
-            if (!hasPendingTarget) {
-                pendingTargetCharIndex = clampedVisibleStart;
-                hasPendingTarget = true;
-            } else {
-                pendingTargetCharIndex = clamp(pendingTargetCharIndex, 0, currentDocument.text.length());
-            }
-            pendingNotifyWindowChange = true;
+        if (preservedTarget >= 0) {
+            pendingTargetCharIndex = preservedTarget;
+            hasPendingTarget = true;
+            pendingNotifyWindowChange = preservedNotify || !hadPendingTarget;
+        } else {
+            hasPendingTarget = false;
+            pendingNotifyWindowChange = false;
         }
     }
 
