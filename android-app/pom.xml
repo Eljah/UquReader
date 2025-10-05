@@ -15,7 +15,7 @@
 
   <properties>
     <android.sdk.location>${env.ANDROID_HOME}</android.sdk.location>
-    <android.platform>34</android.platform>
+    <android.platform>33</android.platform>
     <android.build-tools>30.0.3</android.build-tools>
     <java.version>1.8</java.version>
     <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
