@@ -130,6 +130,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ImageButton pageNextButton;
     private View pageControls;
     private TextView pageNumberText;
+    private View readerBottomSpacer;
     private int readerBasePaddingLeft;
     private int readerBasePaddingTop;
     private int readerBasePaddingRight;
@@ -327,6 +328,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pageNextButton = findViewById(R.id.pageNextButton);
         pageControls = findViewById(R.id.pageControls);
         pageNumberText = findViewById(R.id.pageNumberText);
+        readerBottomSpacer = findViewById(R.id.readerBottomSpacer);
 
         if (readerView != null) {
             readerBasePaddingLeft = readerView.getPaddingLeft();
@@ -930,9 +932,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     pendingVisualPage = approxPageForChar(pendingVisualChar);
                 }
                 updatePageControls();
+                updateReaderBottomInset();
             });
         } else {
             updatePageControls();
+            updateReaderBottomInset();
         }
         if (!restoringReadingState) {
             schedulePersistReadingState();
@@ -1050,8 +1054,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int right = readerBasePaddingRight;
         int bottom = readerBasePaddingBottom;
         int panelHeight = computeBottomPanelHeight();
-        bottom += panelHeight;
         int viewportInset = panelHeight;
+        if (readerBottomSpacer != null) {
+            ViewGroup.LayoutParams spacerParams = readerBottomSpacer.getLayoutParams();
+            if (spacerParams != null && spacerParams.height != panelHeight) {
+                spacerParams.height = panelHeight;
+                readerBottomSpacer.setLayoutParams(spacerParams);
+            }
+            readerBottomSpacer.setVisibility(panelHeight > 0 ? View.VISIBLE : View.GONE);
+        } else {
+            bottom += panelHeight;
+        }
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
             int overlayHeight = Math.max(0, pageControls.getHeight());
             int overlayMargin = 0;
@@ -1247,7 +1260,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int clampedStart = Math.max(0, Math.min(localStart, textLength));
         int line = layout.getLineForOffset(clampedStart);
         int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
-        readerScrollView.smoothScrollTo(0, y);
+        readerScrollView.scrollTo(0, y);
         readerScrollView.post(this::dispatchReaderViewportChanged);
     }
 
@@ -1441,7 +1454,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 int index = Math.max(0, Math.min(sentence.start, text.length()));
                 int line = layout.getLineForOffset(index);
                 int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
-                readerScrollView.smoothScrollTo(0, y);
+                readerScrollView.scrollTo(0, y);
             }
         });
     }

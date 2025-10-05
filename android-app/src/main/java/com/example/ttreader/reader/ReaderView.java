@@ -445,7 +445,7 @@ public class ReaderView extends TextView {
         int local = clamp(anchor - visibleStart, 0, contentLength);
         int line = layout.getLineForOffset(local);
         int y = getTotalPaddingTop() + layout.getLineTop(line);
-        attachedScrollView.smoothScrollTo(0, y);
+        attachedScrollView.scrollTo(0, y);
         post(this::logVisibleExposures);
     }
 
