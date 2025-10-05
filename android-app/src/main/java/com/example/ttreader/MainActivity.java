@@ -336,6 +336,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
             readerView.attachScrollView(readerScrollView);
             readerView.setWindowChangeListener(this::handleReaderWindowChanged);
+            readerView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
+                    updateReaderBottomInset());
         }
 
         if (readerScrollView != null) {
@@ -1047,7 +1049,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int top = readerBasePaddingTop;
         int right = readerBasePaddingRight;
         int bottom = readerBasePaddingBottom;
-        int viewportInset = 0;
+        int panelHeight = computeBottomPanelHeight();
+        bottom += panelHeight;
+        int viewportInset = panelHeight;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
             int overlayHeight = Math.max(0, pageControls.getHeight());
             int overlayMargin = 0;
@@ -1056,8 +1060,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 overlayMargin = ((ViewGroup.MarginLayoutParams) lp).bottomMargin;
             }
             int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
-            bottom = readerBasePaddingBottom + overlayHeight + overlayMargin + extra;
-            viewportInset = overlayHeight + overlayMargin + extra;
+            int overlayReach = overlayHeight + overlayMargin + extra;
+            int additional = Math.max(0, overlayReach - panelHeight);
+            bottom += additional;
+            viewportInset += additional;
         }
         readerViewportBottomInset = viewportInset;
         if (readerView.getPaddingLeft() != left
@@ -1068,6 +1074,23 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerView.invalidate();
         }
         dispatchReaderViewportChanged();
+    }
+
+    private int computeBottomPanelHeight() {
+        if (readerView == null) {
+            return 0;
+        }
+        int lineHeight = readerView.getLineHeight();
+        if (lineHeight <= 0) {
+            float textSize = readerView.getTextSize();
+            if (textSize > 0f) {
+                lineHeight = Math.round(textSize * 1.2f);
+            }
+        }
+        if (lineHeight <= 0) {
+            lineHeight = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
+        }
+        return Math.max(0, lineHeight * 2);
     }
 
     private void dispatchReaderViewportChanged() {

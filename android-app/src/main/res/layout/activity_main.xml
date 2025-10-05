@@ -34,16 +34,27 @@
             android:fillViewport="true"
             android:fadingEdgeLength="0dp"
             android:overScrollMode="never"
-            android:padding="24dp"
             android:requiresFadingEdge="none">
 
-            <com.example.ttreader.reader.ReaderView
-                android:id="@+id/readerView"
+            <LinearLayout
+                android:id="@+id/readerPageContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="24dp"
+                android:layout_marginBottom="24dp"
                 android:background="@drawable/reader_page_background"
-                android:padding="24dp"
-                android:textColor="@color/reader_text_primary" />
+                android:orientation="vertical">
+
+                <com.example.ttreader.reader.ReaderView
+                    android:id="@+id/readerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:padding="24dp"
+                    android:textColor="@color/reader_text_primary" />
+            </LinearLayout>
         </ScrollView>
 
         <LinearLayout
