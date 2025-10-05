@@ -31,7 +31,6 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -336,7 +335,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerBasePaddingRight = readerView.getPaddingRight();
             readerBasePaddingBottom = readerView.getPaddingBottom();
             readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
-            readerView.attachScrollView(readerScrollView);
             readerView.setWindowChangeListener(this::handleReaderWindowChanged);
             readerView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
                     updateReaderBottomInset());
@@ -346,8 +344,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerScrollView.setVerticalFadingEdgeEnabled(false);
             readerScrollView.setFadingEdgeLength(0);
             readerScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
-            observer.addOnScrollChangedListener(() -> dispatchReaderViewportChanged());
+            readerScrollView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
+                    dispatchReaderViewportChanged());
             readerScrollView.post(this::dispatchReaderViewportChanged);
         }
 
@@ -767,6 +765,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private int approxPageForChar(int charIndex) {
+        if (readerView != null && readerView.getDocumentLength() > 0) {
+            int index = readerView.getPageIndexForChar(Math.max(0, charIndex));
+            return index + 1;
+        }
         if (charIndex < 0) {
             return 1;
         }
@@ -918,7 +920,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (viewportStart >= 0) {
                 pendingVisualChar = viewportStart;
             }
-            pendingVisualPage = approxPageForChar(pendingVisualChar);
+            pendingVisualPage = readerView.getCurrentPageIndex() + 1;
         } else {
             pendingVisualPage = approxPageForChar(pendingVisualChar);
         }
@@ -928,6 +930,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 int viewportStart = readerView.getViewportStartChar();
                 if (viewportStart >= 0) {
                     pendingVisualChar = viewportStart;
+                }
+                if (readerView != null) {
+                    pendingVisualPage = readerView.getCurrentPageIndex() + 1;
+                } else {
                     pendingVisualPage = approxPageForChar(pendingVisualChar);
                 }
                 updatePageControls();
@@ -955,11 +961,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         if (pageNumberText != null) {
             if (readerView != null && readerView.getDocumentLength() > 0) {
-                int current = Math.max(1, pendingVisualPage);
-                int total = Math.max(1, (readerView.getDocumentLength() + APPROX_CHARS_PER_PAGE - 1) / APPROX_CHARS_PER_PAGE);
-                if (current > total) {
-                    current = total;
-                }
+                int current = readerView.getCurrentPageIndex() + 1;
+                int total = Math.max(1, readerView.getTotalPageCount());
                 pageNumberText.setText(String.format(Locale.getDefault(), "%d / %d", current, total));
             } else {
                 pageNumberText.setText("—");
@@ -1111,7 +1114,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return;
         }
         int height = Math.max(0, readerScrollView.getHeight() - readerViewportBottomInset);
-        readerView.onViewportChanged(readerScrollView.getScrollY(), height);
+        readerView.setViewportHeight(height);
     }
 
     private void updatePendingSpeechChar(int charIndex) {
@@ -1245,23 +1248,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void scrollToSpan(TokenSpan span, int attempt) {
-        if (readerView == null || readerScrollView == null || span == null) return;
-        readerView.ensureWindowContains(span.getStartIndex());
-        android.text.Layout layout = readerView.getLayout();
-        CharSequence text = readerView.getText();
-        if ((layout == null || text == null) && attempt < 5) {
-            readerView.postDelayed(() -> scrollToSpan(span, attempt + 1), 50);
-            return;
-        } else if (layout == null || text == null) {
-            return;
-        }
-        int textLength = text.length();
-        int localStart = readerView.toLocalCharIndex(span.getStartIndex());
-        int clampedStart = Math.max(0, Math.min(localStart, textLength));
-        int line = layout.getLineForOffset(clampedStart);
-        int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
-        readerScrollView.scrollTo(0, y);
-        readerScrollView.post(this::dispatchReaderViewportChanged);
+        if (readerView == null || span == null) return;
+        readerView.scrollToGlobalChar(span.getStartIndex());
     }
 
     private void dismissTokenSheet(boolean restoreFocus) {
@@ -1442,21 +1430,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void scrollSentenceIntoView(ReaderView.SentenceRange sentence) {
-        if (sentence == null || readerView == null || readerScrollView == null) return;
-        readerView.post(() -> {
-            TokenSpan span = readerView.findSpanForCharIndex(sentence.start);
-            if (span != null) {
-                scrollToSpan(span, 0);
-            } else {
-                android.text.Layout layout = readerView.getLayout();
-                CharSequence text = readerView.getText();
-                if (layout == null || text == null) return;
-                int index = Math.max(0, Math.min(sentence.start, text.length()));
-                int line = layout.getLineForOffset(index);
-                int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
-                readerScrollView.scrollTo(0, y);
-            }
-        });
+        if (sentence == null || readerView == null) return;
+        readerView.post(() -> readerView.scrollToGlobalChar(sentence.start));
     }
 
     private void startProgressUpdates() {

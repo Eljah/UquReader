@@ -9,10 +9,11 @@ import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.text.method.MovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.example.ttreader.data.DbHelper;
@@ -46,8 +47,8 @@ public class ReaderView extends TextView {
         void onWindowChanged(int globalStart, int globalEnd);
     }
 
-    private static final int WINDOW_PADDING_CHARS = 1000;
-    private static final int WINDOW_THRESHOLD_CHARS = 200;
+    private static final int PAGE_CHUNK_SIZE = 4000;
+    private static final int MIN_PAGE_ADVANCE_CHARS = 64;
 
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
@@ -70,13 +71,13 @@ public class ReaderView extends TextView {
     private int visibleEnd = 0;
     private int pendingInitialCharIndex = 0;
     private boolean hasPendingInitialChar = false;
-    private boolean windowChangeInProgress = false;
-    private int pendingAnchorCharIndex = -1;
-    private ScrollView attachedScrollView;
-    private int lastViewportScroll = 0;
-    private int lastViewportHeight = 0;
-    private int viewportStartChar = 0;
-    private int viewportEndChar = 0;
+    private final List<Page> pages = new ArrayList<>();
+    private int viewportHeight = 0;
+    private boolean paginationDirty = true;
+    private boolean hasPendingTarget = false;
+    private boolean pendingNotifyWindowChange = false;
+    private int pendingTargetCharIndex = 0;
+    private int currentPageIndex = 0;
     private SentenceOutlineSpan activeSentenceSpan;
     private ForegroundColorSpan activeLetterSpan;
     private int activeSentenceStart = -1;
@@ -104,6 +105,14 @@ public class ReaderView extends TextView {
         super(context, attrs, defStyle);
         movementMethod = createMovementMethod();
         init();
+    }
+
+    @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        if (w != oldw) {
+            markPaginationDirty();
+            post(this::showPendingTargetIfPossible);
+        }
     }
 
     private void init() {
@@ -156,8 +165,13 @@ public class ReaderView extends TextView {
         this.workId = workId == null ? "" : workId;
     }
 
-    public void attachScrollView(ScrollView scrollView) {
-        this.attachedScrollView = scrollView;
+    public void setViewportHeight(int height) {
+        int clamped = Math.max(0, height);
+        if (clamped != viewportHeight) {
+            viewportHeight = clamped;
+            markPaginationDirty();
+        }
+        showPendingTargetIfPossible();
     }
 
     public void setWindowChangeListener(WindowChangeListener listener) {
@@ -171,7 +185,7 @@ public class ReaderView extends TextView {
         pendingInitialCharIndex = charIndex;
         hasPendingInitialChar = true;
         if (currentDocument != null) {
-            displayWindowAround(charIndex, charIndex, false);
+            requestDisplayForChar(charIndex, false);
         }
     }
 
@@ -205,14 +219,12 @@ public class ReaderView extends TextView {
 
     public void ensureWindowContains(int globalCharIndex) {
         if (globalCharIndex < visibleStart || globalCharIndex >= visibleEnd) {
-            displayWindowAround(globalCharIndex, globalCharIndex, true);
+            requestDisplayForChar(globalCharIndex, true);
         }
     }
 
     public void scrollToGlobalChar(int globalCharIndex) {
-        ensureWindowContains(globalCharIndex);
-        pendingAnchorCharIndex = globalCharIndex;
-        post(this::alignPendingAnchor);
+        requestDisplayForChar(globalCharIndex, true);
     }
 
     public void clearContent() {
@@ -222,14 +234,18 @@ public class ReaderView extends TextView {
         tokenSpans.clear();
         sentenceRanges.clear();
         loggedExposures.clear();
+        pages.clear();
+        currentPageIndex = 0;
+        paginationDirty = true;
+        hasPendingTarget = false;
+        pendingNotifyWindowChange = false;
+        pendingTargetCharIndex = 0;
         setText("");
         activeSentenceSpan = null;
         activeLetterSpan = null;
         activeSentenceStart = -1;
         activeSentenceEnd = -1;
         activeLetterIndex = -1;
-        viewportStartChar = 0;
-        viewportEndChar = 0;
     }
 
     public void loadFromDocumentAsset(String assetName) {
@@ -328,52 +344,245 @@ public class ReaderView extends TextView {
         loggedExposures.clear();
         sentenceRanges.clear();
         sentenceRanges.addAll(result.sentenceRanges);
+        pages.clear();
+        currentPageIndex = 0;
+        paginationDirty = true;
         int target = hasPendingInitialChar ? pendingInitialCharIndex : 0;
         hasPendingInitialChar = false;
-        displayWindowAround(target, target, true);
+        requestDisplayForChar(target, true);
     }
 
     public void displayWindowAround(int targetCharIndex) {
-        displayWindowAround(targetCharIndex, targetCharIndex, true);
+        requestDisplayForChar(targetCharIndex, true);
     }
 
-    private void displayWindowAround(int targetCharIndex, int anchorCharIndex, boolean notifyWindowChange) {
-        if (currentDocument == null || currentDocument.text == null) {
-            return;
+    public void ensureWindowContains(int globalCharIndex) {
+        if (globalCharIndex < visibleStart || globalCharIndex >= visibleEnd) {
+            requestDisplayForChar(globalCharIndex, true);
         }
-        int docLength = currentDocument.text.length();
+    }
+
+    public void scrollToGlobalChar(int globalCharIndex) {
+        requestDisplayForChar(globalCharIndex, true);
+    }
+
+    private void requestDisplayForChar(int targetCharIndex, boolean notifyWindowChange) {
+        int docLength = getDocumentLength();
         if (docLength == 0) {
             clearContent();
             return;
         }
-        int target = clamp(targetCharIndex, 0, docLength);
-        int start = Math.max(0, target - WINDOW_PADDING_CHARS);
-        int end = Math.min(docLength, target + WINDOW_PADDING_CHARS);
-        if (end - start < WINDOW_PADDING_CHARS * 2 && docLength > WINDOW_PADDING_CHARS * 2) {
-            if (start == 0) {
-                end = Math.min(docLength, WINDOW_PADDING_CHARS * 2);
-            } else {
-                start = Math.max(0, docLength - WINDOW_PADDING_CHARS * 2);
-                end = docLength;
-            }
-        }
-        start = adjustStartToTokenBoundary(start);
-        end = adjustEndToTokenBoundary(Math.max(end, start + 1));
-        if (end <= start) {
-            end = Math.min(docLength, start + WINDOW_PADDING_CHARS * 2);
-        }
-        applyWindow(start, end, anchorCharIndex, notifyWindowChange);
+        pendingTargetCharIndex = clamp(targetCharIndex, 0, docLength);
+        hasPendingTarget = true;
+        pendingNotifyWindowChange = pendingNotifyWindowChange || notifyWindowChange;
+        showPendingTargetIfPossible();
     }
 
-    private void applyWindow(int windowStart, int windowEnd, int anchorCharIndex, boolean notifyWindowChange) {
+    private void showPendingTargetIfPossible() {
+        if (!hasPendingTarget) {
+            return;
+        }
+        if (!ensurePagination()) {
+            return;
+        }
+        int target = pendingTargetCharIndex;
+        boolean notify = pendingNotifyWindowChange;
+        hasPendingTarget = false;
+        pendingNotifyWindowChange = false;
+        showPageForChar(target, notify);
+    }
+
+    private boolean ensurePagination() {
+        if (currentDocument == null || currentDocument.text == null) {
+            return false;
+        }
+        if (viewportHeight <= 0 || getWidth() <= 0) {
+            return false;
+        }
+        if (paginationDirty) {
+            recomputePagination();
+        }
+        return !pages.isEmpty();
+    }
+
+    private void markPaginationDirty() {
+        paginationDirty = true;
+        if (currentDocument != null && currentDocument.text != null && !currentDocument.text.isEmpty()) {
+            pendingTargetCharIndex = clamp(visibleStart, 0, currentDocument.text.length());
+            hasPendingTarget = true;
+            pendingNotifyWindowChange = true;
+        }
+    }
+
+    private void recomputePagination() {
+        paginationDirty = false;
+        pages.clear();
         if (currentDocument == null || currentDocument.text == null) {
             return;
         }
+        String text = currentDocument.text;
+        int docLength = text.length();
+        if (docLength == 0) {
+            pages.add(new Page(0, 0));
+            return;
+        }
+        int availableWidth = Math.max(1, getWidth() - getTotalPaddingLeft() - getTotalPaddingRight());
+        int availableHeight = Math.max(1, viewportHeight - getTotalPaddingTop() - getTotalPaddingBottom());
+        int start = 0;
+        while (start < docLength) {
+            int end = computePageEnd(text, start, availableWidth, availableHeight);
+            if (end <= start) {
+                end = Math.min(docLength, start + Math.max(MIN_PAGE_ADVANCE_CHARS, availableWidth));
+            }
+            pages.add(new Page(start, end));
+            start = end;
+        }
+        if (pages.isEmpty()) {
+            pages.add(new Page(0, docLength));
+        }
+    }
+
+    private int computePageEnd(String text, int start, int availableWidth, int availableHeight) {
+        int docLength = text.length();
+        int candidateEnd = Math.min(docLength, start + PAGE_CHUNK_SIZE);
+        if (candidateEnd <= start) {
+            return docLength;
+        }
+        CharSequence chunk = text.subSequence(start, candidateEnd);
+        StaticLayout layout = buildStaticLayout(chunk, availableWidth);
+        if (layout == null) {
+            return candidateEnd;
+        }
+        int lineCount = layout.getLineCount();
+        if (lineCount == 0) {
+            return Math.min(docLength, start + MIN_PAGE_ADVANCE_CHARS);
+        }
+        int lastVisibleLine = 0;
+        for (int i = 0; i < lineCount; i++) {
+            if (layout.getLineBottom(i) <= availableHeight) {
+                lastVisibleLine = i;
+            } else {
+                break;
+            }
+        }
+        int localEnd = layout.getLineEnd(lastVisibleLine);
+        if (localEnd <= 0) {
+            localEnd = Math.min(chunk.length(), 1);
+        }
+        int trimmedLocalEnd = trimTrailingWhitespace(chunk.toString(), 0, localEnd);
+        if (trimmedLocalEnd <= 0) {
+            trimmedLocalEnd = Math.min(chunk.length(), localEnd);
+            if (trimmedLocalEnd <= 0) {
+                trimmedLocalEnd = Math.min(chunk.length(), 1);
+            }
+        }
+        int pageEnd = start + trimmedLocalEnd;
+        pageEnd = adjustPageEndToTokenBoundary(start, pageEnd);
+        if (pageEnd <= start) {
+            pageEnd = Math.min(docLength, start + trimmedLocalEnd);
+            if (pageEnd <= start) {
+                pageEnd = Math.min(docLength, start + MIN_PAGE_ADVANCE_CHARS);
+            }
+        }
+        return pageEnd;
+    }
+
+    private StaticLayout buildStaticLayout(CharSequence text, int width) {
+        if (text == null) return null;
+        TextPaint paint = getPaint();
+        if (paint == null) return null;
+        int effectiveWidth = Math.max(1, width);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return StaticLayout.Builder.obtain(text, 0, text.length(), paint, effectiveWidth)
+                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                    .setIncludePad(false)
+                    .setLineSpacing(getLineSpacingExtra(), getLineSpacingMultiplier())
+                    .build();
+        } else {
+            //noinspection deprecation
+            return new StaticLayout(text, paint, effectiveWidth, Layout.Alignment.ALIGN_NORMAL,
+                    getLineSpacingMultiplier(), getLineSpacingExtra(), false);
+        }
+    }
+
+    private int adjustPageEndToTokenBoundary(int start, int candidate) {
+        int docLength = getDocumentLength();
+        int clamped = clamp(candidate, start + 1, docLength);
+        int best = clamped;
+        for (TokenSpan span : tokenSpans) {
+            if (span == null) continue;
+            int spanEnd = span.getEndIndex();
+            if (spanEnd <= start) continue;
+            if (spanEnd <= clamped) {
+                best = spanEnd;
+            } else {
+                break;
+            }
+        }
+        if (best <= start && currentDocument != null && currentDocument.text != null) {
+            for (int i = clamped; i > start + 1; i--) {
+                char c = currentDocument.text.charAt(i - 1);
+                if (Character.isWhitespace(c) || c == ',' || c == '.' || c == ';'
+                        || c == ':' || c == '!' || c == '?' || c == '-') {
+                    best = i;
+                    break;
+                }
+            }
+        }
+        if (best <= start) {
+            best = clamped;
+        }
+        return best;
+    }
+
+    private void showPageForChar(int charIndex, boolean notifyWindowChange) {
+        if (pages.isEmpty()) {
+            return;
+        }
+        int index = findPageIndexForChar(charIndex);
+        showPageAtIndex(index, notifyWindowChange);
+    }
+
+    private int findPageIndexForChar(int charIndex) {
+        if (pages.isEmpty()) {
+            return 0;
+        }
+        int low = 0;
+        int high = pages.size() - 1;
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            Page page = pages.get(mid);
+            if (charIndex < page.start) {
+                high = mid - 1;
+            } else if (charIndex >= page.end) {
+                low = mid + 1;
+            } else {
+                return mid;
+            }
+        }
+        return Math.max(0, Math.min(pages.size() - 1, low));
+    }
+
+    private void showPageAtIndex(int index, boolean notifyWindowChange) {
+        if (pages.isEmpty()) {
+            return;
+        }
+        int clampedIndex = Math.max(0, Math.min(index, pages.size() - 1));
+        currentPageIndex = clampedIndex;
+        Page page = pages.get(clampedIndex);
+        applyPage(page.start, page.end, notifyWindowChange);
+    }
+
+    private void applyPage(int pageStart, int pageEnd, boolean notifyWindowChange) {
+        if (currentDocument == null || currentDocument.text == null) {
+            clearContent();
+            return;
+        }
         int docLength = currentDocument.text.length();
-        int clampedStart = clamp(windowStart, 0, docLength);
-        int clampedEnd = clamp(windowEnd, clampedStart, docLength);
+        int clampedStart = clamp(pageStart, 0, docLength);
+        int clampedEnd = clamp(pageEnd, clampedStart, docLength);
         if (clampedEnd <= clampedStart) {
-            clampedEnd = Math.min(docLength, clampedStart + WINDOW_PADDING_CHARS * 2);
+            clampedEnd = Math.min(docLength, clampedStart + MIN_PAGE_ADVANCE_CHARS);
         }
         SpannableStringBuilder builder = new SpannableStringBuilder(
                 currentDocument.text.substring(clampedStart, clampedEnd));
@@ -381,7 +590,7 @@ public class ReaderView extends TextView {
             if (span == null) continue;
             int spanStart = span.getStartIndex();
             int spanEnd = span.getEndIndex();
-            if (spanStart >= clampedEnd || spanEnd <= clampedStart) {
+            if (spanEnd <= clampedStart || spanStart >= clampedEnd) {
                 continue;
             }
             int localStart = Math.max(0, spanStart - clampedStart);
@@ -391,7 +600,6 @@ public class ReaderView extends TextView {
             }
             builder.setSpan(span, localStart, localEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
-        windowChangeInProgress = true;
         visibleStart = clampedStart;
         visibleEnd = clampedEnd;
         setText(builder);
@@ -399,13 +607,52 @@ public class ReaderView extends TextView {
             setMovementMethod(movementMethod);
         }
         reapplySpeechHighlights();
-        windowChangeInProgress = false;
-        pendingAnchorCharIndex = anchorCharIndex;
-        post(this::alignPendingAnchor);
         logVisibleExposures();
         if (notifyWindowChange && windowChangeListener != null) {
             windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
         }
+    }
+
+    public boolean hasPreviousPage() {
+        return currentPageIndex > 0;
+    }
+
+    public boolean hasNextPage() {
+        return currentPageIndex + 1 < pages.size();
+    }
+
+    public int getCurrentPageIndex() {
+        return Math.max(0, Math.min(currentPageIndex, pages.size() - 1));
+    }
+
+    public int getTotalPageCount() {
+        return pages.size();
+    }
+
+    public int getPageIndexForChar(int charIndex) {
+        return findPageIndexForChar(charIndex);
+    }
+
+    public int getViewportStartChar() {
+        return visibleStart;
+    }
+
+    public int getViewportEndChar() {
+        return visibleEnd;
+    }
+
+    public int findNextPageStart() {
+        if (!hasNextPage()) {
+            return -1;
+        }
+        return pages.get(currentPageIndex + 1).start;
+    }
+
+    public int findPreviousPageStart() {
+        if (!hasPreviousPage()) {
+            return -1;
+        }
+        return pages.get(currentPageIndex - 1).start;
     }
 
     private void reapplySpeechHighlights() {
@@ -414,110 +661,6 @@ public class ReaderView extends TextView {
         }
         if (activeLetterIndex >= 0) {
             highlightLetter(activeLetterIndex);
-        }
-    }
-
-    private void alignPendingAnchor() {
-        if (pendingAnchorCharIndex < 0) {
-            return;
-        }
-        int anchor = pendingAnchorCharIndex;
-        pendingAnchorCharIndex = -1;
-        if (anchor < visibleStart) {
-            anchor = visibleStart;
-        } else if (anchor > visibleEnd) {
-            anchor = visibleEnd;
-        }
-        if (attachedScrollView == null) {
-            return;
-        }
-        Layout layout = getLayout();
-        CharSequence text = getText();
-        if (layout == null || text == null) {
-            final int retryAnchor = anchor;
-            postDelayed(() -> {
-                pendingAnchorCharIndex = retryAnchor;
-                alignPendingAnchor();
-            }, 16);
-            return;
-        }
-        int contentLength = text.length();
-        int local = clamp(anchor - visibleStart, 0, contentLength);
-        int line = layout.getLineForOffset(local);
-        int y = getTotalPaddingTop() + layout.getLineTop(line);
-        attachedScrollView.scrollTo(0, y);
-        post(this::logVisibleExposures);
-    }
-
-    public void onViewportChanged(int scrollY, int viewportHeight) {
-        lastViewportScroll = Math.max(0, scrollY);
-        lastViewportHeight = Math.max(0, viewportHeight);
-        if (!windowChangeInProgress) {
-            ensureWindowForViewport(scrollY, viewportHeight);
-        }
-        logVisibleExposures();
-    }
-
-    public boolean hasPreviousPage() {
-        return viewportStartChar > 0;
-    }
-
-    public boolean hasNextPage() {
-        if (currentDocument == null || currentDocument.text == null) {
-            return false;
-        }
-        return viewportEndChar < currentDocument.text.length();
-    }
-
-    public int getViewportStartChar() {
-        return viewportStartChar;
-    }
-
-    public int getViewportEndChar() {
-        return viewportEndChar;
-    }
-
-    public int findNextPageStart() {
-        if (!hasNextPage()) {
-            return -1;
-        }
-        return Math.max(viewportStartChar + 1, viewportEndChar);
-    }
-
-    public int findPreviousPageStart() {
-        if (!hasPreviousPage()) {
-            return -1;
-        }
-        int span = Math.max(1, viewportEndChar - viewportStartChar);
-        int candidate = viewportStartChar - span;
-        if (candidate < 0) {
-            candidate = 0;
-        }
-        return candidate;
-    }
-
-    private void ensureWindowForViewport(int scrollY, int viewportHeight) {
-        if (currentDocument == null || currentDocument.text == null) {
-            return;
-        }
-        Layout layout = getLayout();
-        CharSequence text = getText();
-        if (layout == null || text == null || text.length() == 0) {
-            return;
-        }
-        int contentLength = text.length();
-        int topLine = layout.getLineForVertical(scrollY);
-        int bottomLine = layout.getLineForVertical(scrollY + viewportHeight);
-        int localTop = clamp(layout.getLineStart(topLine), 0, contentLength);
-        int localBottom = clamp(layout.getLineEnd(bottomLine), 0, contentLength);
-        int globalTop = visibleStart + localTop;
-        int globalBottom = visibleStart + localBottom;
-        viewportStartChar = globalTop;
-        viewportEndChar = Math.max(globalTop, globalBottom);
-        if (globalTop < visibleStart + WINDOW_THRESHOLD_CHARS && visibleStart > 0) {
-            displayWindowAround(Math.max(0, globalTop - WINDOW_PADDING_CHARS / 2), globalTop, true);
-        } else if (globalBottom > visibleEnd - WINDOW_THRESHOLD_CHARS && visibleEnd < getDocumentLength()) {
-            displayWindowAround(Math.min(getDocumentLength(), globalBottom + WINDOW_PADDING_CHARS / 2), globalBottom, true);
         }
     }
 
@@ -659,15 +802,8 @@ public class ReaderView extends TextView {
 
     private void logVisibleExposures() {
         if (usageDao == null || tokenSpans.isEmpty()) return;
-        if (lastViewportHeight <= 0) return;
-        Layout layout = getLayout();
-        CharSequence text = getText();
-        if (layout == null || text == null) return;
-        int contentLength = text.length();
-        int visibleTop = lastViewportScroll;
-        int visibleBottom = visibleTop + lastViewportHeight;
-        int firstLine = layout.getLineForVertical(visibleTop);
-        int lastLine = layout.getLineForVertical(Math.max(visibleBottom, 0));
+        if (visibleEnd <= visibleStart) return;
+        long now = System.currentTimeMillis();
         for (TokenSpan span : tokenSpans) {
             if (span == null || loggedExposures.contains(span)) continue;
             int globalStart = span.getStartIndex();
@@ -675,21 +811,8 @@ public class ReaderView extends TextView {
             if (globalEnd <= visibleStart || globalStart >= visibleEnd) {
                 continue;
             }
-            int localStart = clampIndex(globalStart - visibleStart, contentLength);
-            int localEnd = clampIndex(globalEnd - visibleStart, contentLength);
-            if (localEnd <= localStart) continue;
-            int startLine = layout.getLineForOffset(localStart);
-            int endLine = layout.getLineForOffset(Math.max(0, localEnd - 1));
-            if (startLine <= lastLine && endLine >= firstLine) {
-                recordExposure(span, System.currentTimeMillis());
-            }
+            recordExposure(span, now);
         }
-    }
-
-    private int clampIndex(int value, int max) {
-        if (value < 0) return 0;
-        if (value > max) return max;
-        return value;
     }
 
     private void recordExposure(TokenSpan span, long timestamp) {
@@ -735,30 +858,6 @@ public class ReaderView extends TextView {
 
         List<SentenceRange> ranges = buildSentenceRanges(plain.toString());
         return new LoadResult(plain.toString(), spans, ranges);
-    }
-
-    private int adjustStartToTokenBoundary(int candidate) {
-        int result = Math.max(0, candidate);
-        for (int i = tokenSpans.size() - 1; i >= 0; i--) {
-            TokenSpan span = tokenSpans.get(i);
-            if (span == null) continue;
-            if (span.getStartIndex() <= result) {
-                return Math.max(0, span.getStartIndex());
-            }
-        }
-        return result;
-    }
-
-    private int adjustEndToTokenBoundary(int candidate) {
-        int docLength = getDocumentLength();
-        int result = clamp(candidate, 0, docLength);
-        for (TokenSpan span : tokenSpans) {
-            if (span == null) continue;
-            if (span.getEndIndex() >= result) {
-                return Math.min(docLength, span.getEndIndex());
-            }
-        }
-        return result;
     }
 
     private List<SentenceRange> buildSentenceRanges(String text) {
@@ -837,6 +936,16 @@ public class ReaderView extends TextView {
 
         public int length() {
             return Math.max(0, end - start);
+        }
+    }
+
+    private static final class Page {
+        final int start;
+        final int end;
+
+        Page(int start, int end) {
+            this.start = Math.max(0, start);
+            this.end = Math.max(this.start, end);
         }
     }
 
