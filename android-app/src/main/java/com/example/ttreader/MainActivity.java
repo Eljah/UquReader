@@ -133,6 +133,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private View pageControls;
     private TextView pageNumberText;
     private View readerBottomPanel;
+    private View readerPageContainer;
     private int readerBasePaddingLeft;
     private int readerBasePaddingTop;
     private int readerBasePaddingRight;
@@ -142,8 +143,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private final List<Runnable> pendingViewportReadyActions = new ArrayList<>();
     private boolean awaitingViewportMeasurement;
     private boolean readerViewportReady;
-    private boolean readerBottomInsetLocked;
-    private int readerLockedBottomInset;
+    private int readerContainerMarginTop;
+    private int readerContainerMarginBottom;
+    private int readerBottomPanelBaseHeight;
     private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
     private boolean flushingViewportActions;
     private ReadingState currentReadingState;
@@ -340,6 +342,25 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pageControls = findViewById(R.id.pageControls);
         pageNumberText = findViewById(R.id.pageNumberText);
         readerBottomPanel = findViewById(R.id.readerBottomPanel);
+        readerPageContainer = findViewById(R.id.readerPageContainer);
+        if (readerPageContainer != null) {
+            ViewGroup.LayoutParams containerParams = readerPageContainer.getLayoutParams();
+            if (containerParams instanceof ViewGroup.MarginLayoutParams) {
+                ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) containerParams;
+                readerContainerMarginTop = mlp.topMargin;
+                readerContainerMarginBottom = mlp.bottomMargin;
+            }
+        }
+        if (readerBottomPanel != null) {
+            ViewGroup.LayoutParams panelParams = readerBottomPanel.getLayoutParams();
+            if (panelParams != null && panelParams.height > 0) {
+                readerBottomPanelBaseHeight = panelParams.height;
+            } else {
+                readerBottomPanelBaseHeight = getResources().getDimensionPixelSize(R.dimen.reader_bottom_panel_min_height);
+            }
+        } else {
+            readerBottomPanelBaseHeight = getResources().getDimensionPixelSize(R.dimen.reader_bottom_panel_min_height);
+        }
 
         if (readerView != null) {
             readerBasePaddingLeft = readerView.getPaddingLeft();
@@ -1064,7 +1085,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int top = readerBasePaddingTop;
         int right = readerBasePaddingRight;
         int bottom = readerBasePaddingBottom;
-        int panelHeight = computeBottomPanelHeight();
         int overlayClearance = 0;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
             int overlayHeight = Math.max(0, pageControls.getHeight());
@@ -1075,14 +1095,31 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
             int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
             int overlayReach = overlayHeight + overlayMargin + extra;
-            overlayClearance = Math.max(0, overlayReach - panelHeight);
+            overlayClearance = Math.max(0, overlayReach);
         }
-        int desiredPanelHeight = panelHeight + overlayClearance;
-        if (readerBottomInsetLocked) {
-            if (desiredPanelHeight < readerLockedBottomInset) {
-                desiredPanelHeight = readerLockedBottomInset;
-            } else if (desiredPanelHeight > readerLockedBottomInset) {
-                readerLockedBottomInset = desiredPanelHeight;
+        int desiredPanelHeight = Math.max(readerBottomPanelBaseHeight, overlayClearance);
+        if (readerScrollView != null && readerPageContainer != null) {
+            int scrollHeight = readerScrollView.getHeight();
+            int scrollPaddingTop = readerScrollView.getPaddingTop();
+            int scrollPaddingBottom = readerScrollView.getPaddingBottom();
+            int availableHeight = scrollHeight - scrollPaddingTop - scrollPaddingBottom;
+            if (availableHeight < 0) {
+                availableHeight = 0;
+            }
+            int verticalMargins = readerContainerMarginTop + readerContainerMarginBottom;
+            if (verticalMargins > 0) {
+                availableHeight = Math.max(0, availableHeight - verticalMargins);
+            }
+            int readerHeight = readerView.getHeight();
+            if (readerHeight <= 0) {
+                readerHeight = readerView.getMeasuredHeight();
+            }
+            if (readerHeight > availableHeight) {
+                readerHeight = availableHeight;
+            }
+            if (availableHeight > 0 && readerHeight >= 0) {
+                int leftover = Math.max(0, availableHeight - readerHeight);
+                desiredPanelHeight = Math.max(desiredPanelHeight, leftover);
             }
         }
 
@@ -1112,32 +1149,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerViewportBottomInset = desiredPanelHeight;
         }
 
-        if (!readerBottomInsetLocked && desiredPanelHeight > 0) {
-            readerBottomInsetLocked = true;
-            readerLockedBottomInset = desiredPanelHeight;
-        }
-
         if (insetChanged || panelChanged || paddingChanged) {
             dispatchReaderViewportChanged();
         }
-    }
-
-    private int computeBottomPanelHeight() {
-        if (readerView == null) {
-            return 0;
-        }
-        int minPanel = getResources().getDimensionPixelSize(R.dimen.reader_bottom_panel_min_height);
-        int lineHeight = readerView.getLineHeight();
-        if (lineHeight <= 0) {
-            float textSize = readerView.getTextSize();
-            if (textSize > 0f) {
-                lineHeight = Math.round(textSize * 1.2f);
-            }
-        }
-        if (lineHeight <= 0) {
-            return minPanel;
-        }
-        return Math.max(minPanel, lineHeight * 2);
     }
 
     private void runWhenReaderViewportReady(Runnable action) {

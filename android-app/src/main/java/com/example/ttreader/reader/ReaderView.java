@@ -451,8 +451,13 @@ public class ReaderView extends TextView {
             pages.clear();
         }
         if (!currentDocument.text.isEmpty()) {
-            pendingTargetCharIndex = clamp(visibleStart, 0, currentDocument.text.length());
-            hasPendingTarget = true;
+            int clampedVisibleStart = clamp(visibleStart, 0, currentDocument.text.length());
+            if (!hasPendingTarget) {
+                pendingTargetCharIndex = clampedVisibleStart;
+                hasPendingTarget = true;
+            } else {
+                pendingTargetCharIndex = clamp(pendingTargetCharIndex, 0, currentDocument.text.length());
+            }
             pendingNotifyWindowChange = true;
         }
     }
