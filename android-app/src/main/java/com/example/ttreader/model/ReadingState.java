@@ -9,12 +9,13 @@ public class ReadingState {
     public final String lastMode;
     public final int visualPage;
     public final int visualCharIndex;
+    public final int visualCardHeight;
     public final int voiceSentenceIndex;
     public final int voiceCharIndex;
     public final long updatedMs;
 
     public ReadingState(String languagePair, String workId, String lastMode,
-                        int visualPage, int visualCharIndex,
+                        int visualPage, int visualCharIndex, int visualCardHeight,
                         int voiceSentenceIndex, int voiceCharIndex,
                         long updatedMs) {
         this.languagePair = languagePair;
@@ -22,6 +23,7 @@ public class ReadingState {
         this.lastMode = lastMode == null ? "" : lastMode;
         this.visualPage = visualPage;
         this.visualCharIndex = visualCharIndex;
+        this.visualCardHeight = Math.max(0, visualCardHeight);
         this.voiceSentenceIndex = voiceSentenceIndex;
         this.voiceCharIndex = voiceCharIndex;
         this.updatedMs = updatedMs;

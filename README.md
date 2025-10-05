@@ -23,7 +23,7 @@ CREATE INDEX tt_ru_tt_idx ON tt_ru(lemma_tt);
 ## Сборка
 Нужен Android SDK (переменные окружения `ANDROID_SDK_ROOT` или `ANDROID_HOME`). Если нужный пакет `build-tools;33.0.2` отсутствует в каталоге SDK, сборка автоматически вызовет `sdkmanager` и установит его перед генерацией `R.java` и запуском D8.
 
-Пример команд (скрипт `./mvnw` перед запуском Maven автоматически собирает вспомогательный `sun.misc.BASE64Encoder` shim и при необходимости создает debug-keystore для установки APK; существующий `~/.android/debug.keystore` переиспользуется, поэтому обновление установленного приложения не ломается. В GitHub Actions ключ сохраняется в кэше и повторно используется между сборками). По умолчанию используется платформа Android 28 и build-tools 33.0.2. Версию build-tools можно переопределить переменной окружения `ANDROID_BUILD_TOOLS_VERSION` или параметром Maven `-Dandroid.build-tools`, а платформу — флагом `-Dandroid.platform`:
+Пример команд (скрипт `./mvnw` перед запуском Maven автоматически собирает вспомогательный `sun.misc.BASE64Encoder` shim и при необходимости создает debug-keystore для установки APK; существующий `~/.android/debug.keystore` переиспользуется, поэтому обновление установленного приложения не ломается. В GitHub Actions ключ сохраняется в кэше и повторно используется между сборками). По умолчанию используется платформа Android 34 и build-tools 33.0.2. Версию build-tools можно переопределить переменной окружения `ANDROID_BUILD_TOOLS_VERSION` или параметром Maven `-Dandroid.build-tools`, а платформу — флагом `-Dandroid.platform`:
 ```bash
 ./mvnw -e clean install
 # при подключенном устройстве / эмуляторе:

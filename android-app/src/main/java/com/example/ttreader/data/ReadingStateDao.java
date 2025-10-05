@@ -26,7 +26,8 @@ public class ReadingStateDao {
         String work = sanitize(workId);
         try (Cursor c = db.query(TABLE_NAME,
                 new String[]{"language_pair", "work_id", "last_mode", "visual_page",
-                        "visual_char_index", "voice_sentence_index", "voice_char_index", "updated_ms"},
+                        "visual_char_index", "visual_card_height", "voice_sentence_index",
+                        "voice_char_index", "updated_ms"},
                 "language_pair=? AND work_id=?",
                 new String[]{lang, work}, null, null, null)) {
             if (c.moveToFirst()) {
@@ -38,7 +39,8 @@ public class ReadingStateDao {
                         c.getInt(4),
                         c.getInt(5),
                         c.getInt(6),
-                        c.getLong(7));
+                        c.getInt(7),
+                        c.getLong(8));
             }
         }
         return null;
@@ -68,6 +70,7 @@ public class ReadingStateDao {
                 insert.put("work_id", work);
                 insert.put("visual_page", safePage);
                 insert.put("visual_char_index", safeChar);
+                insert.put("visual_card_height", 0);
                 insert.put("voice_sentence_index", -1);
                 insert.put("voice_char_index", -1);
                 insert.put("updated_ms", safeTimestamp);
@@ -101,10 +104,39 @@ public class ReadingStateDao {
                 insert.put("work_id", work);
                 insert.put("visual_page", 0);
                 insert.put("visual_char_index", 0);
+                insert.put("visual_card_height", 0);
                 insert.put("voice_sentence_index", safeSentence);
                 insert.put("voice_char_index", safeChar);
                 insert.put("updated_ms", safeTimestamp);
                 insert.put("last_mode", updateLast ? ReadingState.MODE_VOICE : "");
+                db.insertWithOnConflict(TABLE_NAME, null, insert, SQLiteDatabase.CONFLICT_REPLACE);
+            }
+        });
+    }
+
+    public void updateVisualCardHeight(String languagePair, String workId, int cardHeight,
+                                       long timestamp) {
+        final String lang = sanitize(languagePair);
+        final String work = sanitize(workId);
+        final int safeHeight = Math.max(0, cardHeight);
+        final long safeTimestamp = Math.max(0L, timestamp);
+        writeQueue.enqueue(() -> {
+            ContentValues update = new ContentValues();
+            update.put("visual_card_height", safeHeight);
+            update.put("updated_ms", safeTimestamp);
+            int rows = db.update(TABLE_NAME, update,
+                    "language_pair=? AND work_id=?", new String[]{lang, work});
+            if (rows == 0) {
+                ContentValues insert = new ContentValues();
+                insert.put("language_pair", lang);
+                insert.put("work_id", work);
+                insert.put("visual_page", 0);
+                insert.put("visual_char_index", 0);
+                insert.put("visual_card_height", safeHeight);
+                insert.put("voice_sentence_index", -1);
+                insert.put("voice_char_index", -1);
+                insert.put("updated_ms", safeTimestamp);
+                insert.put("last_mode", "");
                 db.insertWithOnConflict(TABLE_NAME, null, insert, SQLiteDatabase.CONFLICT_REPLACE);
             }
         });

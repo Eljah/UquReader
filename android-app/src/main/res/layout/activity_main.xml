@@ -33,8 +33,22 @@
                 android:id="@+id/readerView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@color/reader_card_background"
                 android:padding="16dp" />
         </ScrollView>
+
+        <TextView
+            android:id="@+id/pageIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/page_indicator_background"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="@string/reader_page_indicator_placeholder"
+            android:textColor="@android:color/black"
+            android:textStyle="bold" />
 
         <ImageButton
             android:id="@+id/pagePreviousButton"

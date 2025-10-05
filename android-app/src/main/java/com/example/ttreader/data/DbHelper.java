@@ -18,7 +18,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 6;
+    private static final int APP_DB_VERSION = 7;
 
     private static final String TAG = "DbHelper";
     private static final String PREFS_NAME = "com.example.ttreader.DB_PREFS";
@@ -73,6 +73,13 @@ public class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 6) {
             createReadingStateTable(db);
+        }
+        if (oldVersion < 7) {
+            try {
+                db.execSQL("ALTER TABLE reading_state ADD COLUMN visual_card_height INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {
+                // Column may already exist on some devices.
+            }
         }
     }
 
@@ -256,6 +263,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 " last_mode TEXT NOT NULL DEFAULT '',\n" +
                 " visual_page INTEGER NOT NULL DEFAULT 0,\n" +
                 " visual_char_index INTEGER NOT NULL DEFAULT 0,\n" +
+                " visual_card_height INTEGER NOT NULL DEFAULT 0,\n" +
                 " voice_sentence_index INTEGER NOT NULL DEFAULT -1,\n" +
                 " voice_char_index INTEGER NOT NULL DEFAULT -1,\n" +
                 " updated_ms INTEGER NOT NULL DEFAULT 0,\n" +

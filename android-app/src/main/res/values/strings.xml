@@ -77,4 +77,6 @@
     <string name="rhvoice_no_handler">Не удалось открыть ссылку для установки RHVoice.</string>
     <string name="reader_page_previous">Предыдущая страница</string>
     <string name="reader_page_next">Следующая страница</string>
+    <string name="reader_page_indicator_placeholder">— / —</string>
+    <string name="reader_page_indicator_format">%1$d / %2$d</string>
 </resources>

@@ -37,6 +37,7 @@ import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
@@ -72,6 +73,7 @@ import java.util.Set;
 
 public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
     private static final String TAG = "MainActivity";
+    private static final String TAG_LAYOUT = "ReaderLayout";
     private static final String LANGUAGE_PAIR_TT_RU = "tt-ru";
     private static final int MENU_WORK_ID_BASE = 100;
     private static final String PREFS_READER_STATE = "com.example.ttreader.reader_state";
@@ -126,6 +128,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ProgressBar readerLoadingIndicator;
     private ImageButton pagePreviousButton;
     private ImageButton pageNextButton;
+    private TextView pageIndicator;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -148,6 +151,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private WorkInfo currentWork;
     private int readingProgressColor;
     private int listeningProgressColor;
+    private int cachedVisualCardHeight = 0;
+    private final int[] tmpViewLocation = new int[2];
+    private ViewTreeObserver.OnGlobalLayoutListener readerLayoutListener;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
@@ -316,9 +322,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
         pagePreviousButton = findViewById(R.id.pagePreviousButton);
         pageNextButton = findViewById(R.id.pageNextButton);
+        pageIndicator = findViewById(R.id.pageIndicator);
         readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
         readerView.attachScrollView(readerScrollView);
         readerView.setWindowChangeListener(this::handleReaderWindowChanged);
+        setupReaderLayoutLogging();
 
         if (readerScrollView != null) {
             readerScrollView.setOnTouchListener((v, event) -> true);
@@ -433,6 +441,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         dismissRhvoiceDialog();
         speechProgressHandler.removeCallbacksAndMessages(null);
+        disposeReaderLayoutLogging();
         super.onDestroy();
     }
 
@@ -797,12 +806,22 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         return currentWork;
     }
 
+    private void setCurrentReadingState(ReadingState state) {
+        currentReadingState = state;
+        cachedVisualCardHeight = state != null ? Math.max(0, state.visualCardHeight) : 0;
+        applyCachedReaderCardHeight();
+        updatePageIndicator();
+    }
+
     private void reloadReaderForCurrentSelection() {
         WorkInfo work = getCurrentWork();
         if (readerView == null || work == null) return;
         if (readingStateDao != null) {
-            currentReadingState = readingStateDao.getState(currentLanguagePair, work.id);
+            setCurrentReadingState(readingStateDao.getState(currentLanguagePair, work.id));
+        } else {
+            setCurrentReadingState(null);
         }
+        setupReaderLayoutLogging();
         readerView.setUsageContext(currentLanguagePair, work.id);
         shouldContinueSpeech = currentReadingState != null
                 && currentReadingState.isVoiceMode()
@@ -882,6 +901,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void handleReaderWindowChanged(int start, int end) {
+        logLayoutState("handleReaderWindowChanged");
         pendingVisualChar = Math.max(0, start);
         if (readerView != null) {
             int viewportStart = readerView.getViewportStartChar();
@@ -921,12 +941,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             pageNextButton.setEnabled(enabled);
             pageNextButton.setAlpha(enabled ? 1f : 0.3f);
         }
+        updatePageIndicator();
+        logLayoutState("updatePageControls");
     }
 
     private void goToPreviousPage() {
         if (readerView == null) {
             return;
         }
+        logLayoutState("goToPreviousPage");
         int target = readerView.findPreviousPageStart();
         if (target >= 0) {
             readerView.scrollToGlobalChar(target);
@@ -937,10 +960,107 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView == null) {
             return;
         }
+        logLayoutState("goToNextPage");
         int target = readerView.findNextPageStart();
         if (target >= 0) {
             readerView.scrollToGlobalChar(target);
         }
+    }
+
+    private void updatePageIndicator() {
+        if (pageIndicator == null) {
+            return;
+        }
+        int currentPage = Math.max(1, pendingVisualPage);
+        int totalPages = currentPage;
+        if (readerView != null) {
+            int docLength = Math.max(0, readerView.getDocumentLength());
+            totalPages = Math.max(currentPage, approxPageForChar(docLength));
+        }
+        if (totalPages <= 0) {
+            totalPages = currentPage;
+        }
+        String text = getString(R.string.reader_page_indicator_format, currentPage, totalPages);
+        pageIndicator.setText(text);
+        logViewMetrics("pageIndicator", pageIndicator, "updatePageIndicator");
+        Log.d(TAG_LAYOUT, "updatePageIndicator stack=" + Log.getStackTraceString(new Throwable()));
+    }
+
+    private void applyCachedReaderCardHeight() {
+        if (readerView == null) {
+            return;
+        }
+        int appliedHeight = Math.max(0, cachedVisualCardHeight);
+        if (appliedHeight > 0) {
+            readerView.setMinimumHeight(appliedHeight);
+            readerView.setMinHeight(appliedHeight);
+        }
+        logViewMetrics("yellowCard", readerView, "applyCachedReaderCardHeight");
+        Log.d(TAG_LAYOUT, "applyCachedReaderCardHeight stack="
+                + Log.getStackTraceString(new Throwable()));
+    }
+
+    private void maybePersistReaderCardHeight() {
+        if (readerView == null || readingStateDao == null || currentWork == null) {
+            return;
+        }
+        int height = readerView.getHeight();
+        if (height <= 0 || height <= cachedVisualCardHeight) {
+            return;
+        }
+        cachedVisualCardHeight = height;
+        readingStateDao.updateVisualCardHeight(currentLanguagePair, currentWork.id,
+                height, System.currentTimeMillis());
+        logViewMetrics("yellowCard", readerView, "persistReaderCardHeight");
+        Log.d(TAG_LAYOUT, "persistReaderCardHeight stack="
+                + Log.getStackTraceString(new Throwable()));
+    }
+
+    private void logLayoutState(String event) {
+        logViewMetrics("yellowCard", readerView, event);
+        logViewMetrics("pageIndicator", pageIndicator, event);
+        logViewMetrics("pagePreviousButton", pagePreviousButton, event);
+        logViewMetrics("pageNextButton", pageNextButton, event);
+        Log.d(TAG_LAYOUT, event + " stack=" + Log.getStackTraceString(new Throwable()));
+    }
+
+    private void logViewMetrics(String elementName, View view, String event) {
+        if (view == null) {
+            Log.d(TAG_LAYOUT, elementName + " unavailable for event=" + event);
+            return;
+        }
+        int[] location = tmpViewLocation;
+        try {
+            view.getLocationOnScreen(location);
+        } catch (IllegalArgumentException e) {
+            Log.d(TAG_LAYOUT, elementName + " off-screen for event=" + event);
+            return;
+        }
+        String message = elementName + " event=" + event
+                + " pos=(" + location[0] + "," + location[1] + ")"
+                + " size=(" + view.getWidth() + "x" + view.getHeight() + ")";
+        Log.d(TAG_LAYOUT, message);
+    }
+
+    private void setupReaderLayoutLogging() {
+        if (readerView == null) {
+            return;
+        }
+        disposeReaderLayoutLogging();
+        readerLayoutListener = this::onReaderViewGlobalLayout;
+        readerView.getViewTreeObserver().addOnGlobalLayoutListener(readerLayoutListener);
+    }
+
+    private void disposeReaderLayoutLogging() {
+        if (readerView != null && readerLayoutListener != null) {
+            readerView.getViewTreeObserver().removeOnGlobalLayoutListener(readerLayoutListener);
+        }
+        readerLayoutListener = null;
+    }
+
+    private void onReaderViewGlobalLayout() {
+        logLayoutState("readerOnGlobalLayout");
+        maybePersistReaderCardHeight();
     }
 
     private void schedulePersistReadingState() {
@@ -975,9 +1095,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 safeVisualChar, now, visualIsLast);
         readingStateDao.updateVoiceState(currentLanguagePair, work.id, speechSentence,
                 speechChar, now, voiceIsLast);
+        if (cachedVisualCardHeight > 0) {
+            readingStateDao.updateVisualCardHeight(currentLanguagePair, work.id,
+                    cachedVisualCardHeight, now);
+        }
         String mode = voiceIsLast ? ReadingState.MODE_VOICE : ReadingState.MODE_VISUAL;
-        currentReadingState = new ReadingState(currentLanguagePair, work.id, mode,
-                safeVisualPage, safeVisualChar, speechSentence, speechChar, now);
+        ReadingState updatedState = new ReadingState(currentLanguagePair, work.id, mode,
+                safeVisualPage, safeVisualChar, cachedVisualCardHeight,
+                speechSentence, speechChar, now);
+        setCurrentReadingState(updatedState);
         pendingLastMode = mode;
     }
 
@@ -993,6 +1119,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         if (pageNextButton != null) {
             pageNextButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        }
+        if (pageIndicator != null) {
+            pageIndicator.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
         }
     }
 
@@ -1023,9 +1152,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         persistReadingStateNow();
         stopSpeech();
         if (readingStateDao != null) {
-            currentReadingState = readingStateDao.getState(currentLanguagePair, work.id);
+            setCurrentReadingState(readingStateDao.getState(currentLanguagePair, work.id));
         } else {
-            currentReadingState = null;
+            setCurrentReadingState(null);
         }
         currentWork = work;
         reloadReaderForCurrentSelection();
@@ -1072,9 +1201,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         stopSpeech();
         currentLanguagePair = languagePair;
         if (readingStateDao != null && currentWork != null) {
-            currentReadingState = readingStateDao.getState(currentLanguagePair, currentWork.id);
+            setCurrentReadingState(readingStateDao.getState(currentLanguagePair, currentWork.id));
         } else {
-            currentReadingState = null;
+            setCurrentReadingState(null);
         }
         reloadReaderForCurrentSelection();
         updateLanguagePairDisplay();
