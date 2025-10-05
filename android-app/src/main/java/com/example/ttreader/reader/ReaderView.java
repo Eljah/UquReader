@@ -330,7 +330,7 @@ public class ReaderView extends TextView {
         sentenceRanges.addAll(result.sentenceRanges);
         int target = hasPendingInitialChar ? pendingInitialCharIndex : 0;
         hasPendingInitialChar = false;
-        displayWindowAround(target, target, false);
+        displayWindowAround(target, target, true);
     }
 
     public void displayWindowAround(int targetCharIndex) {

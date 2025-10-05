@@ -134,6 +134,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int readerBasePaddingTop;
     private int readerBasePaddingRight;
     private int readerBasePaddingBottom;
+    private int readerViewportBottomInset;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -343,16 +344,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
             readerScrollView.setOnTouchListener((v, event) -> true);
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
-            observer.addOnScrollChangedListener(() -> {
-                if (readerView != null) {
-                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight());
-                }
-            });
-            readerScrollView.post(() -> {
-                if (readerView != null) {
-                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight());
-                }
-            });
+            observer.addOnScrollChangedListener(() -> dispatchReaderViewportChanged());
+            readerScrollView.post(this::dispatchReaderViewportChanged);
         }
 
         if (pagePreviousButton != null) {
@@ -1054,6 +1047,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int top = readerBasePaddingTop;
         int right = readerBasePaddingRight;
         int bottom = readerBasePaddingBottom;
+        int viewportInset = 0;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
             int overlayHeight = Math.max(0, pageControls.getHeight());
             int overlayMargin = 0;
@@ -1063,7 +1057,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
             int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
             bottom = readerBasePaddingBottom + overlayHeight + overlayMargin + extra;
+            viewportInset = overlayHeight + overlayMargin + extra;
         }
+        readerViewportBottomInset = viewportInset;
         if (readerView.getPaddingLeft() != left
                 || readerView.getPaddingTop() != top
                 || readerView.getPaddingRight() != right
@@ -1071,6 +1067,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerView.setPadding(left, top, right, bottom);
             readerView.invalidate();
         }
+        dispatchReaderViewportChanged();
+    }
+
+    private void dispatchReaderViewportChanged() {
+        if (readerView == null || readerScrollView == null) {
+            return;
+        }
+        int height = Math.max(0, readerScrollView.getHeight() - readerViewportBottomInset);
+        readerView.onViewportChanged(readerScrollView.getScrollY(), height);
     }
 
     private void updatePendingSpeechChar(int charIndex) {
@@ -1220,8 +1225,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int line = layout.getLineForOffset(clampedStart);
         int y = readerView.getTotalPaddingTop() + layout.getLineTop(line);
         readerScrollView.smoothScrollTo(0, y);
-        readerScrollView.post(() ->
-                readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
+        readerScrollView.post(this::dispatchReaderViewportChanged);
     }
 
     private void dismissTokenSheet(boolean restoreFocus) {
