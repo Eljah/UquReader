@@ -58,8 +58,9 @@
                 <View
                     android:id="@+id/readerBottomPanel"
                     android:layout_width="match_parent"
-                    android:layout_height="@dimen/reader_bottom_panel_min_height"
-                    android:background="@android:color/transparent" />
+                    android:layout_height="0dp"
+                    android:background="@android:color/transparent"
+                    android:visibility="gone" />
             </LinearLayout>
         </com.example.ttreader.widget.StaticPageScrollView>
 
