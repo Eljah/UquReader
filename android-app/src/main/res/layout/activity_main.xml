@@ -27,7 +27,7 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <ScrollView
+        <com.example.ttreader.widget.StaticPageScrollView
             android:id="@+id/readerScrollView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -56,11 +56,12 @@
                     android:textColor="@color/reader_text_primary" />
 
                 <View
-                    android:id="@+id/readerBottomSpacer"
+                    android:id="@+id/readerBottomPanel"
                     android:layout_width="match_parent"
-                    android:layout_height="0dp" />
+                    android:layout_height="@dimen/reader_bottom_panel_min_height"
+                    android:background="@color/app_surface" />
             </LinearLayout>
-        </ScrollView>
+        </com.example.ttreader.widget.StaticPageScrollView>
 
         <LinearLayout
             android:id="@+id/pageControls"

@@ -130,7 +130,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ImageButton pageNextButton;
     private View pageControls;
     private TextView pageNumberText;
-    private View readerBottomSpacer;
+    private View readerBottomPanel;
     private int readerBasePaddingLeft;
     private int readerBasePaddingTop;
     private int readerBasePaddingRight;
@@ -328,7 +328,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pageNextButton = findViewById(R.id.pageNextButton);
         pageControls = findViewById(R.id.pageControls);
         pageNumberText = findViewById(R.id.pageNumberText);
-        readerBottomSpacer = findViewById(R.id.readerBottomSpacer);
+        readerBottomPanel = findViewById(R.id.readerBottomPanel);
 
         if (readerView != null) {
             readerBasePaddingLeft = readerView.getPaddingLeft();
@@ -346,7 +346,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerScrollView.setVerticalFadingEdgeEnabled(false);
             readerScrollView.setFadingEdgeLength(0);
             readerScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            readerScrollView.setOnTouchListener((v, event) -> true);
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
             observer.addOnScrollChangedListener(() -> dispatchReaderViewportChanged());
             readerScrollView.post(this::dispatchReaderViewportChanged);
@@ -1055,13 +1054,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int bottom = readerBasePaddingBottom;
         int panelHeight = computeBottomPanelHeight();
         int viewportInset = panelHeight;
-        if (readerBottomSpacer != null) {
-            ViewGroup.LayoutParams spacerParams = readerBottomSpacer.getLayoutParams();
-            if (spacerParams != null && spacerParams.height != panelHeight) {
-                spacerParams.height = panelHeight;
-                readerBottomSpacer.setLayoutParams(spacerParams);
+        if (readerBottomPanel != null) {
+            ViewGroup.LayoutParams panelParams = readerBottomPanel.getLayoutParams();
+            if (panelParams != null && panelParams.height != panelHeight) {
+                panelParams.height = panelHeight;
+                readerBottomPanel.setLayoutParams(panelParams);
             }
-            readerBottomSpacer.setVisibility(panelHeight > 0 ? View.VISIBLE : View.GONE);
+            readerBottomPanel.setVisibility(panelHeight > 0 ? View.VISIBLE : View.GONE);
         } else {
             bottom += panelHeight;
         }
@@ -1093,6 +1092,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView == null) {
             return 0;
         }
+        int minPanel = getResources().getDimensionPixelSize(R.dimen.reader_bottom_panel_min_height);
         int lineHeight = readerView.getLineHeight();
         if (lineHeight <= 0) {
             float textSize = readerView.getTextSize();
@@ -1101,9 +1101,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
         if (lineHeight <= 0) {
-            lineHeight = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
+            return minPanel;
         }
-        return Math.max(0, lineHeight * 2);
+        return Math.max(minPanel, lineHeight * 2);
     }
 
     private void dispatchReaderViewportChanged() {
