@@ -14,6 +14,7 @@ import android.text.TextPaint;
 import android.text.method.MovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.widget.TextView;
 
 import com.example.ttreader.data.DbHelper;
@@ -39,6 +40,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ReaderView extends TextView {
+    private static final String TAG = "ReaderViewTrace";
     public interface TokenInfoProvider {
         void onTokenLongPress(TokenSpan span, List<String> ruLemmas);
         void onTokenSingleTap(TokenSpan span);
@@ -119,6 +121,7 @@ public class ReaderView extends TextView {
     @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         if (w != oldw) {
+            Log.d(TAG, "onSizeChanged: " + oldw + " -> " + w);
             markPaginationDirty();
             post(this::showPendingTargetIfPossible);
         }
@@ -179,9 +182,13 @@ public class ReaderView extends TextView {
     public void setViewportHeight(int height) {
         int clamped = Math.max(0, height);
         if (clamped != viewportHeight) {
+            Log.d(TAG, "setViewportHeight: " + viewportHeight + " -> " + clamped);
             viewportHeight = clamped;
             if (!shouldIgnoreViewportChange(clamped)) {
+                Log.d(TAG, "setViewportHeight: triggering markPaginationDirty");
                 markPaginationDirty();
+            } else {
+                Log.d(TAG, "setViewportHeight: ignoring change");
             }
         }
         showPendingTargetIfPossible();
@@ -394,13 +401,16 @@ public class ReaderView extends TextView {
         if (!hasPendingTarget) {
             return;
         }
+        Log.d(TAG, "showPendingTargetIfPossible: pendingTarget=" + pendingTargetCharIndex);
         if (!ensurePagination()) {
+            Log.d(TAG, "showPendingTargetIfPossible: pagination not ready");
             return;
         }
         int target = pendingTargetCharIndex;
         boolean notify = pendingNotifyWindowChange;
         hasPendingTarget = false;
         pendingNotifyWindowChange = false;
+        Log.d(TAG, "showPendingTargetIfPossible: displaying target=" + target + " notify=" + notify);
         showPageForChar(target, notify);
     }
 
@@ -416,19 +426,23 @@ public class ReaderView extends TextView {
             return false;
         }
         if (!paginationCacheLoaded) {
+            Log.d(TAG, "ensurePagination: attempt cache load");
             paginationCacheLoaded = true;
             if (applyCachedPagination(spec)) {
                 paginationDirty = false;
                 paginationLocked = true;
                 activePaginationSpec = spec;
+                Log.d(TAG, "ensurePagination: cache applied pages=" + pages.size());
             }
         }
         if (paginationDirty) {
+            Log.d(TAG, "ensurePagination: recompute start");
             recomputePagination(spec);
             paginationDirty = false;
             paginationLocked = true;
             activePaginationSpec = spec;
             persistPagination(spec);
+            Log.d(TAG, "ensurePagination: recompute end pages=" + pages.size());
         }
         return !pages.isEmpty();
     }
@@ -441,8 +455,15 @@ public class ReaderView extends TextView {
         PaginationSpec currentSpec = captureCurrentSpec();
         if (paginationLocked && activePaginationSpec != null && currentSpec != null
                 && activePaginationSpec.matchesDimensions(currentSpec)) {
+            Log.d(TAG, "markPaginationDirty: skip same spec " + activePaginationSpec.contentWidth
+                    + "x" + activePaginationSpec.contentHeight);
             return;
         }
+        Log.d(TAG, "markPaginationDirty: activeSpec="
+                + (activePaginationSpec != null
+                ? activePaginationSpec.contentWidth + "x" + activePaginationSpec.contentHeight
+                : "null") + " currentSpec="
+                + (currentSpec != null ? currentSpec.contentWidth + "x" + currentSpec.contentHeight : "null"));
         int preservedTarget = -1;
         boolean hadPendingTarget = hasPendingTarget;
         boolean preservedNotify = pendingNotifyWindowChange;
@@ -458,15 +479,19 @@ public class ReaderView extends TextView {
         paginationCacheLoaded = false;
         activePaginationSpec = null;
         if (!pages.isEmpty()) {
+            Log.d(TAG, "markPaginationDirty: clearing " + pages.size() + " pages");
             pages.clear();
         }
         if (preservedTarget >= 0) {
             pendingTargetCharIndex = preservedTarget;
             hasPendingTarget = true;
             pendingNotifyWindowChange = preservedNotify || !hadPendingTarget;
+            Log.d(TAG, "markPaginationDirty: preservedTarget=" + preservedTarget
+                    + " notify=" + pendingNotifyWindowChange);
         } else {
             hasPendingTarget = false;
             pendingNotifyWindowChange = false;
+            Log.d(TAG, "markPaginationDirty: cleared pending target");
         }
     }
 
@@ -585,14 +610,18 @@ public class ReaderView extends TextView {
     }
 
     private void recomputePagination(PaginationSpec spec) {
+        Log.d(TAG, "recomputePagination: spec="
+                + (spec != null ? spec.contentWidth + "x" + spec.contentHeight : "null"));
         pages.clear();
         if (currentDocument == null || currentDocument.text == null || spec == null) {
+            Log.d(TAG, "recomputePagination: missing document or spec");
             return;
         }
         String text = currentDocument.text;
         int docLength = text.length();
         if (docLength == 0) {
             pages.add(new Page(0, 0));
+            Log.d(TAG, "recomputePagination: empty document");
             return;
         }
         int availableWidth = Math.max(1, spec.contentWidth);
@@ -609,6 +638,7 @@ public class ReaderView extends TextView {
         if (pages.isEmpty()) {
             pages.add(new Page(0, docLength));
         }
+        Log.d(TAG, "recomputePagination: pages=" + pages.size());
     }
 
     private int computePageEnd(String text, int start, int availableWidth, int availableHeight) {

@@ -74,6 +74,7 @@ import java.util.Set;
 
 public class MainActivity extends Activity implements ReaderView.TokenInfoProvider {
     private static final String TAG = "MainActivity";
+    private static final String LAYOUT_LOG_TAG = "ReaderLayoutTrace";
     private static final String LANGUAGE_PAIR_TT_RU = "tt-ru";
     private static final int MENU_WORK_ID_BASE = 100;
     private static final String PREFS_READER_STATE = "com.example.ttreader.reader_state";
@@ -955,6 +956,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pendingLastMode = ReadingState.MODE_VISUAL;
         if (readerView != null) {
             readerView.post(() -> {
+                Log.d(LAYOUT_LOG_TAG, "handleReaderWindowChanged: window=" + start + "-" + end
+                        + " viewportStart=" + readerView.getViewportStartChar()
+                        + " page=" + (readerView.getCurrentPageIndex() + 1)
+                        + "/" + readerView.getTotalPageCount());
                 resetReaderScrollOffset();
                 int viewportStart = readerView.getViewportStartChar();
                 if (viewportStart >= 0) {
@@ -1083,6 +1088,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int right = readerBasePaddingRight;
         int bottom = readerBasePaddingBottom;
 
+        Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: begin overlayVisible="
+                + (pageControls != null && pageControls.getVisibility() == View.VISIBLE));
+
         int overlayClearance = 0;
         boolean awaitingMeasurement = false;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
@@ -1092,28 +1100,35 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     overlayInsetRetryScheduled = true;
                     pageControls.post(() -> {
                         overlayInsetRetryScheduled = false;
+                        Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: retry after pending measurement");
                         updateReaderBottomInset();
                     });
                 }
                 awaitingMeasurement = true;
+                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: awaiting overlay measurement");
             } else {
                 overlayInsetRetryScheduled = false;
                 int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
                 overlayClearance = Math.max(0, overlayHeight + extra);
                 lastKnownOverlayHeight = overlayHeight;
+                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: overlayHeight=" + overlayHeight
+                        + " extra=" + extra + " clearance=" + overlayClearance);
             }
         } else {
             overlayInsetRetryScheduled = false;
             lastKnownOverlayHeight = 0;
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: controls hidden");
         }
 
         if (awaitingMeasurement) {
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: exit awaiting measurement");
             return;
         }
 
         boolean overlayChanged = overlayClearance != lastOverlayClearance;
         if (overlayChanged) {
             lastOverlayClearance = overlayClearance;
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: overlay clearance changed -> " + overlayClearance);
         }
 
         boolean readerPaddingChanged = readerView.getPaddingLeft() != left
@@ -1122,6 +1137,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 || readerView.getPaddingBottom() != bottom;
         if (readerPaddingChanged) {
             readerView.setPadding(left, top, right, bottom);
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: reader padding -> L" + left
+                    + " T" + top + " R" + right + " B" + bottom);
         }
 
         int additionalOverlayPadding = overlayClearance;
@@ -1137,12 +1154,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     || readerScrollView.getPaddingBottom() != scrollBottom;
             if (scrollPaddingChanged) {
                 readerScrollView.setPadding(scrollLeft, scrollTop, scrollRight, scrollBottom);
+                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: scroll padding -> L" + scrollLeft
+                        + " T" + scrollTop + " R" + scrollRight + " B" + scrollBottom);
             }
         }
 
         if (overlayChanged || readerPaddingChanged || scrollPaddingChanged) {
+            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: dispatch viewport change");
             dispatchReaderViewportChanged();
         }
+        Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: end");
     }
 
     private void runWhenReaderViewportReady(Runnable action) {
@@ -1251,6 +1272,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return;
         }
         lastDispatchedViewportHeight = height;
+        Log.d(LAYOUT_LOG_TAG, "dispatchReaderViewportChanged: scrollHeight=" + scrollHeight
+                + " paddingTop=" + scrollPaddingTop + " paddingBottom=" + scrollPaddingBottom
+                + " bottomInset=" + readerViewportBottomInset + " -> viewportHeight=" + height);
         readerView.setViewportHeight(height);
     }
 
