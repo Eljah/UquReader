@@ -143,6 +143,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean awaitingViewportMeasurement;
     private boolean readerViewportReady;
     private int readerBottomPanelBaseHeight;
+    private int readerScrollBasePaddingLeft;
+    private int readerScrollBasePaddingTop;
+    private int readerScrollBasePaddingRight;
+    private int readerScrollBasePaddingBottom;
     private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
     private boolean flushingViewportActions;
     private ReadingState currentReadingState;
@@ -360,6 +364,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
 
         if (readerScrollView != null) {
+            readerScrollBasePaddingLeft = readerScrollView.getPaddingLeft();
+            readerScrollBasePaddingTop = readerScrollView.getPaddingTop();
+            readerScrollBasePaddingRight = readerScrollView.getPaddingRight();
+            readerScrollBasePaddingBottom = readerScrollView.getPaddingBottom();
             readerScrollView.setVerticalFadingEdgeEnabled(false);
             readerScrollView.setFadingEdgeLength(0);
             readerScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -1073,17 +1081,21 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int top = readerBasePaddingTop;
         int right = readerBasePaddingRight;
         int bottom = readerBasePaddingBottom;
-        int overlayClearance = 0;
-        if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
-            int overlayHeight = Math.max(0, pageControls.getHeight());
-            if (overlayHeight == 0) {
-                overlayHeight = Math.max(overlayHeight, pageControls.getMeasuredHeight());
-            }
-            int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
-            overlayClearance = Math.max(0, overlayHeight + extra);
-        }
-        int desiredPanelHeight = Math.max(readerBottomPanelBaseHeight, overlayClearance);
 
+        int overlayClearance = 0;
+        boolean awaitingOverlayMeasurement = false;
+        if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
+            int overlayHeight = Math.max(pageControls.getHeight(), pageControls.getMeasuredHeight());
+            if (overlayHeight <= 0) {
+                pageControls.post(this::updateReaderBottomInset);
+                awaitingOverlayMeasurement = true;
+            } else {
+                int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
+                overlayClearance = Math.max(0, overlayHeight + extra);
+            }
+        }
+
+        int desiredPanelHeight = readerBottomPanelBaseHeight;
         boolean panelChanged = false;
         if (readerBottomPanel != null) {
             ViewGroup.LayoutParams panelParams = readerBottomPanel.getLayoutParams();
@@ -1097,20 +1109,37 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             bottom += desiredPanelHeight;
         }
 
-        boolean paddingChanged = readerView.getPaddingLeft() != left
+        boolean readerPaddingChanged = readerView.getPaddingLeft() != left
                 || readerView.getPaddingTop() != top
                 || readerView.getPaddingRight() != right
                 || readerView.getPaddingBottom() != bottom;
-        if (paddingChanged) {
+        if (readerPaddingChanged) {
             readerView.setPadding(left, top, right, bottom);
         }
 
-        boolean insetChanged = readerViewportBottomInset != desiredPanelHeight;
+        int desiredViewportInset = desiredPanelHeight;
+        boolean insetChanged = readerViewportBottomInset != desiredViewportInset;
         if (insetChanged) {
-            readerViewportBottomInset = desiredPanelHeight;
+            readerViewportBottomInset = desiredViewportInset;
         }
 
-        if (insetChanged || panelChanged || paddingChanged) {
+        int additionalOverlayPadding = Math.max(0, overlayClearance - readerBottomPanelBaseHeight);
+        boolean scrollPaddingChanged = false;
+        if (readerScrollView != null) {
+            int scrollLeft = readerScrollBasePaddingLeft;
+            int scrollTop = readerScrollBasePaddingTop;
+            int scrollRight = readerScrollBasePaddingRight;
+            int scrollBottom = readerScrollBasePaddingBottom + additionalOverlayPadding;
+            scrollPaddingChanged = readerScrollView.getPaddingLeft() != scrollLeft
+                    || readerScrollView.getPaddingTop() != scrollTop
+                    || readerScrollView.getPaddingRight() != scrollRight
+                    || readerScrollView.getPaddingBottom() != scrollBottom;
+            if (scrollPaddingChanged) {
+                readerScrollView.setPadding(scrollLeft, scrollTop, scrollRight, scrollBottom);
+            }
+        }
+
+        if (!awaitingOverlayMeasurement && (insetChanged || panelChanged || readerPaddingChanged || scrollPaddingChanged)) {
             dispatchReaderViewportChanged();
         }
     }
