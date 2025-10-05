@@ -32,6 +32,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
@@ -49,6 +50,7 @@ import com.example.ttreader.data.DeviceStatsDao;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.PaginationDao;
 import com.example.ttreader.data.ReadingStateDao;
+import com.example.ttreader.data.UiLayoutDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.ReadingState;
 import com.example.ttreader.reader.ReaderView;
@@ -125,6 +127,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private DeviceStatsDao deviceStatsDao;
     private ReadingStateDao readingStateDao;
     private PaginationDao paginationDao;
+    private UiLayoutDao uiLayoutDao;
     private ScrollView readerScrollView;
     private View readerPageContainer;
     private ReaderView readerView;
@@ -147,6 +150,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean readerViewportReady;
     private int lastOverlayClearance;
     private int lastKnownOverlayHeight = -1;
+    private int persistedPageControlsHeight;
     private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
     private boolean flushingViewportActions;
     private boolean overlayInsetRetryScheduled;
@@ -313,6 +317,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         deviceStatsDao = new DeviceStatsDao(db);
         readingStateDao = new ReadingStateDao(db);
         paginationDao = new PaginationDao(db);
+        uiLayoutDao = new UiLayoutDao(db);
+        Integer storedHeight = uiLayoutDao.getPageControlsHeight();
+        persistedPageControlsHeight = storedHeight == null ? 0 : Math.max(0, storedHeight);
+        Log.d(LAYOUT_LOG_TAG, "Loaded persisted page controls height: " + persistedPageControlsHeight);
 
         readerPrefs = getSharedPreferences(PREFS_READER_STATE, MODE_PRIVATE);
         if (readerPrefs != null) {
@@ -347,6 +355,31 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pageControls = findViewById(R.id.pageControls);
         pageNumberText = findViewById(R.id.pageNumberText);
 
+        if (pageControls != null) {
+            enforcePageControlsMinHeight("onCreate");
+            logViewEvent("PageControls", pageControls,
+                    "initialize persistedHeight=" + persistedPageControlsHeight);
+        }
+        if (pageNumberText != null) {
+            pageNumberText.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop,
+                    oldRight, oldBottom) -> logViewEvent("PageNumberText", pageNumberText,
+                    "onLayout height=" + Math.max(0, bottom - top)
+                            + " oldHeight=" + Math.max(0, oldBottom - oldTop)));
+        }
+        if (pagePreviousButton != null) {
+            pagePreviousButton.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft,
+                    oldTop, oldRight, oldBottom) -> logViewEvent("PagePreviousButton",
+                    pagePreviousButton,
+                    "onLayout height=" + Math.max(0, bottom - top)
+                            + " oldHeight=" + Math.max(0, oldBottom - oldTop)));
+        }
+        if (pageNextButton != null) {
+            pageNextButton.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft,
+                    oldTop, oldRight, oldBottom) -> logViewEvent("PageNextButton", pageNextButton,
+                    "onLayout height=" + Math.max(0, bottom - top)
+                            + " oldHeight=" + Math.max(0, oldBottom - oldTop)));
+        }
+
         if (readerView != null) {
             readerBasePaddingLeft = readerView.getPaddingLeft();
             readerBasePaddingTop = readerView.getPaddingTop();
@@ -378,22 +411,39 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 if (pageControls.getVisibility() != View.VISIBLE) {
                     newHeight = 0;
                 }
+                int previousHeight = Math.max(0, oldBottom - oldTop);
+                logViewEvent("PageControls", pageControls,
+                        "onLayout height=" + newHeight + " oldHeight=" + previousHeight);
+                if (newHeight > 0) {
+                    maybePersistPageControlsHeight(newHeight, "onLayout");
+                }
                 if (lastKnownOverlayHeight != newHeight) {
                     lastKnownOverlayHeight = newHeight;
+                    logViewEvent("PageControls", pageControls,
+                            "layoutHeightChanged -> " + newHeight);
                     updateReaderBottomInset();
                 }
             });
         }
 
         if (pagePreviousButton != null) {
-            pagePreviousButton.setOnClickListener(v -> goToPreviousPage());
+            pagePreviousButton.setOnClickListener(v -> {
+                logViewEvent("PagePreviousButton", pagePreviousButton, "click");
+                goToPreviousPage();
+            });
         }
         if (pageNextButton != null) {
-            pageNextButton.setOnClickListener(v -> goToNextPage());
+            pageNextButton.setOnClickListener(v -> {
+                logViewEvent("PageNextButton", pageNextButton, "click");
+                goToNextPage();
+            });
         }
 
         if (pageControls != null) {
-            pageControls.post(this::updateReaderBottomInset);
+            pageControls.post(() -> {
+                logViewEvent("PageControls", pageControls, "postUpdateReaderBottomInset");
+                updateReaderBottomInset();
+            });
         } else {
             updateReaderBottomInset();
         }
@@ -992,40 +1042,35 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updatePageControls() {
-        if (pagePreviousButton != null) {
-            boolean enabled = readerView != null && readerView.hasPreviousPage();
-            if (pagePreviousButton.isEnabled() != enabled) {
-                pagePreviousButton.setEnabled(enabled);
-            }
-            float targetAlpha = enabled ? 1f : 0.3f;
-            if (pagePreviousButton.getAlpha() != targetAlpha) {
-                pagePreviousButton.setAlpha(targetAlpha);
-            }
-        }
-        if (pageNextButton != null) {
-            boolean enabled = readerView != null && readerView.hasNextPage();
-            if (pageNextButton.isEnabled() != enabled) {
-                pageNextButton.setEnabled(enabled);
-            }
-            float targetAlpha = enabled ? 1f : 0.3f;
-            if (pageNextButton.getAlpha() != targetAlpha) {
-                pageNextButton.setAlpha(targetAlpha);
-            }
-        }
-        if (pageNumberText != null) {
-            if (readerView != null && readerView.getDocumentLength() > 0) {
-                int current = readerView.getCurrentPageIndex() + 1;
-                int total = Math.max(1, readerView.getTotalPageCount());
-                String formatted = String.format(Locale.getDefault(), "%d / %d", current, total);
-                CharSequence existing = pageNumberText.getText();
-                if (!TextUtils.equals(existing, formatted)) {
-                    pageNumberText.setText(formatted);
-                }
+        boolean prevEnabled = readerView != null && readerView.hasPreviousPage();
+        setEnabledWithLogging(pagePreviousButton, "PagePreviousButton", prevEnabled);
+        float prevAlpha = prevEnabled ? 1f : 0.3f;
+        setAlphaWithLogging(pagePreviousButton, "PagePreviousButton", prevAlpha);
+
+        boolean nextEnabled = readerView != null && readerView.hasNextPage();
+        setEnabledWithLogging(pageNextButton, "PageNextButton", nextEnabled);
+        float nextAlpha = nextEnabled ? 1f : 0.3f;
+        setAlphaWithLogging(pageNextButton, "PageNextButton", nextAlpha);
+
+        if (readerView != null && readerView.getDocumentLength() > 0) {
+            int current = readerView.getCurrentPageIndex() + 1;
+            int total = Math.max(1, readerView.getTotalPageCount());
+            String formatted = String.format(Locale.getDefault(), "%d / %d", current, total);
+            CharSequence existing = pageNumberText == null ? null : pageNumberText.getText();
+            if (!TextUtils.equals(existing, formatted)) {
+                setTextWithLogging(pageNumberText, "PageNumberText", formatted);
             } else {
-                CharSequence dash = "—";
-                if (!TextUtils.equals(pageNumberText.getText(), dash)) {
-                    pageNumberText.setText(dash);
-                }
+                logViewEvent("PageNumberText", pageNumberText,
+                        "setText no-op -> " + formatted);
+            }
+        } else {
+            CharSequence dash = "—";
+            CharSequence existing = pageNumberText == null ? null : pageNumberText.getText();
+            if (!TextUtils.equals(existing, dash)) {
+                setTextWithLogging(pageNumberText, "PageNumberText", dash);
+            } else {
+                logViewEvent("PageNumberText", pageNumberText,
+                        "setText no-op -> " + dash);
             }
         }
     }
@@ -1095,15 +1140,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerScrollView != null) {
             readerScrollView.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
         }
-        if (pageControls != null) {
-            pageControls.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
-        }
-        if (pagePreviousButton != null) {
-            pagePreviousButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
-        }
-        if (pageNextButton != null) {
-            pageNextButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
-        }
+        setVisibilityWithLogging(pageControls, "PageControls",
+                show ? View.INVISIBLE : View.VISIBLE);
+        setVisibilityWithLogging(pagePreviousButton, "PagePreviousButton",
+                show ? View.INVISIBLE : View.VISIBLE);
+        setVisibilityWithLogging(pageNextButton, "PageNextButton",
+                show ? View.INVISIBLE : View.VISIBLE);
         updateReaderBottomInset();
     }
 
@@ -1122,7 +1164,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int overlayClearance = 0;
         boolean awaitingMeasurement = false;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
-            int overlayHeight = Math.max(pageControls.getHeight(), pageControls.getMeasuredHeight());
+            int overlayHeight = resolvePageControlsOverlayHeight();
             if (overlayHeight <= 0) {
                 if (!overlayInsetRetryScheduled) {
                     overlayInsetRetryScheduled = true;
@@ -1187,6 +1229,146 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             dispatchReaderViewportChanged();
         }
         Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: end");
+    }
+
+    private int resolvePageControlsOverlayHeight() {
+        if (pageControls == null || pageControls.getVisibility() != View.VISIBLE) {
+            return 0;
+        }
+        int overlayHeight = Math.max(pageControls.getHeight(), pageControls.getMeasuredHeight());
+        if (overlayHeight <= 0 && persistedPageControlsHeight > 0) {
+            overlayHeight = persistedPageControlsHeight;
+            logViewEvent("PageControls", pageControls,
+                    "usingPersistedHeightForInset -> " + overlayHeight);
+        }
+        if (overlayHeight > 0) {
+            maybePersistPageControlsHeight(overlayHeight, "resolveOverlayHeight");
+        }
+        return overlayHeight;
+    }
+
+    private void maybePersistPageControlsHeight(int candidateHeight, String reason) {
+        int safeHeight = Math.max(0, candidateHeight);
+        if (safeHeight <= 0 || safeHeight <= persistedPageControlsHeight) {
+            return;
+        }
+        persistedPageControlsHeight = safeHeight;
+        if (uiLayoutDao != null) {
+            uiLayoutDao.savePageControlsHeight(safeHeight);
+        }
+        enforcePageControlsMinHeight("persist:" + reason);
+        logViewEvent("PageControls", pageControls,
+                "persistHeight -> " + safeHeight + " reason=" + reason);
+    }
+
+    private void enforcePageControlsMinHeight(String reason) {
+        if (pageControls == null || persistedPageControlsHeight <= 0) {
+            return;
+        }
+        int minHeight = persistedPageControlsHeight;
+        pageControls.setMinimumHeight(minHeight);
+        ViewGroup.LayoutParams lp = pageControls.getLayoutParams();
+        if (lp != null && lp.height > 0 && lp.height < minHeight) {
+            lp.height = minHeight;
+            pageControls.setLayoutParams(lp);
+        }
+        pageControls.requestLayout();
+        logViewEvent("PageControls", pageControls,
+                "enforceMinHeight -> " + minHeight + " reason=" + reason);
+    }
+
+    private void setVisibilityWithLogging(View view, String component, int visibility) {
+        if (view == null) {
+            logViewEvent(component, null,
+                    "setVisibility(" + visibilityToString(visibility) + ") skipped");
+            return;
+        }
+        if (view.getVisibility() != visibility) {
+            view.setVisibility(visibility);
+            logViewEvent(component, view,
+                    "setVisibility -> " + visibilityToString(visibility));
+        } else {
+            logViewEvent(component, view,
+                    "setVisibility no-op -> " + visibilityToString(visibility));
+        }
+    }
+
+    private void setEnabledWithLogging(View view, String component, boolean enabled) {
+        if (view == null) {
+            logViewEvent(component, null, "setEnabled(" + enabled + ") skipped");
+            return;
+        }
+        if (view.isEnabled() != enabled) {
+            view.setEnabled(enabled);
+            logViewEvent(component, view, "setEnabled -> " + enabled);
+        } else {
+            logViewEvent(component, view, "setEnabled no-op -> " + enabled);
+        }
+    }
+
+    private void setAlphaWithLogging(View view, String component, float alpha) {
+        if (view == null) {
+            logViewEvent(component, null, "setAlpha(" + alpha + ") skipped");
+            return;
+        }
+        if (Math.abs(view.getAlpha() - alpha) > 0.001f) {
+            view.setAlpha(alpha);
+            logViewEvent(component, view, "setAlpha -> " + alpha);
+        } else {
+            logViewEvent(component, view, "setAlpha no-op -> " + alpha);
+        }
+    }
+
+    private void setTextWithLogging(TextView view, String component, CharSequence text) {
+        if (view == null) {
+            logViewEvent(component, null, "setText(" + text + ") skipped");
+            return;
+        }
+        view.setText(text);
+        logViewEvent(component, view, "setText -> " + text);
+    }
+
+    private String visibilityToString(int visibility) {
+        if (visibility == View.VISIBLE) {
+            return "VISIBLE";
+        } else if (visibility == View.INVISIBLE) {
+            return "INVISIBLE";
+        } else if (visibility == View.GONE) {
+            return "GONE";
+        }
+        return String.valueOf(visibility);
+    }
+
+    private void logViewEvent(String component, View view, String action) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(component).append(": ").append(action);
+        if (view != null) {
+            sb.append(" bounds=")
+                    .append('[').append(view.getLeft()).append(',').append(view.getTop())
+                    .append(" -> ").append(view.getRight()).append(',').append(view.getBottom())
+                    .append(']');
+            sb.append(" size=").append(view.getWidth()).append('x').append(view.getHeight());
+            boolean attached = true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                attached = view.isAttachedToWindow();
+            }
+            if (attached) {
+                int[] location = new int[2];
+                try {
+                    view.getLocationOnScreen(location);
+                    sb.append(" screen=")
+                            .append('[').append(location[0]).append(',').append(location[1]).append(']');
+                } catch (IllegalArgumentException e) {
+                    sb.append(" screen=[unavailable]");
+                }
+            } else {
+                sb.append(" attached=false");
+            }
+        } else {
+            sb.append(" view=null");
+        }
+        sb.append('\n').append(Log.getStackTraceString(new Throwable("trace")));
+        Log.d(LAYOUT_LOG_TAG, sb.toString());
     }
 
     private void runWhenReaderViewportReady(Runnable action) {

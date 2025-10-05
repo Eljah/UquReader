@@ -18,7 +18,7 @@ import java.io.OutputStream;
 
 public class DbHelper extends SQLiteOpenHelper {
     public static final String APP_DB_NAME = "appdata.db";
-    private static final int APP_DB_VERSION = 7;
+    private static final int APP_DB_VERSION = 8;
 
     private static final String TAG = "DbHelper";
     private static final String PREFS_NAME = "com.example.ttreader.DB_PREFS";
@@ -46,6 +46,7 @@ public class DbHelper extends SQLiteOpenHelper {
         createDeviceStatsTables(db);
         createReadingStateTable(db);
         createPaginationTable(db);
+        createUiLayoutTable(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -77,6 +78,9 @@ public class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 7) {
             createPaginationTable(db);
+        }
+        if (oldVersion < 8) {
+            createUiLayoutTable(db);
         }
     }
 
@@ -293,6 +297,14 @@ public class DbHelper extends SQLiteOpenHelper {
                 " page_breaks TEXT NOT NULL,\n" +
                 " updated_ms INTEGER NOT NULL,\n" +
                 " PRIMARY KEY(language_pair, work_id)\n" +
+                ")");
+    }
+
+    private void createUiLayoutTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS ui_layout(\n" +
+                " name TEXT NOT NULL PRIMARY KEY,\n" +
+                " int_value INTEGER NOT NULL DEFAULT 0,\n" +
+                " updated_ms INTEGER NOT NULL DEFAULT 0\n" +
                 ")");
     }
 }
