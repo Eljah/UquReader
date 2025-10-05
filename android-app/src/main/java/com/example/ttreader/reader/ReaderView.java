@@ -217,16 +217,6 @@ public class ReaderView extends TextView {
         return local;
     }
 
-    public void ensureWindowContains(int globalCharIndex) {
-        if (globalCharIndex < visibleStart || globalCharIndex >= visibleEnd) {
-            requestDisplayForChar(globalCharIndex, true);
-        }
-    }
-
-    public void scrollToGlobalChar(int globalCharIndex) {
-        requestDisplayForChar(globalCharIndex, true);
-    }
-
     public void clearContent() {
         visibleStart = 0;
         visibleEnd = 0;
