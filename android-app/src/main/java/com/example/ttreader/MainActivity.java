@@ -135,6 +135,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int readerBasePaddingRight;
     private int readerBasePaddingBottom;
     private int readerViewportBottomInset;
+    private boolean readerViewportDispatchScheduled;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -346,7 +347,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
             readerScrollView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
                     dispatchReaderViewportChanged());
-            readerScrollView.post(this::dispatchReaderViewportChanged);
+            scheduleReaderViewportDispatch();
         }
 
         if (pagePreviousButton != null) {
@@ -1113,15 +1114,35 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         return Math.max(minPanel, lineHeight * 2);
     }
 
+    private void scheduleReaderViewportDispatch() {
+        if (readerScrollView == null || readerViewportDispatchScheduled) {
+            return;
+        }
+        readerViewportDispatchScheduled = true;
+        readerScrollView.post(() -> {
+            readerViewportDispatchScheduled = false;
+            dispatchReaderViewportChanged();
+        });
+    }
+
     private void dispatchReaderViewportChanged() {
         if (readerView == null || readerScrollView == null) {
             return;
         }
         int scrollPaddingTop = readerScrollView.getPaddingTop();
         int scrollPaddingBottom = readerScrollView.getPaddingBottom();
-        int height = readerScrollView.getHeight() - scrollPaddingTop - scrollPaddingBottom
-                - readerViewportBottomInset;
-        readerView.setViewportHeight(Math.max(0, height));
+        int scrollHeight = readerScrollView.getHeight();
+        if (scrollHeight <= 0) {
+            scheduleReaderViewportDispatch();
+            return;
+        }
+        int height = scrollHeight - scrollPaddingTop - scrollPaddingBottom - readerViewportBottomInset;
+        if (height <= 0) {
+            readerView.setViewportHeight(0);
+            scheduleReaderViewportDispatch();
+            return;
+        }
+        readerView.setViewportHeight(height);
     }
 
     private void resetReaderScrollOffset() {
