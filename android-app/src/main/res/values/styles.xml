@@ -39,6 +39,13 @@
         <item name="android:letterSpacing">0.01</item>
     </style>
 
+    <style name="TextAppearance.UquReader.PageIndicator" parent="@android:style/TextAppearance.Material.Body1">
+        <item name="android:textColor">@color/reader_letter_highlight</item>
+        <item name="android:fontFamily">sans-serif-condensed</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.05</item>
+    </style>
+
     <style name="Widget.UquReader.Toolbar" parent="@android:style/Widget.Material.Toolbar">
         <item name="android:background">@color/app_primary</item>
         <item name="android:logo">@mipmap/ic_launcher</item>

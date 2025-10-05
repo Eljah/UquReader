@@ -109,6 +109,10 @@ public class ReaderView extends TextView {
     private void init() {
         setTextIsSelectable(false);
         setLineSpacing(1.2f, 1.2f);
+        setHorizontalFadingEdgeEnabled(false);
+        setVerticalFadingEdgeEnabled(false);
+        setFadingEdgeLength(0);
+        setOverScrollMode(OVER_SCROLL_NEVER);
         sentenceOutlineColor = resolveColorResource(com.example.ttreader.R.color.reader_sentence_outline);
         letterHighlightColor = resolveColorResource(com.example.ttreader.R.color.reader_letter_highlight);
         float density = getResources().getDisplayMetrics().density;

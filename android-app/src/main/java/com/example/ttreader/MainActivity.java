@@ -37,6 +37,7 @@ import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
@@ -126,6 +127,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ProgressBar readerLoadingIndicator;
     private ImageButton pagePreviousButton;
     private ImageButton pageNextButton;
+    private View pageControls;
+    private TextView pageNumberText;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -316,17 +319,31 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
         pagePreviousButton = findViewById(R.id.pagePreviousButton);
         pageNextButton = findViewById(R.id.pageNextButton);
-        readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
-        readerView.attachScrollView(readerScrollView);
-        readerView.setWindowChangeListener(this::handleReaderWindowChanged);
+        pageControls = findViewById(R.id.pageControls);
+        pageNumberText = findViewById(R.id.pageNumberText);
+
+        if (readerView != null) {
+            readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
+            readerView.attachScrollView(readerScrollView);
+            readerView.setWindowChangeListener(this::handleReaderWindowChanged);
+        }
 
         if (readerScrollView != null) {
+            readerScrollView.setVerticalFadingEdgeEnabled(false);
+            readerScrollView.setFadingEdgeLength(0);
+            readerScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
             readerScrollView.setOnTouchListener((v, event) -> true);
             ViewTreeObserver observer = readerScrollView.getViewTreeObserver();
-            observer.addOnScrollChangedListener(() ->
-                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
-            readerScrollView.post(() ->
-                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight()));
+            observer.addOnScrollChangedListener(() -> {
+                if (readerView != null) {
+                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight());
+                }
+            });
+            readerScrollView.post(() -> {
+                if (readerView != null) {
+                    readerView.onViewportChanged(readerScrollView.getScrollY(), readerScrollView.getHeight());
+                }
+            });
         }
 
         if (pagePreviousButton != null) {
@@ -921,6 +938,18 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             pageNextButton.setEnabled(enabled);
             pageNextButton.setAlpha(enabled ? 1f : 0.3f);
         }
+        if (pageNumberText != null) {
+            if (readerView != null && readerView.getDocumentLength() > 0) {
+                int current = Math.max(1, pendingVisualPage);
+                int total = Math.max(1, (readerView.getDocumentLength() + APPROX_CHARS_PER_PAGE - 1) / APPROX_CHARS_PER_PAGE);
+                if (current > total) {
+                    current = total;
+                }
+                pageNumberText.setText(String.format(Locale.getDefault(), "%d / %d", current, total));
+            } else {
+                pageNumberText.setText("—");
+            }
+        }
     }
 
     private void goToPreviousPage() {
@@ -987,6 +1016,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         if (readerScrollView != null) {
             readerScrollView.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+        }
+        if (pageControls != null) {
+            pageControls.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
         }
         if (pagePreviousButton != null) {
             pagePreviousButton.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
