@@ -19,6 +19,7 @@ import android.widget.TextView;
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.DictionaryDao;
 import com.example.ttreader.data.MemoryDao;
+import com.example.ttreader.data.PaginationDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.Morphology;
 import com.example.ttreader.model.Token;
@@ -49,11 +50,13 @@ public class ReaderView extends TextView {
 
     private static final int PAGE_CHUNK_SIZE = 4000;
     private static final int MIN_PAGE_ADVANCE_CHARS = 64;
+    private static final float FLOAT_TOLERANCE = 0.01f;
 
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
     private UsageStatsDao usageDao;
     private DictionaryDao dictDao;
+    private PaginationDao paginationDao;
     private TokenInfoProvider provider;
     private WindowChangeListener windowChangeListener;
     private String languagePair = "";
@@ -74,10 +77,16 @@ public class ReaderView extends TextView {
     private final List<Page> pages = new ArrayList<>();
     private int viewportHeight = 0;
     private boolean paginationDirty = true;
+    private boolean paginationCacheLoaded = false;
+    private boolean paginationLocked = false;
     private boolean hasPendingTarget = false;
     private boolean pendingNotifyWindowChange = false;
     private int pendingTargetCharIndex = 0;
     private int currentPageIndex = 0;
+    private PaginationSpec activePaginationSpec;
+    private Runnable pendingInitialCompletion;
+    private boolean initialContentDelivered = false;
+    private int currentDocumentSignature = 0;
     private SentenceOutlineSpan activeSentenceSpan;
     private ForegroundColorSpan activeLetterSpan;
     private int activeSentenceStart = -1;
@@ -147,11 +156,13 @@ public class ReaderView extends TextView {
         });
     }
 
-    public void setup(DbHelper helper, MemoryDao memoryDao, UsageStatsDao usageDao, TokenInfoProvider provider) {
+    public void setup(DbHelper helper, MemoryDao memoryDao, UsageStatsDao usageDao,
+                      PaginationDao paginationDao, TokenInfoProvider provider) {
         this.dbHelper = helper;
         this.memoryDao = memoryDao;
         this.usageDao = usageDao;
         this.provider = provider;
+        this.paginationDao = paginationDao;
         try {
             File dict = helper.ensureDictionaryDb();
             this.dictDao = new DictionaryDao(dict);
@@ -169,7 +180,9 @@ public class ReaderView extends TextView {
         int clamped = Math.max(0, height);
         if (clamped != viewportHeight) {
             viewportHeight = clamped;
-            markPaginationDirty();
+            if (!shouldIgnoreViewportChange(clamped)) {
+                markPaginationDirty();
+            }
         }
         showPendingTargetIfPossible();
     }
@@ -227,9 +240,15 @@ public class ReaderView extends TextView {
         pages.clear();
         currentPageIndex = 0;
         paginationDirty = true;
+        paginationCacheLoaded = false;
+        paginationLocked = false;
         hasPendingTarget = false;
         pendingNotifyWindowChange = false;
         pendingTargetCharIndex = 0;
+        activePaginationSpec = null;
+        pendingInitialCompletion = null;
+        initialContentDelivered = false;
+        currentDocumentSignature = 0;
         setText("");
         activeSentenceSpan = null;
         activeLetterSpan = null;
@@ -267,10 +286,7 @@ public class ReaderView extends TextView {
                 if (result == null) return;
                 mainHandler.post(() -> {
                     if (sequence != contentSequence.get()) return;
-                    applyLoadResult(result);
-                    if (completion != null) {
-                        completion.run();
-                    }
+                    applyLoadResult(result, completion);
                     clearPendingTask(sequence);
                 });
             } catch (InterruptedException interrupted) {
@@ -324,7 +340,7 @@ public class ReaderView extends TextView {
         }
     }
 
-    private void applyLoadResult(LoadResult result) {
+    private void applyLoadResult(LoadResult result, Runnable completion) {
         if (result == null) {
             return;
         }
@@ -337,6 +353,12 @@ public class ReaderView extends TextView {
         pages.clear();
         currentPageIndex = 0;
         paginationDirty = true;
+        paginationCacheLoaded = false;
+        paginationLocked = false;
+        activePaginationSpec = null;
+        initialContentDelivered = false;
+        pendingInitialCompletion = completion;
+        currentDocumentSignature = computeDocumentSignature(result.text);
         int target = hasPendingInitialChar ? pendingInitialCharIndex : 0;
         hasPendingInitialChar = false;
         requestDisplayForChar(target, true);
@@ -389,25 +411,169 @@ public class ReaderView extends TextView {
         if (viewportHeight <= 0 || getWidth() <= 0) {
             return false;
         }
+        PaginationSpec spec = captureCurrentSpec();
+        if (spec == null) {
+            return false;
+        }
+        if (!paginationCacheLoaded) {
+            paginationCacheLoaded = true;
+            if (applyCachedPagination(spec)) {
+                paginationDirty = false;
+                paginationLocked = true;
+                activePaginationSpec = spec;
+            }
+        }
         if (paginationDirty) {
-            recomputePagination();
+            recomputePagination(spec);
+            paginationDirty = false;
+            paginationLocked = true;
+            activePaginationSpec = spec;
+            persistPagination(spec);
         }
         return !pages.isEmpty();
     }
 
     private void markPaginationDirty() {
+        if (currentDocument == null || currentDocument.text == null) {
+            paginationDirty = true;
+            return;
+        }
+        PaginationSpec currentSpec = captureCurrentSpec();
+        if (paginationLocked && activePaginationSpec != null && currentSpec != null
+                && activePaginationSpec.matchesDimensions(currentSpec)) {
+            return;
+        }
         paginationDirty = true;
-        if (currentDocument != null && currentDocument.text != null && !currentDocument.text.isEmpty()) {
+        paginationLocked = false;
+        paginationCacheLoaded = false;
+        activePaginationSpec = null;
+        if (!pages.isEmpty()) {
+            pages.clear();
+        }
+        if (!currentDocument.text.isEmpty()) {
             pendingTargetCharIndex = clamp(visibleStart, 0, currentDocument.text.length());
             hasPendingTarget = true;
             pendingNotifyWindowChange = true;
         }
     }
 
-    private void recomputePagination() {
-        paginationDirty = false;
+    private boolean shouldIgnoreViewportChange(int newViewportHeight) {
+        if (!paginationLocked || activePaginationSpec == null) {
+            return false;
+        }
+        int contentHeight = Math.max(0, newViewportHeight - getTotalPaddingTop() - getTotalPaddingBottom());
+        return activePaginationSpec.contentHeight == contentHeight;
+    }
+
+    private PaginationSpec captureCurrentSpec() {
+        if (viewportHeight <= 0 || getWidth() <= 0) {
+            return null;
+        }
+        int contentWidth = getWidth() - getTotalPaddingLeft() - getTotalPaddingRight();
+        int contentHeight = viewportHeight - getTotalPaddingTop() - getTotalPaddingBottom();
+        if (contentWidth <= 0 || contentHeight <= 0) {
+            return null;
+        }
+        return new PaginationSpec(contentWidth, contentHeight, getTextSize(),
+                getLineSpacingExtra(), getLineSpacingMultiplier(), resolveLetterSpacing(),
+                currentDocumentSignature);
+    }
+
+    private float resolveLetterSpacing() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            return getLetterSpacing();
+        }
+        return 0f;
+    }
+
+    private boolean applyCachedPagination(PaginationSpec spec) {
+        if (paginationDao == null || spec == null) {
+            return false;
+        }
+        PaginationDao.Snapshot snapshot = paginationDao.getSnapshot(languagePair, workId);
+        if (snapshot == null) {
+            return false;
+        }
+        if (!spec.matchesSnapshot(snapshot)) {
+            paginationDao.deleteSnapshot(languagePair, workId);
+            return false;
+        }
+        List<PaginationDao.PageBreak> cachedPages = snapshot.pageBreaks;
+        if (cachedPages == null || cachedPages.isEmpty()) {
+            paginationDao.deleteSnapshot(languagePair, workId);
+            return false;
+        }
         pages.clear();
-        if (currentDocument == null || currentDocument.text == null) {
+        int docLength = getDocumentLength();
+        int previousEnd = 0;
+        for (PaginationDao.PageBreak page : cachedPages) {
+            if (page == null) {
+                paginationDao.deleteSnapshot(languagePair, workId);
+                return false;
+            }
+            if (page.start < previousEnd) {
+                paginationDao.deleteSnapshot(languagePair, workId);
+                return false;
+            }
+            if (page.end < page.start) {
+                paginationDao.deleteSnapshot(languagePair, workId);
+                return false;
+            }
+            if (page.end == page.start && docLength > 0) {
+                paginationDao.deleteSnapshot(languagePair, workId);
+                return false;
+            }
+            pages.add(new Page(page.start, page.end));
+            previousEnd = page.end;
+        }
+        if (pages.isEmpty()) {
+            paginationDao.deleteSnapshot(languagePair, workId);
+            return false;
+        }
+        if (docLength > 0 && pages.get(pages.size() - 1).end < docLength) {
+            paginationDao.deleteSnapshot(languagePair, workId);
+            return false;
+        }
+        return true;
+    }
+
+    private void persistPagination(PaginationSpec spec) {
+        if (paginationDao == null || spec == null || pages.isEmpty()) {
+            return;
+        }
+        List<PaginationDao.PageBreak> pageBreaks = new ArrayList<>(pages.size());
+        for (Page page : pages) {
+            if (page == null) {
+                continue;
+            }
+            pageBreaks.add(new PaginationDao.PageBreak(page.start, page.end));
+        }
+        if (pageBreaks.isEmpty()) {
+            return;
+        }
+        PaginationDao.Snapshot snapshot = new PaginationDao.Snapshot(
+                languagePair, workId, spec.contentWidth, spec.contentHeight,
+                spec.textSize, spec.lineSpacingExtra, spec.lineSpacingMultiplier,
+                spec.letterSpacing, spec.documentSignature, pageBreaks,
+                System.currentTimeMillis());
+        paginationDao.saveSnapshot(snapshot);
+    }
+
+    private static boolean floatsEqual(float a, float b) {
+        return Math.abs(a - b) <= FLOAT_TOLERANCE;
+    }
+
+    private int computeDocumentSignature(String text) {
+        if (text == null) {
+            return 0;
+        }
+        int hash = text.hashCode();
+        return 31 * hash + text.length();
+    }
+
+    private void recomputePagination(PaginationSpec spec) {
+        pages.clear();
+        if (currentDocument == null || currentDocument.text == null || spec == null) {
             return;
         }
         String text = currentDocument.text;
@@ -416,8 +582,8 @@ public class ReaderView extends TextView {
             pages.add(new Page(0, 0));
             return;
         }
-        int availableWidth = Math.max(1, getWidth() - getTotalPaddingLeft() - getTotalPaddingRight());
-        int availableHeight = Math.max(1, viewportHeight - getTotalPaddingTop() - getTotalPaddingBottom());
+        int availableWidth = Math.max(1, spec.contentWidth);
+        int availableHeight = Math.max(1, spec.contentHeight);
         int start = 0;
         while (start < docLength) {
             int end = computePageEnd(text, start, availableWidth, availableHeight);
@@ -593,6 +759,7 @@ public class ReaderView extends TextView {
         visibleStart = clampedStart;
         visibleEnd = clampedEnd;
         setText(builder);
+        deliverInitialContentIfNeeded();
         if (getMovementMethod() != movementMethod) {
             setMovementMethod(movementMethod);
         }
@@ -600,6 +767,17 @@ public class ReaderView extends TextView {
         logVisibleExposures();
         if (notifyWindowChange && windowChangeListener != null) {
             windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
+        }
+    }
+
+    private void deliverInitialContentIfNeeded() {
+        if (initialContentDelivered) {
+            return;
+        }
+        initialContentDelivered = true;
+        if (pendingInitialCompletion != null) {
+            pendingInitialCompletion.run();
+            pendingInitialCompletion = null;
         }
     }
 
@@ -926,6 +1104,54 @@ public class ReaderView extends TextView {
 
         public int length() {
             return Math.max(0, end - start);
+        }
+    }
+
+    private static final class PaginationSpec {
+        final int contentWidth;
+        final int contentHeight;
+        final float textSize;
+        final float lineSpacingExtra;
+        final float lineSpacingMultiplier;
+        final float letterSpacing;
+        final int documentSignature;
+
+        PaginationSpec(int contentWidth, int contentHeight, float textSize,
+                        float lineSpacingExtra, float lineSpacingMultiplier,
+                        float letterSpacing, int documentSignature) {
+            this.contentWidth = Math.max(1, contentWidth);
+            this.contentHeight = Math.max(1, contentHeight);
+            this.textSize = textSize;
+            this.lineSpacingExtra = lineSpacingExtra;
+            this.lineSpacingMultiplier = lineSpacingMultiplier;
+            this.letterSpacing = letterSpacing;
+            this.documentSignature = documentSignature;
+        }
+
+        boolean matchesSnapshot(PaginationDao.Snapshot snapshot) {
+            if (snapshot == null) {
+                return false;
+            }
+            return contentWidth == snapshot.contentWidth
+                    && contentHeight == snapshot.contentHeight
+                    && documentSignature == snapshot.documentSignature
+                    && floatsEqual(textSize, snapshot.textSize)
+                    && floatsEqual(lineSpacingExtra, snapshot.lineSpacingExtra)
+                    && floatsEqual(lineSpacingMultiplier, snapshot.lineSpacingMultiplier)
+                    && floatsEqual(letterSpacing, snapshot.letterSpacing);
+        }
+
+        boolean matchesDimensions(PaginationSpec other) {
+            if (other == null) {
+                return false;
+            }
+            return contentWidth == other.contentWidth
+                    && contentHeight == other.contentHeight
+                    && documentSignature == other.documentSignature
+                    && floatsEqual(textSize, other.textSize)
+                    && floatsEqual(lineSpacingExtra, other.lineSpacingExtra)
+                    && floatsEqual(lineSpacingMultiplier, other.lineSpacingMultiplier)
+                    && floatsEqual(letterSpacing, other.letterSpacing);
         }
     }
 

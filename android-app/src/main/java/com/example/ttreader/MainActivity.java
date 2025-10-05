@@ -47,6 +47,7 @@ import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.DeviceIdentity;
 import com.example.ttreader.data.DeviceStatsDao;
 import com.example.ttreader.data.MemoryDao;
+import com.example.ttreader.data.PaginationDao;
 import com.example.ttreader.data.ReadingStateDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.ReadingState;
@@ -122,6 +123,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private UsageStatsDao usageStatsDao;
     private DeviceStatsDao deviceStatsDao;
     private ReadingStateDao readingStateDao;
+    private PaginationDao paginationDao;
     private ScrollView readerScrollView;
     private ReaderView readerView;
     private ProgressBar readerLoadingIndicator;
@@ -297,6 +299,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         usageStatsDao = new UsageStatsDao(db);
         deviceStatsDao = new DeviceStatsDao(db);
         readingStateDao = new ReadingStateDao(db);
+        paginationDao = new PaginationDao(db);
 
         readerPrefs = getSharedPreferences(PREFS_READER_STATE, MODE_PRIVATE);
         if (readerPrefs != null) {
@@ -335,7 +338,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerBasePaddingTop = readerView.getPaddingTop();
             readerBasePaddingRight = readerView.getPaddingRight();
             readerBasePaddingBottom = readerView.getPaddingBottom();
-            readerView.setup(dbHelper, memoryDao, usageStatsDao, this);
+            readerView.setup(dbHelper, memoryDao, usageStatsDao, paginationDao, this);
             readerView.setWindowChangeListener(this::handleReaderWindowChanged);
             readerView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
                     updateReaderBottomInset());
