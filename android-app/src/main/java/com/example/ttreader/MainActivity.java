@@ -31,6 +31,7 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -126,6 +127,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ReadingStateDao readingStateDao;
     private PaginationDao paginationDao;
     private ScrollView readerScrollView;
+    private View readerPageContainer;
     private ReaderView readerView;
     private ProgressBar readerLoadingIndicator;
     private ImageButton pagePreviousButton;
@@ -142,15 +144,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private final List<Runnable> pendingViewportReadyActions = new ArrayList<>();
     private boolean awaitingViewportMeasurement;
     private boolean readerViewportReady;
-    private int readerScrollBasePaddingLeft;
-    private int readerScrollBasePaddingTop;
-    private int readerScrollBasePaddingRight;
-    private int readerScrollBasePaddingBottom;
+    private int readerPageBaseMarginLeft;
+    private int readerPageBaseMarginTop;
+    private int readerPageBaseMarginRight;
+    private int readerPageBaseMarginBottom;
     private int lastOverlayClearance;
     private int lastKnownOverlayHeight = -1;
     private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
     private boolean flushingViewportActions;
     private boolean overlayInsetRetryScheduled;
+    private boolean readerWindowInitialized;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -338,6 +341,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
 
         readerScrollView = findViewById(R.id.readerScrollView);
+        readerPageContainer = findViewById(R.id.readerPageContainer);
         readerView = findViewById(R.id.readerView);
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
         pagePreviousButton = findViewById(R.id.pagePreviousButton);
@@ -355,16 +359,26 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
 
         if (readerScrollView != null) {
-            readerScrollBasePaddingLeft = readerScrollView.getPaddingLeft();
-            readerScrollBasePaddingTop = readerScrollView.getPaddingTop();
-            readerScrollBasePaddingRight = readerScrollView.getPaddingRight();
-            readerScrollBasePaddingBottom = readerScrollView.getPaddingBottom();
             readerScrollView.setVerticalFadingEdgeEnabled(false);
             readerScrollView.setFadingEdgeLength(0);
             readerScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            readerScrollView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
-                    dispatchReaderViewportChanged());
+            readerScrollView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+                if (bottom - top != oldBottom - oldTop) {
+                    dispatchReaderViewportChanged();
+                }
+            });
             scheduleReaderViewportDispatch();
+        }
+
+        if (readerPageContainer != null) {
+            ViewGroup.LayoutParams params = readerPageContainer.getLayoutParams();
+            if (params instanceof ViewGroup.MarginLayoutParams) {
+                ViewGroup.MarginLayoutParams margins = (ViewGroup.MarginLayoutParams) params;
+                readerPageBaseMarginLeft = margins.leftMargin;
+                readerPageBaseMarginTop = margins.topMargin;
+                readerPageBaseMarginRight = margins.rightMargin;
+                readerPageBaseMarginBottom = margins.bottomMargin;
+            }
         }
 
         if (pageControls != null) {
@@ -874,6 +888,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pendingSpeechChar = -1;
         restoringReadingState = true;
         showReaderLoading(true);
+        readerWindowInitialized = false;
+        lastDispatchedViewportHeight = -1;
+        lastOverlayClearance = -1;
         readerView.clearContent();
         runWhenReaderViewportReady(() -> readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
             updateSentenceRanges();
@@ -960,7 +977,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                         + " viewportStart=" + readerView.getViewportStartChar()
                         + " page=" + (readerView.getCurrentPageIndex() + 1)
                         + "/" + readerView.getTotalPageCount());
-                resetReaderScrollOffset();
+                if (!readerWindowInitialized) {
+                    readerWindowInitialized = true;
+                    resetReaderScrollOffset();
+                }
                 int viewportStart = readerView.getViewportStartChar();
                 if (viewportStart >= 0) {
                     pendingVisualChar = viewportStart;
@@ -1141,25 +1161,32 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     + " T" + top + " R" + right + " B" + bottom);
         }
 
-        int additionalOverlayPadding = overlayClearance;
-        boolean scrollPaddingChanged = false;
-        if (readerScrollView != null) {
-            int scrollLeft = readerScrollBasePaddingLeft;
-            int scrollTop = readerScrollBasePaddingTop;
-            int scrollRight = readerScrollBasePaddingRight;
-            int scrollBottom = readerScrollBasePaddingBottom + additionalOverlayPadding;
-            scrollPaddingChanged = readerScrollView.getPaddingLeft() != scrollLeft
-                    || readerScrollView.getPaddingTop() != scrollTop
-                    || readerScrollView.getPaddingRight() != scrollRight
-                    || readerScrollView.getPaddingBottom() != scrollBottom;
-            if (scrollPaddingChanged) {
-                readerScrollView.setPadding(scrollLeft, scrollTop, scrollRight, scrollBottom);
-                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: scroll padding -> L" + scrollLeft
-                        + " T" + scrollTop + " R" + scrollRight + " B" + scrollBottom);
+        boolean containerMarginChanged = false;
+        if (readerPageContainer != null && readerPageContainer.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams margins = (ViewGroup.MarginLayoutParams) readerPageContainer.getLayoutParams();
+            int targetLeft = readerPageBaseMarginLeft;
+            int targetTop = readerPageBaseMarginTop;
+            int targetRight = readerPageBaseMarginRight;
+            int targetBottom = readerPageBaseMarginBottom + overlayClearance;
+            if (margins.leftMargin != targetLeft || margins.topMargin != targetTop
+                    || margins.rightMargin != targetRight || margins.bottomMargin != targetBottom) {
+                margins.leftMargin = targetLeft;
+                margins.topMargin = targetTop;
+                margins.rightMargin = targetRight;
+                margins.bottomMargin = targetBottom;
+                readerPageContainer.setLayoutParams(margins);
+                containerMarginChanged = true;
+                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: page container margins -> L" + targetLeft
+                        + " T" + targetTop + " R" + targetRight + " B" + targetBottom);
             }
         }
 
-        if (overlayChanged || readerPaddingChanged || scrollPaddingChanged) {
+        boolean insetChanged = readerViewportBottomInset != overlayClearance;
+        if (insetChanged) {
+            readerViewportBottomInset = overlayClearance;
+        }
+
+        if (overlayChanged || readerPaddingChanged || containerMarginChanged || insetChanged) {
             Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: dispatch viewport change");
             dispatchReaderViewportChanged();
         }
