@@ -133,7 +133,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private View pageControls;
     private TextView pageNumberText;
     private View readerBottomPanel;
-    private View readerPageContainer;
     private int readerBasePaddingLeft;
     private int readerBasePaddingTop;
     private int readerBasePaddingRight;
@@ -143,8 +142,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private final List<Runnable> pendingViewportReadyActions = new ArrayList<>();
     private boolean awaitingViewportMeasurement;
     private boolean readerViewportReady;
-    private int readerContainerMarginTop;
-    private int readerContainerMarginBottom;
     private int readerBottomPanelBaseHeight;
     private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
     private boolean flushingViewportActions;
@@ -342,15 +339,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pageControls = findViewById(R.id.pageControls);
         pageNumberText = findViewById(R.id.pageNumberText);
         readerBottomPanel = findViewById(R.id.readerBottomPanel);
-        readerPageContainer = findViewById(R.id.readerPageContainer);
-        if (readerPageContainer != null) {
-            ViewGroup.LayoutParams containerParams = readerPageContainer.getLayoutParams();
-            if (containerParams instanceof ViewGroup.MarginLayoutParams) {
-                ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) containerParams;
-                readerContainerMarginTop = mlp.topMargin;
-                readerContainerMarginBottom = mlp.bottomMargin;
-            }
-        }
         if (readerBottomPanel != null) {
             ViewGroup.LayoutParams panelParams = readerBottomPanel.getLayoutParams();
             if (panelParams != null && panelParams.height > 0) {
@@ -1088,40 +1076,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int overlayClearance = 0;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
             int overlayHeight = Math.max(0, pageControls.getHeight());
-            int overlayMargin = 0;
-            ViewGroup.LayoutParams lp = pageControls.getLayoutParams();
-            if (lp instanceof ViewGroup.MarginLayoutParams) {
-                overlayMargin = ((ViewGroup.MarginLayoutParams) lp).bottomMargin;
+            if (overlayHeight == 0) {
+                overlayHeight = Math.max(overlayHeight, pageControls.getMeasuredHeight());
             }
             int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
-            int overlayReach = overlayHeight + overlayMargin + extra;
-            overlayClearance = Math.max(0, overlayReach);
+            overlayClearance = Math.max(0, overlayHeight + extra);
         }
         int desiredPanelHeight = Math.max(readerBottomPanelBaseHeight, overlayClearance);
-        if (readerScrollView != null && readerPageContainer != null) {
-            int scrollHeight = readerScrollView.getHeight();
-            int scrollPaddingTop = readerScrollView.getPaddingTop();
-            int scrollPaddingBottom = readerScrollView.getPaddingBottom();
-            int availableHeight = scrollHeight - scrollPaddingTop - scrollPaddingBottom;
-            if (availableHeight < 0) {
-                availableHeight = 0;
-            }
-            int verticalMargins = readerContainerMarginTop + readerContainerMarginBottom;
-            if (verticalMargins > 0) {
-                availableHeight = Math.max(0, availableHeight - verticalMargins);
-            }
-            int readerHeight = readerView.getHeight();
-            if (readerHeight <= 0) {
-                readerHeight = readerView.getMeasuredHeight();
-            }
-            if (readerHeight > availableHeight) {
-                readerHeight = availableHeight;
-            }
-            if (availableHeight > 0 && readerHeight >= 0) {
-                int leftover = Math.max(0, availableHeight - readerHeight);
-                desiredPanelHeight = Math.max(desiredPanelHeight, leftover);
-            }
-        }
 
         boolean panelChanged = false;
         if (readerBottomPanel != null) {
