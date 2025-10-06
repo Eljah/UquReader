@@ -51,10 +51,10 @@ If the API 33 platform files have not been installed yet, Maven aborts during de
 ```
 [ERROR] Failed to execute goal on project uqureader: Could not resolve dependencies for project com.example:uqureader:apk:1.1.0
 [ERROR] dependency: android:android:jar:33 (system)
-[ERROR]         Could not find artifact android:android:jar:33 at specified path /usr/lib/android-sdk/platforms/android-33/android.jar
+[ERROR]         Could not find artifact android:android:jar:33 at specified path /workspace/UquReader/.codex/android-sdk/platforms/android-33/android.jar
 ```
 
-Maven emits the message with 120-column word wrapping, so the trailing `/android.jar` segment may appear on the next line in the console output. Installing the platform with the `sdkmanager` command from the previous section resolves the error.
+The build now normalises the Android SDK location inside Codex containers to avoid spurious `/usr/lib/android-sdk` fallbacks and emits the missing-file path on a single line. Installing the platform with the `sdkmanager` command from the previous section resolves the error.
 
 ## Emulator session
 
