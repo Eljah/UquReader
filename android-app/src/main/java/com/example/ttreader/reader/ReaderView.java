@@ -17,6 +17,7 @@ import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewParent;
 import android.widget.TextView;
 
 import com.example.ttreader.data.DbHelper;
@@ -858,6 +859,35 @@ public class ReaderView extends TextView {
                 .append(']');
         sb.append(" scroll=").append('[').append(getScrollX()).append(',').append(getScrollY()).append(']');
         sb.append(" visibleRange=").append('[').append(visibleStart).append(',').append(visibleEnd).append(')');
+        ViewParent parent = getParent();
+        View cardView = parent instanceof View ? (View) parent : null;
+        if (cardView != null) {
+            sb.append(" cardBounds=")
+                    .append('[').append(cardView.getLeft()).append(',').append(cardView.getTop())
+                    .append(" -> ").append(cardView.getRight()).append(',').append(cardView.getBottom())
+                    .append(']');
+            sb.append(" cardPadding=")
+                    .append('[').append(cardView.getPaddingLeft()).append(',')
+                    .append(cardView.getPaddingTop()).append(" -> ")
+                    .append(cardView.getPaddingRight()).append(',')
+                    .append(cardView.getPaddingBottom()).append(']');
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                if (cardView.isAttachedToWindow()) {
+                    int[] location = new int[2];
+                    try {
+                        cardView.getLocationOnScreen(location);
+                        sb.append(" cardScreen=")
+                                .append('[').append(location[0]).append(',').append(location[1])
+                                .append(" -> ").append(location[0] + cardView.getWidth()).append(',')
+                                .append(location[1] + cardView.getHeight()).append(']');
+                    } catch (IllegalArgumentException ignored) {
+                        sb.append(" cardScreen=[unavailable]");
+                    }
+                } else {
+                    sb.append(" cardAttached=false");
+                }
+            }
+        }
         Layout layout = getLayout();
         if (layout != null) {
             int lineCount = layout.getLineCount();
@@ -867,11 +897,23 @@ public class ReaderView extends TextView {
                 int firstBaseline = layout.getLineBaseline(0);
                 int lastIndex = lineCount - 1;
                 int lastBaseline = layout.getLineBaseline(lastIndex);
+                int lastBottom = layout.getLineBottom(lastIndex);
                 sb.append(" firstLineTop=").append(layout.getLineTop(0));
                 sb.append(" firstBaseline=").append(firstBaseline);
                 sb.append(" lastLineTop=").append(layout.getLineTop(lastIndex));
                 sb.append(" lastBaseline=").append(lastBaseline);
-                sb.append(" lastBottom=").append(layout.getLineBottom(lastIndex));
+                sb.append(" lastBottom=").append(lastBottom);
+                int textBottomInView = getPaddingTop() + lastBottom;
+                sb.append(" textBottomInView=").append(textBottomInView);
+                if (cardView != null) {
+                    int textBottomInCard = getTop() + textBottomInView;
+                    int cardInnerBottom = cardView.getBottom() - cardView.getPaddingBottom();
+                    int cardInnerTop = cardView.getTop() + cardView.getPaddingTop();
+                    sb.append(" cardInnerTop=").append(cardInnerTop);
+                    sb.append(" cardInnerBottom=").append(cardInnerBottom);
+                    sb.append(" textBottomInCard=").append(textBottomInCard);
+                    sb.append(" cardClearance=").append(cardInnerBottom - textBottomInCard);
+                }
             }
         } else {
             sb.append(" layout=null");
