@@ -1,6 +1,7 @@
 package com.example.ttreader.reader;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Handler;
@@ -15,6 +16,7 @@ import android.text.method.MovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 
 import com.example.ttreader.data.DbHelper;
@@ -41,6 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ReaderView extends TextView {
     private static final String TAG = "ReaderViewTrace";
+    private static final String TEXT_LOG_TAG = "ReaderTextTrace";
     public interface TokenInfoProvider {
         void onTokenLongPress(TokenSpan span, List<String> ruLemmas);
         void onTokenSingleTap(TokenSpan span);
@@ -125,6 +128,31 @@ public class ReaderView extends TextView {
             markPaginationDirty();
             post(this::showPendingTargetIfPossible);
         }
+        logTextEvent("onSizeChanged w=" + w + " h=" + h + " old=" + oldw + "x" + oldh);
+    }
+
+    @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        logTextEvent("onMeasure widthSpec=" + View.MeasureSpec.toString(widthMeasureSpec)
+                + " heightSpec=" + View.MeasureSpec.toString(heightMeasureSpec)
+                + " -> measured=" + getMeasuredWidth() + "x" + getMeasuredHeight());
+    }
+
+    @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+        logTextEvent("onLayout changed=" + changed + " localBounds=[" + left + ',' + top
+                + " -> " + right + ',' + bottom + "]");
+    }
+
+    @Override protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        logTextEvent("onDraw");
+    }
+
+    @Override public void setText(CharSequence text, BufferType type) {
+        super.setText(text, type);
+        int length = text == null ? 0 : text.length();
+        logTextEvent("setText length=" + length);
     }
 
     private void init() {
@@ -256,6 +284,7 @@ public class ReaderView extends TextView {
         pendingInitialCompletion = null;
         initialContentDelivered = false;
         currentDocumentSignature = 0;
+        logTextEvent("clearContent");
         setText("");
         activeSentenceSpan = null;
         activeLetterSpan = null;
@@ -801,6 +830,8 @@ public class ReaderView extends TextView {
         }
         visibleStart = clampedStart;
         visibleEnd = clampedEnd;
+        logTextEvent("applyPage start=" + visibleStart + " end=" + visibleEnd
+                + " length=" + builder.length());
         setText(builder);
         deliverInitialContentIfNeeded();
         if (getMovementMethod() != movementMethod) {
@@ -811,6 +842,42 @@ public class ReaderView extends TextView {
         if (notifyWindowChange && windowChangeListener != null) {
             windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
         }
+    }
+
+    private void logTextEvent(String action) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ReaderText: ").append(action);
+        sb.append(" bounds=")
+                .append('[').append(getLeft()).append(',').append(getTop())
+                .append(" -> ").append(getRight()).append(',').append(getBottom())
+                .append(']');
+        sb.append(" size=").append(getWidth()).append('x').append(getHeight());
+        sb.append(" padding=")
+                .append('[').append(getPaddingLeft()).append(',').append(getPaddingTop())
+                .append(" -> ").append(getPaddingRight()).append(',').append(getPaddingBottom())
+                .append(']');
+        sb.append(" scroll=").append('[').append(getScrollX()).append(',').append(getScrollY()).append(']');
+        sb.append(" visibleRange=").append('[').append(visibleStart).append(',').append(visibleEnd).append(')');
+        Layout layout = getLayout();
+        if (layout != null) {
+            int lineCount = layout.getLineCount();
+            sb.append(" layout=").append(layout.getWidth()).append('x').append(layout.getHeight());
+            sb.append(" lines=").append(lineCount);
+            if (lineCount > 0) {
+                int firstBaseline = layout.getLineBaseline(0);
+                int lastIndex = lineCount - 1;
+                int lastBaseline = layout.getLineBaseline(lastIndex);
+                sb.append(" firstLineTop=").append(layout.getLineTop(0));
+                sb.append(" firstBaseline=").append(firstBaseline);
+                sb.append(" lastLineTop=").append(layout.getLineTop(lastIndex));
+                sb.append(" lastBaseline=").append(lastBaseline);
+                sb.append(" lastBottom=").append(layout.getLineBottom(lastIndex));
+            }
+        } else {
+            sb.append(" layout=null");
+        }
+        sb.append('\n').append(Log.getStackTraceString(new Throwable("trace")));
+        Log.d(TEXT_LOG_TAG, sb.toString());
     }
 
     private void deliverInitialContentIfNeeded() {

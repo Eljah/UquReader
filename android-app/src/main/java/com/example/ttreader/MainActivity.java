@@ -1073,6 +1073,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 logViewEvent("ReaderView", readerView,
                         "afterWindowChanged page=" + currentPageIndex + "/" + Math.max(1, totalPages)
                                 + " height=" + readerHeight);
+                enforceReaderPageHeight("afterWindowChanged");
             });
         } else {
             updatePageControls();
@@ -1081,6 +1082,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     "afterWindowChanged (noReaderView) height=" + cardHeight);
             logViewEvent("ReaderView", null,
                     "afterWindowChanged (noReaderView) height=0");
+            enforceReaderPageHeight("afterWindowChanged:noReader");
         }
         if (!restoringReadingState) {
             schedulePersistReadingState();
@@ -1119,6 +1121,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                         "setText no-op -> " + dash);
             }
         }
+        enforcePageControlsMinHeight("updatePageControls");
     }
 
     private void goToPreviousPage() {
