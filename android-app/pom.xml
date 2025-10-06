@@ -20,6 +20,8 @@
     <java.version>1.8</java.version>
     <base64encoder.jar>${project.basedir}/tools/base64encoder/base64encoder.jar</base64encoder.jar>
     <android.debug.keystore>${user.home}/.android/debug.keystore</android.debug.keystore>
+    <android.debug.keystore.alias>androiddebugkey</android.debug.keystore.alias>
+    <android.debug.keystore.password>android</android.debug.keystore.password>
     <app.version>${project.version}</app.version>
     <app.version.code>2</app.version.code>
   </properties>
@@ -355,6 +357,36 @@ fi
             </configuration>
           </execution>
           <execution>
+            <id>sign-debug-apk</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <property name="apksigner.executable" value="${android.sdk.location}/build-tools/${android.build-tools}/apksigner" />
+                <property name="apk.output" value="${project.build.directory}/${project.artifactId}-${project.version}.apk" />
+                <property name="debug.keystore" value="${android.debug.keystore}" />
+                <property name="debug.keystore.alias" value="${android.debug.keystore.alias}" />
+                <property name="debug.keystore.password" value="${android.debug.keystore.password}" />
+                <available file="${apksigner.executable}" property="apksigner.present" />
+                <fail message="apksigner not found at ${apksigner.executable}" unless="apksigner.present" />
+                <exec executable="${apksigner.executable}">
+                  <arg value="sign" />
+                  <arg value="--ks" />
+                  <arg value="${debug.keystore}" />
+                  <arg value="--ks-pass" />
+                  <arg value="pass:${debug.keystore.password}" />
+                  <arg value="--key-pass" />
+                  <arg value="pass:${debug.keystore.password}" />
+                  <arg value="--ks-key-alias" />
+                  <arg value="${debug.keystore.alias}" />
+                  <arg value="${apk.output}" />
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
             <id>strip-duplicate-dummy-classes</id>
             <phase>prepare-package</phase>
             <goals>
@@ -430,6 +462,9 @@ fi
           <codex.keystore>${project.basedir}/../.codex/codex-release.keystore</codex.keystore>
           <codex.keystore.alias>codex</codex.keystore.alias>
           <codex.keystore.password>codexpass</codex.keystore.password>
+          <android.debug.keystore>${codex.keystore}</android.debug.keystore>
+          <android.debug.keystore.alias>${codex.keystore.alias}</android.debug.keystore.alias>
+          <android.debug.keystore.password>${codex.keystore.password}</android.debug.keystore.password>
         </properties>
         <build>
           <plugins>
@@ -477,33 +512,6 @@ else
   "$KEYTOOL" -genkeypair -keystore "$KEYSTORE" -storepass "${codex.keystore.password}" -keypass "${codex.keystore.password}" -alias "${codex.keystore.alias}" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Codex Signing,O=OpenAI Codex,OU=AI Platform,L=San Francisco,S=California,C=US";
   echo "info: created Codex signing keystore at $KEYSTORE";
 fi' />
-                      </exec>
-                    </target>
-                  </configuration>
-                </execution>
-                <execution>
-                  <id>codex-sign-apk</id>
-                  <phase>package</phase>
-                  <goals>
-                    <goal>run</goal>
-                  </goals>
-                  <configuration>
-                    <target>
-                      <property name="apksigner.executable" value="${android.sdk.location}/build-tools/${android.build-tools}/apksigner" />
-                      <property name="apk.output" value="${project.build.directory}/${project.artifactId}-${project.version}.apk" />
-                      <available file="${apksigner.executable}" property="apksigner.present" />
-                      <fail message="apksigner not found at ${apksigner.executable}" unless="apksigner.present" />
-                      <exec executable="${apksigner.executable}">
-                        <arg value="sign" />
-                        <arg value="--ks" />
-                        <arg value="${codex.keystore}" />
-                        <arg value="--ks-pass" />
-                        <arg value="pass:${codex.keystore.password}" />
-                        <arg value="--key-pass" />
-                        <arg value="pass:${codex.keystore.password}" />
-                        <arg value="--ks-key-alias" />
-                        <arg value="${codex.keystore.alias}" />
-                        <arg value="${apk.output}" />
                       </exec>
                     </target>
                   </configuration>
