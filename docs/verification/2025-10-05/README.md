@@ -46,6 +46,16 @@ TERM=dumb ./mvnw -pl android-app -am package -DskipTests
 
 The build succeeds after provisioning the debug keystore at `~/.android/debug.keystore`. The Maven `android-maven-plugin` reports the missing keystore during the `sign-debug-apk` Ant task if it is absent.
 
+If the API 33 platform files have not been installed yet, Maven aborts during dependency resolution with an error similar to:
+
+```
+[ERROR] Failed to execute goal on project uqureader: Could not resolve dependencies for project com.example:uqureader:apk:1.1.0
+[ERROR] dependency: android:android:jar:33 (system)
+[ERROR]         Could not find artifact android:android:jar:33 at specified path /usr/lib/android-sdk/platforms/android-33/android.jar
+```
+
+Maven emits the message with 120-column word wrapping, so the trailing `/android.jar` segment may appear on the next line in the console output. Installing the platform with the `sdkmanager` command from the previous section resolves the error.
+
 ## Emulator session
 
 The app can be launched on the API 28 x86 emulator headlessly once `/dev/kvm` acceleration is available:
