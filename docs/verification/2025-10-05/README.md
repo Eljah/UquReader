@@ -91,11 +91,11 @@ HVF on macOS, or WHPX/Hyper-V on Windows). Once the emulator reports the device 
 
 ## Capture layout and text traces
 
-Once the emulator (or a physical device) is available, install the freshly built APK and gather the specialised layout traces that confirm the yellow card, pagination controls, and text frame remain stable across page changes:
+Once the emulator (or a physical device) is available, install the freshly built APK and gather the specialised layout traces that confirm the yellow card, pagination controls, and text frame remain stable across page changes. The repository now ships with a helper script that automates the install step and explains why the package manager might be unreachable when the device is still `offline`:
 
 ```bash
-# Install the debug build produced by the Maven build step above.
-adb install -r android-app/target/com.example.ttreader-android.apk
+# Install the freshest APK produced by Maven.
+./tools/codex-install-apk.sh
 
 # Launch the app (replace with the actual launcher intent if needed).
 adb shell monkey -p com.example.ttreader 1
@@ -124,9 +124,9 @@ installs. The following experiments were run after building the app locally with
    the device never progresses past the `offline` state because the software CPU
    backend lacks the AVX/F16C instructions required by Android 9.
 2. **`adb install` against the offline device** – Attempting to sideload the
-   freshly built `android-app/target/uqureader-1.1.0.apk` fails with
-   `cmd: Can't find service: package`, confirming that the system server never
-   started.
+   freshly built APK with `./tools/codex-install-apk.sh` (or the raw
+   `adb install` command it wraps) fails with `cmd: Can't find service:
+   package`, confirming that the system server never started.
 3. **ARM64 system image fallback** – Installing
    `system-images;android-28;default;arm64-v8a` succeeds, but launching an AVD
    based on it immediately aborts with `PANIC: Avd's CPU Architecture 'arm64' is
