@@ -1191,12 +1191,20 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 .append(safeTotal);
         if (lastLoggedPageIndex >= 0) {
             int delta = current - lastLoggedPageIndex;
-            if (delta > 0) {
-                action.append(" delta=+").append(delta);
-            } else if (delta < 0) {
-                action.append(" delta=").append(delta);
+            if (delta == 1) {
+                action.append(" delta=+").append(delta).append(" monotonic=true");
             } else {
-                action.append(" delta=0");
+                if (delta > 0) {
+                    action.append(" delta=+").append(delta);
+                } else {
+                    action.append(" delta=").append(delta);
+                }
+                action.append(" monotonicViolation");
+                Log.w(LAYOUT_LOG_TAG,
+                        "PageNumberText: " + stage
+                                + " nonIncremental page advance delta=" + delta
+                                + " current=" + current + '/' + safeTotal
+                                + " previous=" + lastLoggedPageIndex + '/' + lastLoggedPageTotal);
             }
             if (lastLoggedPageTotal >= 0 && lastLoggedPageTotal != safeTotal) {
                 int totalDelta = safeTotal - lastLoggedPageTotal;
