@@ -65,19 +65,63 @@ collect_devices() {
   done
 }
 
-attempt_recovery() {
-  local attempt="${1:-0}"
-  if [[ ${#offline_devices[@]} -eq 0 ]]; then
+find_emulator_binary() {
+  local candidate
+  for candidate in \
+    "${ANDROID_HOME:-}/emulator/emulator" \
+    "${ANDROID_SDK_ROOT:-}/emulator/emulator" \
+    "$PROJECT_ROOT/.codex/android-sdk/emulator/emulator"; do
+    if [[ -n "$candidate" && -x "$candidate" ]]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  if command -v emulator >/dev/null 2>&1; then
+    command -v emulator
+    return 0
+  fi
+
+  return 1
+}
+
+launch_default_emulator() {
+  local emulator_bin
+  if ! emulator_bin="$(find_emulator_binary)"; then
+    echo "[codex-install] No emulator binary found on PATH or in ANDROID_HOME/ANDROID_SDK_ROOT." >&2
     return 1
   fi
 
-  echo "[codex-install] Attempting to recover offline/unstable devices (attempt $((attempt + 1)))." >&2
+  mapfile -t available_avds < <("$emulator_bin" -list-avds 2>/dev/null | sed 's/\r$//')
+  if [[ ${#available_avds[@]} -eq 0 ]]; then
+    echo "[codex-install] Emulator binary located but no AVDs are configured." >&2
+    return 1
+  fi
+
+  local target_avd="${CODEX_INSTALL_AVD:-${available_avds[0]}}"
+  echo "[codex-install] Launching emulator for AVD $target_avd" >&2
+
+  # Launch the emulator in the background. Users can provide CODEX_EMULATOR_RESTART_CMD
+  # when a custom startup sequence is required. The nohup/stdout redirection prevents
+  # the emulator process from being killed when the script finishes.
+  nohup "$emulator_bin" -avd "$target_avd" -no-snapshot-save -no-boot-anim >/dev/null 2>&1 &
+  disown || true
+  return 0
+}
+
+attempt_recovery() {
+  local attempt="${1:-0}"
+  local reason="${2:-offline}"
+  local performed_action=0
+
+  echo "[codex-install] Attempting device/emulator recovery (attempt $((attempt + 1)); reason=$reason)." >&2
   "$ADB_BIN" reconnect offline >/dev/null 2>&1 || true
   "$ADB_BIN" kill-server >/dev/null 2>&1 || true
   "$ADB_BIN" start-server >/dev/null 2>&1 || true
 
   local entry serial state
   for entry in "${offline_devices[@]}"; do
+    performed_action=1
     serial="${entry%%:*}"
     state="${entry##*:}"
     if [[ "$serial" =~ ^emulator-[0-9]+$ ]]; then
@@ -90,9 +134,17 @@ attempt_recovery() {
   done
 
   if [[ -n "${CODEX_EMULATOR_RESTART_CMD:-}" ]]; then
+    performed_action=1
     echo "[codex-install]  - Executing CODEX_EMULATOR_RESTART_CMD" >&2
     # shellcheck disable=SC2086 # Intentional word splitting for custom command sequences.
     eval ${CODEX_EMULATOR_RESTART_CMD} || true
+  elif launch_default_emulator; then
+    performed_action=1
+  fi
+
+  if [[ $performed_action -eq 0 ]]; then
+    echo "[codex-install] No recovery actions available. Connect or configure an emulator manually." >&2
+    return 1
   fi
 
   sleep 5
@@ -103,7 +155,7 @@ collect_devices
 
 recovery_attempt=0
 while [[ ${#online_devices[@]} -eq 0 && $recovery_attempt -lt 3 ]]; do
-  if ! attempt_recovery "$recovery_attempt"; then
+  if ! attempt_recovery "$recovery_attempt" "no-online-devices"; then
     break
   fi
   ((recovery_attempt++))
