@@ -23,6 +23,7 @@ import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
@@ -176,6 +177,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private TextView pageNumberText;
     private final ViewBoundsSnapshot pageControlsBounds = new ViewBoundsSnapshot();
     private final ViewBoundsSnapshot pageNumberBounds = new ViewBoundsSnapshot();
+    private int lastPageNumberMinWidth;
+    private int lastPageNumberDigitCount;
     private int lastLoggedPageIndex = -1;
     private int lastLoggedPageTotal = -1;
     private int readerBasePaddingLeft;
@@ -1147,6 +1150,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView != null && readerView.getDocumentLength() > 0) {
             int current = readerView.getCurrentPageIndex() + 1;
             int total = Math.max(1, readerView.getTotalPageCount());
+            ensurePageNumberMinWidth(total);
             String formatted = String.format(Locale.getDefault(), "%d / %d", current, total);
             CharSequence existing = pageNumberText == null ? null : pageNumberText.getText();
             if (!TextUtils.equals(existing, formatted)) {
@@ -1193,6 +1197,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             int delta = current - lastLoggedPageIndex;
             if (delta == 1) {
                 action.append(" delta=+").append(delta).append(" monotonic=true");
+            } else if (delta == 0) {
+                action.append(" delta=0 monotonic=true unchanged");
             } else {
                 if (delta > 0) {
                     action.append(" delta=+").append(delta);
@@ -1216,6 +1222,50 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         logViewEvent("PageNumberText", pageNumberText, action.toString());
         lastLoggedPageIndex = current;
         lastLoggedPageTotal = safeTotal;
+    }
+
+    private void ensurePageNumberMinWidth(int totalPages) {
+        if (pageNumberText == null) {
+            return;
+        }
+        int safeTotal = Math.max(1, totalPages);
+        int digitCount = (int) Math.floor(Math.log10(safeTotal)) + 1;
+        digitCount = Math.max(1, digitCount);
+        if (digitCount <= lastPageNumberDigitCount && lastPageNumberMinWidth > 0) {
+            return;
+        }
+        TextPaint paint = pageNumberText.getPaint();
+        if (paint == null) {
+            return;
+        }
+        String sample = buildPageNumberSample(digitCount);
+        float measured = paint.measureText(sample);
+        int paddedWidth = (int) Math.ceil(measured)
+                + pageNumberText.getPaddingLeft() + pageNumberText.getPaddingRight();
+        if (paddedWidth <= 0) {
+            return;
+        }
+        if (paddedWidth > lastPageNumberMinWidth) {
+            pageNumberText.setMinWidth(paddedWidth);
+            lastPageNumberMinWidth = paddedWidth;
+            lastPageNumberDigitCount = digitCount;
+            logViewEvent("PageNumberText", pageNumberText,
+                    "setMinWidth -> " + paddedWidth + " digits=" + digitCount
+                            + " sample=" + sample);
+        }
+    }
+
+    private String buildPageNumberSample(int digitCount) {
+        int safeDigits = Math.max(1, digitCount);
+        StringBuilder builder = new StringBuilder(safeDigits * 2 + 3);
+        for (int i = 0; i < safeDigits; i++) {
+            builder.append('0');
+        }
+        builder.append(" / ");
+        for (int i = 0; i < safeDigits; i++) {
+            builder.append('0');
+        }
+        return builder.toString();
     }
 
     private void logViewBoundsSnapshot(String component, View view,
