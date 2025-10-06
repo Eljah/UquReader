@@ -112,6 +112,33 @@ Expect to see the following patterns in the log output while you flip through pa
 
 Any deviation indicates that the persisted layout cache is not being honoured and warrants further investigation before considering the regression fixed.
 
+### Codex container installation attempt (2025-10-06)
+
+Although the Codex container now provisions the SDK automatically, the headless
+emulator that ships with the image still cannot boot far enough to accept APK
+installs. The following experiments were run after building the app locally with
+`TERM=dumb ./mvnw -pl android-app -am package -DskipTests`:
+
+1. **x86_64 system image with software rendering** – Starting the `api28` AVD
+   with `-accel off` and SwiftShader allows QEMU to reach the boot stage, but
+   the device never progresses past the `offline` state because the software CPU
+   backend lacks the AVX/F16C instructions required by Android 9.
+2. **`adb install` against the offline device** – Attempting to sideload the
+   freshly built `android-app/target/uqureader-1.1.0.apk` fails with
+   `cmd: Can't find service: package`, confirming that the system server never
+   started.
+3. **ARM64 system image fallback** – Installing
+   `system-images;android-28;default;arm64-v8a` succeeds, but launching an AVD
+   based on it immediately aborts with `PANIC: Avd's CPU Architecture 'arm64' is
+   not supported` because the bundled QEMU binary only supports x86 guests on
+   this host.
+
+Until the container exposes hardware virtualisation (KVM, HVF, or WHPX) or
+ships an emulator build that emulates ARM64 on x86 hosts, APK installation has
+to be performed on an external workstation. The logcat instrumentation added in
+this repository remains the most reliable way to validate the reader layout on
+realistic devices.
+
 ## Artifacts
 
 The raw emulator artifacts (screenshot and `ReaderLayoutTrace` logcats) are large and were removed from version control. Re-run the session above to regenerate them if needed for comparison during future fixes.
