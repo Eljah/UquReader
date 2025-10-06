@@ -852,6 +852,11 @@ public class ReaderView extends TextView {
         if (getWidth() <= 0) {
             return false;
         }
+        if (!hasSufficientHeightForRender()) {
+            Log.d(TAG, "canRenderImmediately: insufficient height height=" + getHeight()
+                    + " viewport=" + viewportHeight);
+            return false;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && !isLaidOut()) {
             return false;
         }
@@ -863,6 +868,25 @@ public class ReaderView extends TextView {
             return isLaidOut();
         }
         return getWidth() > 0 && getHeight() > 0;
+    }
+
+    private boolean hasSufficientHeightForRender() {
+        int height = getHeight();
+        if (height <= 0) {
+            return false;
+        }
+        if (viewportHeight <= 0) {
+            return true;
+        }
+        int paddingTop = getTotalPaddingTop();
+        int paddingBottom = getTotalPaddingBottom();
+        int contentHeight = Math.max(0, height - paddingTop - paddingBottom);
+        int targetContentHeight = Math.max(0, viewportHeight - paddingTop - paddingBottom);
+        if (contentHeight >= targetContentHeight) {
+            return true;
+        }
+        int tolerance = Math.max(getLineHeight() * 4, 96);
+        return contentHeight + tolerance >= targetContentHeight;
     }
 
     private void scheduleDeferredPageConsumption() {
