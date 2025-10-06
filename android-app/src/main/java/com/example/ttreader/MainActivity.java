@@ -105,6 +105,44 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
+    private static final class ViewBoundsSnapshot {
+        private static final float FLOAT_TOLERANCE = 0.5f;
+        int left = Integer.MIN_VALUE;
+        int top = Integer.MIN_VALUE;
+        int right = Integer.MIN_VALUE;
+        int bottom = Integer.MIN_VALUE;
+        float translationX = Float.NaN;
+        float translationY = Float.NaN;
+
+        boolean isInitialized() {
+            return left != Integer.MIN_VALUE;
+        }
+
+        boolean matches(int l, int t, int r, int b, float tx, float ty) {
+            return left == l && top == t && right == r && bottom == b
+                    && floatsEqual(translationX, tx) && floatsEqual(translationY, ty);
+        }
+
+        void update(int l, int t, int r, int b, float tx, float ty) {
+            left = l;
+            top = t;
+            right = r;
+            bottom = b;
+            translationX = tx;
+            translationY = ty;
+        }
+
+        private boolean floatsEqual(float a, float b) {
+            if (Float.isNaN(a) && Float.isNaN(b)) {
+                return true;
+            }
+            if (Float.isNaN(a) || Float.isNaN(b)) {
+                return false;
+            }
+            return Math.abs(a - b) <= FLOAT_TOLERANCE;
+        }
+    }
+
     private final List<WorkInfo> availableWorks = Collections.singletonList(
             new WorkInfo("qubiz_qabiz", "qabiz_qubiz.fb2",
                     R.string.work_name_kubyzkabyz_full, R.string.work_name_kubyzkabyz_short)
@@ -136,6 +174,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private ImageButton pageNextButton;
     private View pageControls;
     private TextView pageNumberText;
+    private final ViewBoundsSnapshot pageControlsBounds = new ViewBoundsSnapshot();
+    private final ViewBoundsSnapshot pageNumberBounds = new ViewBoundsSnapshot();
+    private int lastLoggedPageIndex = -1;
+    private int lastLoggedPageTotal = -1;
     private int readerBasePaddingLeft;
     private int readerBasePaddingTop;
     private int readerBasePaddingRight;
@@ -1074,6 +1116,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                         "afterWindowChanged page=" + currentPageIndex + "/" + Math.max(1, totalPages)
                                 + " height=" + readerHeight);
                 enforceReaderPageHeight("afterWindowChanged");
+                logPageControlsBounds("afterWindowChanged");
             });
         } else {
             updatePageControls();
@@ -1083,6 +1126,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             logViewEvent("ReaderView", null,
                     "afterWindowChanged (noReaderView) height=0");
             enforceReaderPageHeight("afterWindowChanged:noReader");
+            logPageControlsBounds("afterWindowChanged:noReader");
         }
         if (!restoringReadingState) {
             schedulePersistReadingState();
@@ -1120,8 +1164,85 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 logViewEvent("PageNumberText", pageNumberText,
                         "setText no-op -> " + dash);
             }
+            lastLoggedPageIndex = -1;
+            lastLoggedPageTotal = -1;
         }
+        if (readerView != null && readerView.getDocumentLength() > 0) {
+            int current = readerView.getCurrentPageIndex() + 1;
+            int total = Math.max(1, readerView.getTotalPageCount());
+            logPageProgress("updatePageControls", current, total);
+        } else {
+            logViewEvent("PageNumberText", pageNumberText,
+                    "updatePageControls page=— (no document)");
+        }
+        logPageControlsBounds("updatePageControls");
         enforcePageControlsMinHeight("updatePageControls");
+    }
+
+    private void logPageControlsBounds(String stage) {
+        logViewBoundsSnapshot("PageControls", pageControls, pageControlsBounds, stage);
+        logViewBoundsSnapshot("PageNumberText", pageNumberText, pageNumberBounds, stage);
+    }
+
+    private void logPageProgress(String stage, int current, int total) {
+        int safeTotal = Math.max(1, total);
+        StringBuilder action = new StringBuilder(stage)
+                .append(" page=").append(current).append('/')
+                .append(safeTotal);
+        if (lastLoggedPageIndex >= 0) {
+            int delta = current - lastLoggedPageIndex;
+            if (delta > 0) {
+                action.append(" delta=+").append(delta);
+            } else if (delta < 0) {
+                action.append(" delta=").append(delta);
+            } else {
+                action.append(" delta=0");
+            }
+            if (lastLoggedPageTotal >= 0 && lastLoggedPageTotal != safeTotal) {
+                int totalDelta = safeTotal - lastLoggedPageTotal;
+                action.append(" totalDelta=").append(totalDelta > 0 ? "+" + totalDelta : totalDelta);
+            }
+        } else {
+            action.append(" initial");
+        }
+        logViewEvent("PageNumberText", pageNumberText, action.toString());
+        lastLoggedPageIndex = current;
+        lastLoggedPageTotal = safeTotal;
+    }
+
+    private void logViewBoundsSnapshot(String component, View view,
+                                       ViewBoundsSnapshot snapshot, String stage) {
+        if (view == null) {
+            logViewEvent(component, null, stage + " bounds skipped (view null)");
+            return;
+        }
+        int left = view.getLeft();
+        int top = view.getTop();
+        int right = view.getRight();
+        int bottom = view.getBottom();
+        float tx = view.getTranslationX();
+        float ty = view.getTranslationY();
+        StringBuilder action = new StringBuilder(stage)
+                .append(" bounds=")
+                .append('[').append(left).append(',').append(top)
+                .append(" -> ").append(right).append(',').append(bottom).append(']')
+                .append(" translation=")
+                .append('[').append(tx).append(',').append(ty).append(']');
+        if (snapshot.isInitialized()) {
+            if (snapshot.matches(left, top, right, bottom, tx, ty)) {
+                action.append(" status=unchanged");
+            } else {
+                action.append(" status=changed prevBounds=")
+                        .append('[').append(snapshot.left).append(',').append(snapshot.top)
+                        .append(" -> ").append(snapshot.right).append(',').append(snapshot.bottom).append(']')
+                        .append(" prevTranslation=")
+                        .append('[').append(snapshot.translationX).append(',').append(snapshot.translationY).append(']');
+            }
+        } else {
+            action.append(" status=initial");
+        }
+        logViewEvent(component, view, action.toString());
+        snapshot.update(left, top, right, bottom, tx, ty);
     }
 
     private void goToPreviousPage() {

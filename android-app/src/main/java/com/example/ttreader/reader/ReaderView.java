@@ -103,6 +103,8 @@ public class ReaderView extends TextView {
     private float sentenceOutlineStrokeWidth;
     private float sentenceOutlineCornerRadius;
     private final MovementMethod movementMethod;
+    private DeferredPage deferredPage;
+    private boolean deferredPageScheduled;
 
     public ReaderView(Context context) {
         super(context);
@@ -130,6 +132,7 @@ public class ReaderView extends TextView {
             post(this::showPendingTargetIfPossible);
         }
         logTextEvent("onSizeChanged w=" + w + " h=" + h + " old=" + oldw + "x" + oldh);
+        consumeDeferredPageIfNeeded();
     }
 
     @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -143,6 +146,7 @@ public class ReaderView extends TextView {
         super.onLayout(changed, left, top, right, bottom);
         logTextEvent("onLayout changed=" + changed + " localBounds=[" + left + ',' + top
                 + " -> " + right + ',' + bottom + "]");
+        consumeDeferredPageIfNeeded();
     }
 
     @Override protected void onDraw(Canvas canvas) {
@@ -805,6 +809,8 @@ public class ReaderView extends TextView {
     private void applyPage(int pageStart, int pageEnd, boolean notifyWindowChange) {
         if (currentDocument == null || currentDocument.text == null) {
             clearContent();
+            deferredPage = null;
+            deferredPageScheduled = false;
             return;
         }
         int docLength = currentDocument.text.length();
@@ -829,18 +835,75 @@ public class ReaderView extends TextView {
             }
             builder.setSpan(span, localStart, localEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
-        visibleStart = clampedStart;
-        visibleEnd = clampedEnd;
-        logTextEvent("applyPage start=" + visibleStart + " end=" + visibleEnd
-                + " length=" + builder.length());
-        setText(builder);
+        DeferredPage page = new DeferredPage(builder, clampedStart, clampedEnd, notifyWindowChange);
+        if (!canRenderImmediately()) {
+            deferredPage = page;
+            logTextEvent("applyPage deferred start=" + clampedStart + " end=" + clampedEnd
+                    + " length=" + builder.length() + " width=" + getWidth()
+                    + " laidOut=" + isViewLaidOutCompat());
+            scheduleDeferredPageConsumption();
+            return;
+        }
+        deferredPage = null;
+        renderPage(page, "immediate");
+    }
+
+    private boolean canRenderImmediately() {
+        if (getWidth() <= 0) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && !isLaidOut()) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isViewLaidOutCompat() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            return isLaidOut();
+        }
+        return getWidth() > 0 && getHeight() > 0;
+    }
+
+    private void scheduleDeferredPageConsumption() {
+        if (deferredPageScheduled) {
+            return;
+        }
+        deferredPageScheduled = true;
+        post(this::consumeDeferredPageIfNeeded);
+    }
+
+    private void consumeDeferredPageIfNeeded() {
+        deferredPageScheduled = false;
+        if (deferredPage == null) {
+            return;
+        }
+        if (!canRenderImmediately()) {
+            scheduleDeferredPageConsumption();
+            return;
+        }
+        DeferredPage page = deferredPage;
+        deferredPage = null;
+        renderPage(page, "deferred");
+    }
+
+    private void renderPage(DeferredPage page, String reason) {
+        if (page == null) {
+            return;
+        }
+        visibleStart = page.start;
+        visibleEnd = page.end;
+        SpannableStringBuilder content = page.content;
+        logTextEvent("applyPage render=" + reason + " start=" + visibleStart + " end=" + visibleEnd
+                + " length=" + content.length());
+        setText(content);
         deliverInitialContentIfNeeded();
         if (getMovementMethod() != movementMethod) {
             setMovementMethod(movementMethod);
         }
         reapplySpeechHighlights();
         logVisibleExposures();
-        if (notifyWindowChange && windowChangeListener != null) {
+        if (page.notifyWindowChange && windowChangeListener != null) {
             windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
         }
     }
@@ -1314,6 +1377,20 @@ public class ReaderView extends TextView {
         Page(int start, int end) {
             this.start = Math.max(0, start);
             this.end = Math.max(this.start, end);
+        }
+    }
+
+    private static final class DeferredPage {
+        final SpannableStringBuilder content;
+        final int start;
+        final int end;
+        final boolean notifyWindowChange;
+
+        DeferredPage(SpannableStringBuilder content, int start, int end, boolean notifyWindowChange) {
+            this.content = content;
+            this.start = start;
+            this.end = end;
+            this.notifyWindowChange = notifyWindowChange;
         }
     }
 
