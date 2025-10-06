@@ -34,36 +34,91 @@ if ! command -v "$ADB_BIN" >/dev/null 2>&1; then
   fi
 fi
 
-# Capture the current adb device table.
-mapfile -t device_rows < <("$ADB_BIN" devices | awk 'NR>1 {print $0}')
-
-if [[ ${#device_rows[@]} -eq 0 ]]; then
-  echo "[codex-install] No connected Android devices or emulators detected by adb." >&2
+if ! "$ADB_BIN" start-server >/dev/null 2>&1; then
+  echo "[codex-install] Failed to start the adb server." >&2
   exit 1
 fi
 
-online_devices=()
-offline_devices=()
-for row in "${device_rows[@]}"; do
-  # Rows are of the form "serial\tstate".
-  serial="${row%%$'\t'*}"
-  state="${row##*$'\t'}"
-  case "$state" in
-    device)
-      online_devices+=("$serial")
-      ;;
-    offline|unknown)
-      offline_devices+=("$serial:$state")
-      ;;
-  esac
+collect_devices() {
+  local row serial state
+  device_rows=()
+  mapfile -t device_rows < <("$ADB_BIN" devices | awk 'NR>1 {print $0}')
+  online_devices=()
+  offline_devices=()
+
+  for row in "${device_rows[@]}"; do
+    # Rows are of the form "serial\tstate" but there may be trailing spaces.
+    row="${row%%[[:space:]]}"
+    if [[ -z "$row" ]]; then
+      continue
+    fi
+    serial="${row%%$'\t'*}"
+    state="${row##*$'\t'}"
+    case "$state" in
+      device)
+        online_devices+=("$serial")
+        ;;
+      offline|unknown|unauthorized)
+        offline_devices+=("$serial:$state")
+        ;;
+    esac
+  done
+}
+
+attempt_recovery() {
+  local attempt="${1:-0}"
+  if [[ ${#offline_devices[@]} -eq 0 ]]; then
+    return 1
+  fi
+
+  echo "[codex-install] Attempting to recover offline/unstable devices (attempt $((attempt + 1)))." >&2
+  "$ADB_BIN" reconnect offline >/dev/null 2>&1 || true
+  "$ADB_BIN" kill-server >/dev/null 2>&1 || true
+  "$ADB_BIN" start-server >/dev/null 2>&1 || true
+
+  local entry serial state
+  for entry in "${offline_devices[@]}"; do
+    serial="${entry%%:*}"
+    state="${entry##*:}"
+    if [[ "$serial" =~ ^emulator-[0-9]+$ ]]; then
+      echo "[codex-install]  - Requesting emulator reboot for $serial (state=$state)" >&2
+      "$ADB_BIN" -s "$serial" emu kill >/dev/null 2>&1 || true
+    else
+      echo "[codex-install]  - Requesting device reboot for $serial (state=$state)" >&2
+      "$ADB_BIN" -s "$serial" reboot >/dev/null 2>&1 || true
+    fi
+  done
+
+  if [[ -n "${CODEX_EMULATOR_RESTART_CMD:-}" ]]; then
+    echo "[codex-install]  - Executing CODEX_EMULATOR_RESTART_CMD" >&2
+    # shellcheck disable=SC2086 # Intentional word splitting for custom command sequences.
+    eval ${CODEX_EMULATOR_RESTART_CMD} || true
+  fi
+
+  sleep 5
+  return 0
+}
+
+collect_devices
+
+recovery_attempt=0
+while [[ ${#online_devices[@]} -eq 0 && $recovery_attempt -lt 3 ]]; do
+  if ! attempt_recovery "$recovery_attempt"; then
+    break
+  fi
+  ((recovery_attempt++))
+  collect_devices
 done
 
 if [[ ${#online_devices[@]} -eq 0 ]]; then
-  echo "[codex-install] adb found devices, but none are in the 'device' state."
-  for entry in "${offline_devices[@]}"; do
-    echo "[codex-install]  - $entry"
-  done
-  echo "[codex-install] Wait for the emulator/device to finish booting and report 'device'." >&2
+  echo "[codex-install] No connected Android devices or emulators detected by adb." >&2
+  if [[ ${#offline_devices[@]} -gt 0 ]]; then
+    echo "[codex-install] Offline entries detected after recovery attempts:" >&2
+    for entry in "${offline_devices[@]}"; do
+      echo "[codex-install]  - $entry" >&2
+    done
+  fi
+  echo "[codex-install] Ensure an emulator is running and reachable. Restart it manually if necessary." >&2
   exit 1
 fi
 
