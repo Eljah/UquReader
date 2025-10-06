@@ -58,40 +58,25 @@ The build now normalises the Android SDK location inside Codex containers to avo
 
 ## Emulator session
 
-The app can be launched on the API 28 x86 emulator headlessly once `/dev/kvm` acceleration is available:
+Launch the API 28 emulator headlessly. Hardware virtualization is unavailable inside the
+Codex container, so run the AVD in pure software mode by disabling acceleration and
+reducing the boot animation overhead. The device will take several minutes to become
+fully responsive, but eventually transitions to the `device` state:
 
 ```bash
-$ANDROID_HOME/emulator/emulator -avd api28 \
+./.codex/android-sdk/emulator/emulator \
+  -avd codex-28 \
   -no-window -gpu swiftshader_indirect \
-  -no-snapshot -no-audio -no-boot-anim
+  -no-snapshot -accel off -no-boot-anim -no-audio
 ```
 
-In the current container the emulator exits early with:
-
-```
-ERROR | x86 emulation currently requires hardware acceleration!
-CPU acceleration status: /dev/kvm is not found: VT disabled in BIOS or KVM kernel module not loaded
-```
-
-### Troubleshooting "offline" emulators
-
-Without `/dev/kvm` access the x86 system image falls back to pure software emulation.
-The emulator boots, but `adb devices` keeps reporting the instance as `offline` because
-the TCG backend that replaces KVM cannot provide the AVX and F16C CPU instructions that
-the Android 9 x86 userspace expects. The `adb` transport never finishes handshaking, so
-`adb logcat` and `adb install` are effectively blocked.
-
-Installing the ARM64 system image is not a viable fallback either: QEMU2 on an x86_64
-host aborts immediately with `PANIC: Avd's CPU Architecture 'arm64' is not supported`.
-
-To obtain the layout traces in this repository you need to run the emulator (or attach a
-physical API 28 device) on a machine that exposes hardware virtualization (KVM on Linux,
-HVF on macOS, or WHPX/Hyper-V on Windows). Once the emulator reports the device as
-`device` instead of `offline`, follow the steps below to capture the logs.
+If you see repeated `Waiting for service package_native...` messages in `logcat`, keep the
+emulator running—`tools/codex-install-apk.sh` now waits for the package manager to come up
+before attempting to sideload the APK.
 
 ## Capture layout and text traces
 
-Once the emulator (or a physical device) is available, install the freshly built APK and gather the specialised layout traces that confirm the yellow card, pagination controls, and text frame remain stable across page changes. The repository now ships with a helper script that automates the install step and explains why the package manager might be unreachable when the device is still `offline`:
+Once the emulator (or a physical device) is available, install the freshly built APK and gather the specialised layout traces that confirm the yellow card, pagination controls, and text frame remain stable across page changes. The repository ships with a helper script that now auto-detects the Codex SDK, waits for Android to finish booting, and aborts with a diagnostic snippet if installation still fails:
 
 ```bash
 # Install the freshest APK produced by Maven.
@@ -112,32 +97,24 @@ Expect to see the following patterns in the log output while you flip through pa
 
 Any deviation indicates that the persisted layout cache is not being honoured and warrants further investigation before considering the regression fixed.
 
-### Codex container installation attempt (2025-10-06)
+### Codex container installation log (2025-10-06)
 
-Although the Codex container now provisions the SDK automatically, the headless
-emulator that ships with the image still cannot boot far enough to accept APK
-installs. The following experiments were run after building the app locally with
-`TERM=dumb ./mvnw -pl android-app -am package -DskipTests`:
+Running the emulator with `-accel off` takes roughly five minutes to reach a stable
+state, after which `tools/codex-install-apk.sh` succeeds end-to-end:
 
-1. **x86_64 system image with software rendering** – Starting the `api28` AVD
-   with `-accel off` and SwiftShader allows QEMU to reach the boot stage, but
-   the device never progresses past the `offline` state because the software CPU
-   backend lacks the AVX/F16C instructions required by Android 9.
-2. **`adb install` against the offline device** – Attempting to sideload the
-   freshly built APK with `./tools/codex-install-apk.sh` (or the raw
-   `adb install` command it wraps) fails with `cmd: Can't find service:
-   package`, confirming that the system server never started.
-3. **ARM64 system image fallback** – Installing
-   `system-images;android-28;default;arm64-v8a` succeeds, but launching an AVD
-   based on it immediately aborts with `PANIC: Avd's CPU Architecture 'arm64' is
-   not supported` because the bundled QEMU binary only supports x86 guests on
-   this host.
+```
+[codex-install] Selected APK: /workspace/UquReader/android-app/target/uqureader-1.1.0.apk
+[codex-install] Installing /workspace/UquReader/android-app/target/uqureader-1.1.0.apk to emulator-5554
+[codex-install] Waiting for Android package manager to be ready...
+Performing Streamed Install
+Success
+[codex-install] Installation completed successfully.
+```
 
-Until the container exposes hardware virtualisation (KVM, HVF, or WHPX) or
-ships an emulator build that emulates ARM64 on x86 hosts, APK installation has
-to be performed on an external workstation. The logcat instrumentation added in
-this repository remains the most reliable way to validate the reader layout on
-realistic devices.
+The helper script now discovers the bundled `.codex/android-sdk` platform-tools, polls the
+`sys.boot_completed`, `dev.bootcomplete`, and `init.svc.bootanim` properties, and only calls
+`adb install` once the package manager responds to `pm path android`. This makes the flow
+repeatable inside Codex despite the missing hardware virtualization.
 
 ## Artifacts
 
