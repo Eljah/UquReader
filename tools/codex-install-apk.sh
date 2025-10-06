@@ -3,6 +3,7 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 APK_DIR="$PROJECT_ROOT/android-app/target"
+DEFAULT_LAUNCH_AVD=""
 
 if [[ ! -d "$APK_DIR" ]]; then
   echo "[codex-install] APK directory $APK_DIR does not exist. Build the project first." >&2
@@ -65,6 +66,38 @@ collect_devices() {
   done
 }
 
+find_cmdline_tool() {
+  local tool_name="$1"
+  local candidate
+  local -a sdk_roots=()
+
+  if [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
+    sdk_roots+=("$ANDROID_SDK_ROOT")
+  fi
+  if [[ -n "${ANDROID_HOME:-}" ]]; then
+    sdk_roots+=("$ANDROID_HOME")
+  fi
+  sdk_roots+=("$PROJECT_ROOT/.codex/android-sdk")
+
+  for candidate in "${sdk_roots[@]}"; do
+    if [[ -x "$candidate/cmdline-tools/latest/bin/$tool_name" ]]; then
+      echo "$candidate/cmdline-tools/latest/bin/$tool_name"
+      return 0
+    fi
+    if [[ -x "$candidate/cmdline-tools/bin/$tool_name" ]]; then
+      echo "$candidate/cmdline-tools/bin/$tool_name"
+      return 0
+    fi
+  done
+
+  if command -v "$tool_name" >/dev/null 2>&1; then
+    command -v "$tool_name"
+    return 0
+  fi
+
+  return 1
+}
+
 find_emulator_binary() {
   local candidate
   for candidate in \
@@ -85,6 +118,72 @@ find_emulator_binary() {
   return 1
 }
 
+create_default_avd() {
+  local avdmanager_bin sdkmanager_bin system_image avd_name
+  system_image="${CODEX_INSTALL_SYSTEM_IMAGE:-system-images;android-28;default;x86_64}"
+  avd_name="${CODEX_INSTALL_AVD:-codex-default}"  # Will be overridden if AVD already exists.
+
+  if ! avdmanager_bin="$(find_cmdline_tool avdmanager)"; then
+    echo "[codex-install] avdmanager not found; cannot create an emulator profile automatically." >&2
+    return 1
+  fi
+
+  echo "[codex-install] Creating default AVD $avd_name using $system_image" >&2
+  if printf 'no\n' | "$avdmanager_bin" create avd -f -n "$avd_name" -k "$system_image" >/dev/null 2>&1; then
+    echo "[codex-install] Created AVD $avd_name" >&2
+    return 0
+  fi
+
+  if ! sdkmanager_bin="$(find_cmdline_tool sdkmanager)"; then
+    echo "[codex-install] Failed to create AVD automatically and sdkmanager is unavailable." >&2
+    return 1
+  fi
+
+  echo "[codex-install] Required system image missing. Attempting to install $system_image" >&2
+  if ! yes | "$sdkmanager_bin" --install "$system_image" >/dev/null 2>&1; then
+    echo "[codex-install] sdkmanager failed to install $system_image" >&2
+    return 1
+  fi
+
+  if printf 'no\n' | "$avdmanager_bin" create avd -f -n "$avd_name" -k "$system_image" >/dev/null 2>&1; then
+    echo "[codex-install] Created AVD $avd_name" >&2
+    return 0
+  fi
+
+  echo "[codex-install] Unable to create a default AVD automatically." >&2
+  return 1
+}
+
+ensure_launch_avd() {
+  local emulator_bin="$1"
+  mapfile -t available_avds < <("$emulator_bin" -list-avds 2>/dev/null | sed 's/\r$//')
+  if [[ ${#available_avds[@]} -eq 0 ]]; then
+    if ! create_default_avd; then
+      return 1
+    fi
+    mapfile -t available_avds < <("$emulator_bin" -list-avds 2>/dev/null | sed 's/\r$//')
+  fi
+
+  if [[ ${#available_avds[@]} -eq 0 ]]; then
+    echo "[codex-install] Emulator binary located but no AVDs are configured." >&2
+    return 1
+  fi
+
+  if [[ -n "${CODEX_INSTALL_AVD:-}" ]]; then
+    local avd
+    for avd in "${available_avds[@]}"; do
+      if [[ "$avd" == "$CODEX_INSTALL_AVD" ]]; then
+        DEFAULT_LAUNCH_AVD="$avd"
+        return 0
+      fi
+    done
+    echo "[codex-install] Requested AVD $CODEX_INSTALL_AVD not found; falling back to ${available_avds[0]}" >&2
+  fi
+
+  DEFAULT_LAUNCH_AVD="${available_avds[0]}"
+  return 0
+}
+
 launch_default_emulator() {
   local emulator_bin
   if ! emulator_bin="$(find_emulator_binary)"; then
@@ -92,19 +191,16 @@ launch_default_emulator() {
     return 1
   fi
 
-  mapfile -t available_avds < <("$emulator_bin" -list-avds 2>/dev/null | sed 's/\r$//')
-  if [[ ${#available_avds[@]} -eq 0 ]]; then
-    echo "[codex-install] Emulator binary located but no AVDs are configured." >&2
+  if ! ensure_launch_avd "$emulator_bin"; then
     return 1
   fi
 
-  local target_avd="${CODEX_INSTALL_AVD:-${available_avds[0]}}"
-  echo "[codex-install] Launching emulator for AVD $target_avd" >&2
+  echo "[codex-install] Launching emulator for AVD $DEFAULT_LAUNCH_AVD" >&2
 
   # Launch the emulator in the background. Users can provide CODEX_EMULATOR_RESTART_CMD
   # when a custom startup sequence is required. The nohup/stdout redirection prevents
   # the emulator process from being killed when the script finishes.
-  nohup "$emulator_bin" -avd "$target_avd" -no-snapshot-save -no-boot-anim >/dev/null 2>&1 &
+  nohup "$emulator_bin" -avd "$DEFAULT_LAUNCH_AVD" -no-snapshot-save -no-boot-anim >/dev/null 2>&1 &
   disown || true
   return 0
 }
@@ -158,7 +254,7 @@ while [[ ${#online_devices[@]} -eq 0 && $recovery_attempt -lt 3 ]]; do
   if ! attempt_recovery "$recovery_attempt" "no-online-devices"; then
     break
   fi
-  ((recovery_attempt++))
+  ((recovery_attempt+=1))
   collect_devices
 done
 
