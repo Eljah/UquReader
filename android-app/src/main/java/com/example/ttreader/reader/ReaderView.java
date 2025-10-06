@@ -922,6 +922,18 @@ public class ReaderView extends TextView {
                 .append(']');
         sb.append(" scroll=").append('[').append(getScrollX()).append(',').append(getScrollY()).append(']');
         sb.append(" visibleRange=").append('[').append(visibleStart).append(',').append(visibleEnd).append(')');
+        List<Page> pageList = this.pages;
+        int totalPages = pageList != null ? pageList.size() : 0;
+        if (pageList == null) {
+            sb.append(" page=<uninitialized>");
+        } else if (totalPages > 0) {
+            int currentPage = getCurrentPageIndex() + 1;
+            sb.append(" page=").append(currentPage).append('/')
+                    .append(Math.max(1, totalPages));
+        } else {
+            sb.append(" page=—");
+        }
+        sb.append(" paginationDirty=").append(paginationDirty);
         ViewParent parent = getParent();
         View cardView = parent instanceof View ? (View) parent : null;
         if (cardView != null) {
@@ -1009,7 +1021,7 @@ public class ReaderView extends TextView {
     }
 
     public int getTotalPageCount() {
-        return pages.size();
+        return pages != null ? pages.size() : 0;
     }
 
     public int getPageIndexForChar(int charIndex) {

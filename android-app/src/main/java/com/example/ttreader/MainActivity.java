@@ -132,6 +132,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             translationY = ty;
         }
 
+        void reset() {
+            left = Integer.MIN_VALUE;
+            top = Integer.MIN_VALUE;
+            right = Integer.MIN_VALUE;
+            bottom = Integer.MIN_VALUE;
+            translationX = Float.NaN;
+            translationY = Float.NaN;
+        }
+
         private boolean floatsEqual(float a, float b) {
             if (Float.isNaN(a) && Float.isNaN(b)) {
                 return true;
@@ -176,6 +185,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private TextView pageNumberText;
     private final ViewBoundsSnapshot pageControlsBounds = new ViewBoundsSnapshot();
     private final ViewBoundsSnapshot pageNumberBounds = new ViewBoundsSnapshot();
+    private final ViewBoundsSnapshot readerViewBounds = new ViewBoundsSnapshot();
     private int lastLoggedPageIndex = -1;
     private int lastLoggedPageTotal = -1;
     private int readerBasePaddingLeft;
@@ -1115,6 +1125,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 logViewEvent("ReaderView", readerView,
                         "afterWindowChanged page=" + currentPageIndex + "/" + Math.max(1, totalPages)
                                 + " height=" + readerHeight);
+                logReaderViewBounds("afterWindowChanged");
                 enforceReaderPageHeight("afterWindowChanged");
                 logPageControlsBounds("afterWindowChanged");
             });
@@ -1125,6 +1136,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     "afterWindowChanged (noReaderView) height=" + cardHeight);
             logViewEvent("ReaderView", null,
                     "afterWindowChanged (noReaderView) height=0");
+            logReaderViewBounds("afterWindowChanged:noReader");
             enforceReaderPageHeight("afterWindowChanged:noReader");
             logPageControlsBounds("afterWindowChanged:noReader");
         }
@@ -1221,6 +1233,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void logViewBoundsSnapshot(String component, View view,
                                        ViewBoundsSnapshot snapshot, String stage) {
         if (view == null) {
+            snapshot.reset();
             logViewEvent(component, null, stage + " bounds skipped (view null)");
             return;
         }
@@ -1251,6 +1264,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         logViewEvent(component, view, action.toString());
         snapshot.update(left, top, right, bottom, tx, ty);
+    }
+
+    private void logReaderViewBounds(String stage) {
+        logViewBoundsSnapshot("ReaderView", readerView, readerViewBounds, stage);
     }
 
     private void goToPreviousPage() {
