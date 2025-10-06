@@ -4,6 +4,14 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 APK_DIR="$PROJECT_ROOT/android-app/target"
 DEFAULT_LAUNCH_AVD=""
+LAUNCHED_EMULATOR=0
+LAUNCHED_EMULATOR_LOG=""
+
+if [[ -d "$PROJECT_ROOT/.codex/android-sdk" ]]; then
+  export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$PROJECT_ROOT/.codex/android-sdk}"
+  export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+  export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+fi
 
 if [[ ! -d "$APK_DIR" ]]; then
   echo "[codex-install] APK directory $APK_DIR does not exist. Build the project first." >&2
@@ -185,7 +193,7 @@ ensure_launch_avd() {
 }
 
 launch_default_emulator() {
-  local emulator_bin
+  local emulator_bin log_dir timestamp log_file
   if ! emulator_bin="$(find_emulator_binary)"; then
     echo "[codex-install] No emulator binary found on PATH or in ANDROID_HOME/ANDROID_SDK_ROOT." >&2
     return 1
@@ -195,13 +203,28 @@ launch_default_emulator() {
     return 1
   fi
 
-  echo "[codex-install] Launching emulator for AVD $DEFAULT_LAUNCH_AVD" >&2
+  log_dir="$PROJECT_ROOT/.codex/logs"
+  mkdir -p "$log_dir"
+  timestamp="$(date +%Y%m%d-%H%M%S)"
+  log_file="$log_dir/emulator-${DEFAULT_LAUNCH_AVD}-${timestamp}.log"
 
-  # Launch the emulator in the background. Users can provide CODEX_EMULATOR_RESTART_CMD
-  # when a custom startup sequence is required. The nohup/stdout redirection prevents
-  # the emulator process from being killed when the script finishes.
-  nohup "$emulator_bin" -avd "$DEFAULT_LAUNCH_AVD" -no-snapshot-save -no-boot-anim >/dev/null 2>&1 &
+  echo "[codex-install] Launching emulator for AVD $DEFAULT_LAUNCH_AVD (logs: $log_file)" >&2
+
+  # Launch the emulator in the background with headless-friendly defaults.
+  # The nohup/stdout redirection prevents the emulator process from being
+  # killed when the script finishes.
+  nohup "$emulator_bin" \
+    -avd "$DEFAULT_LAUNCH_AVD" \
+    -no-snapshot-save \
+    -no-boot-anim \
+    -no-window \
+    -no-audio \
+    -gpu swiftshader_indirect \
+    -accel off \
+    >"$log_file" 2>&1 &
   disown || true
+  LAUNCHED_EMULATOR=1
+  LAUNCHED_EMULATOR_LOG="$log_file"
   return 0
 }
 
@@ -223,6 +246,8 @@ attempt_recovery() {
     if [[ "$serial" =~ ^emulator-[0-9]+$ ]]; then
       echo "[codex-install]  - Requesting emulator reboot for $serial (state=$state)" >&2
       "$ADB_BIN" -s "$serial" emu kill >/dev/null 2>&1 || true
+      LAUNCHED_EMULATOR=0
+      LAUNCHED_EMULATOR_LOG=""
     else
       echo "[codex-install]  - Requesting device reboot for $serial (state=$state)" >&2
       "$ADB_BIN" -s "$serial" reboot >/dev/null 2>&1 || true
@@ -234,8 +259,19 @@ attempt_recovery() {
     echo "[codex-install]  - Executing CODEX_EMULATOR_RESTART_CMD" >&2
     # shellcheck disable=SC2086 # Intentional word splitting for custom command sequences.
     eval ${CODEX_EMULATOR_RESTART_CMD} || true
-  elif launch_default_emulator; then
+    LAUNCHED_EMULATOR=0
+    LAUNCHED_EMULATOR_LOG=""
+  elif [[ $LAUNCHED_EMULATOR -eq 0 ]]; then
+    if launch_default_emulator; then
+      performed_action=1
+    fi
+  else
     performed_action=1
+    if [[ -n "$LAUNCHED_EMULATOR_LOG" ]]; then
+      echo "[codex-install]  - Emulator already launched; continuing to wait (logs: $LAUNCHED_EMULATOR_LOG)" >&2
+    else
+      echo "[codex-install]  - Emulator already launched; continuing to wait" >&2
+    fi
   fi
 
   if [[ $performed_action -eq 0 ]]; then
@@ -243,20 +279,44 @@ attempt_recovery() {
     return 1
   fi
 
-  sleep 5
   return 0
+}
+
+wait_for_online_device() {
+  local timeout="${1:-120}"
+  local deadline=$((SECONDS + timeout))
+
+  while [[ $SECONDS -lt $deadline ]]; do
+    collect_devices
+    if [[ ${#online_devices[@]} -gt 0 ]]; then
+      return 0
+    fi
+    sleep 5
+  done
+
+  collect_devices
+  return 1
 }
 
 collect_devices
 
+if [[ ${#online_devices[@]} -eq 0 ]]; then
+  wait_for_online_device 15 || true
+fi
+
 recovery_attempt=0
-while [[ ${#online_devices[@]} -eq 0 && $recovery_attempt -lt 3 ]]; do
+max_recovery_attempts=5
+while [[ ${#online_devices[@]} -eq 0 && $recovery_attempt -lt $max_recovery_attempts ]]; do
   if ! attempt_recovery "$recovery_attempt" "no-online-devices"; then
     break
   fi
+  if wait_for_online_device 150; then
+    break
+  fi
   ((recovery_attempt+=1))
-  collect_devices
 done
+
+collect_devices
 
 if [[ ${#online_devices[@]} -eq 0 ]]; then
   echo "[codex-install] No connected Android devices or emulators detected by adb." >&2
