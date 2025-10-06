@@ -355,34 +355,6 @@ fi
             </configuration>
           </execution>
           <execution>
-            <id>sign-debug-apk</id>
-            <phase>package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <property name="apksigner.executable" value="${android.sdk.location}/build-tools/${android.build-tools}/apksigner" />
-                <property name="apk.output" value="${project.build.directory}/${project.artifactId}-${project.version}.apk" />
-                <property name="debug.keystore" value="${android.debug.keystore}" />
-                <available file="${apksigner.executable}" property="apksigner.present" />
-                <fail message="apksigner not found at ${apksigner.executable}" unless="apksigner.present" />
-                <exec executable="${apksigner.executable}">
-                  <arg value="sign" />
-                  <arg value="--ks" />
-                  <arg value="${debug.keystore}" />
-                  <arg value="--ks-pass" />
-                  <arg value="pass:android" />
-                  <arg value="--key-pass" />
-                  <arg value="pass:android" />
-                  <arg value="--ks-key-alias" />
-                  <arg value="androiddebugkey" />
-                  <arg value="${apk.output}" />
-                </exec>
-              </target>
-            </configuration>
-          </execution>
-          <execution>
             <id>strip-duplicate-dummy-classes</id>
             <phase>prepare-package</phase>
             <goals>
@@ -436,18 +408,112 @@ fi
         <android.sdk.location>${env.ANDROID_SDK_ROOT}</android.sdk.location>
       </properties>
     </profile>
-    <profile>
-      <id>env-android-home</id>
-      <activation>
-        <property>
-          <name>env.ANDROID_HOME</name>
-        </property>
-      </activation>
-      <properties>
-        <android.sdk.location>${env.ANDROID_HOME}</android.sdk.location>
-      </properties>
-    </profile>
-  </profiles>
+      <profile>
+        <id>env-android-home</id>
+        <activation>
+          <property>
+            <name>env.ANDROID_HOME</name>
+          </property>
+        </activation>
+        <properties>
+          <android.sdk.location>${env.ANDROID_HOME}</android.sdk.location>
+        </properties>
+      </profile>
+      <profile>
+        <id>codex-signing</id>
+        <activation>
+          <file>
+            <exists>${project.basedir}/../.codex</exists>
+          </file>
+        </activation>
+        <properties>
+          <codex.keystore>${project.basedir}/../.codex/codex-release.keystore</codex.keystore>
+          <codex.keystore.alias>codex</codex.keystore.alias>
+          <codex.keystore.password>codexpass</codex.keystore.password>
+        </properties>
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <inherited>false</inherited>
+              <executions>
+                <execution>
+                  <id>codex-generate-keystore</id>
+                  <phase>validate</phase>
+                  <goals>
+                    <goal>run</goal>
+                  </goals>
+                  <configuration>
+                    <target>
+                      <property name="codex.keystore" value="${codex.keystore}" />
+                      <property name="codex.keystore.alias" value="${codex.keystore.alias}" />
+                      <property name="codex.keystore.password" value="${codex.keystore.password}" />
+                      <condition property="codex.keytool" value="${env.JAVA_HOME}/bin/keytool">
+                        <and>
+                          <isset property="env.JAVA_HOME" />
+                          <available file="${env.JAVA_HOME}/bin/keytool" />
+                        </and>
+                      </condition>
+                      <condition property="codex.keytool" value="keytool">
+                        <not>
+                          <isset property="codex.keytool" />
+                        </not>
+                      </condition>
+                      <exec executable="bash">
+                        <arg value="-c" />
+                        <arg value='set -euo pipefail;
+KEYTOOL="${codex.keytool}";
+if ! command -v "$KEYTOOL" >/dev/null 2>&amp;1; then
+  echo "error: keytool not found at $KEYTOOL" >&amp;2;
+  exit 1;
+fi;
+KEYSTORE="${codex.keystore}";
+KEYSTORE_DIR=$(dirname "$KEYSTORE");
+mkdir -p "$KEYSTORE_DIR";
+if [ -f "$KEYSTORE" ]; then
+  echo "info: reusing Codex signing keystore at $KEYSTORE";
+else
+  "$KEYTOOL" -genkeypair -keystore "$KEYSTORE" -storepass "${codex.keystore.password}" -keypass "${codex.keystore.password}" -alias "${codex.keystore.alias}" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Codex Signing,O=OpenAI Codex,OU=AI Platform,L=San Francisco,S=California,C=US";
+  echo "info: created Codex signing keystore at $KEYSTORE";
+fi' />
+                      </exec>
+                    </target>
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>codex-sign-apk</id>
+                  <phase>package</phase>
+                  <goals>
+                    <goal>run</goal>
+                  </goals>
+                  <configuration>
+                    <target>
+                      <property name="apksigner.executable" value="${android.sdk.location}/build-tools/${android.build-tools}/apksigner" />
+                      <property name="apk.output" value="${project.build.directory}/${project.artifactId}-${project.version}.apk" />
+                      <available file="${apksigner.executable}" property="apksigner.present" />
+                      <fail message="apksigner not found at ${apksigner.executable}" unless="apksigner.present" />
+                      <exec executable="${apksigner.executable}">
+                        <arg value="sign" />
+                        <arg value="--ks" />
+                        <arg value="${codex.keystore}" />
+                        <arg value="--ks-pass" />
+                        <arg value="pass:${codex.keystore.password}" />
+                        <arg value="--key-pass" />
+                        <arg value="pass:${codex.keystore.password}" />
+                        <arg value="--ks-key-alias" />
+                        <arg value="${codex.keystore.alias}" />
+                        <arg value="${apk.output}" />
+                      </exec>
+                    </target>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+          </plugins>
+        </build>
+      </profile>
+    </profiles>
 
   <repositories>
     <repository>
