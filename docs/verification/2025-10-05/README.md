@@ -63,7 +63,28 @@ ERROR | x86 emulation currently requires hardware acceleration!
 CPU acceleration status: /dev/kvm is not found: VT disabled in BIOS or KVM kernel module not loaded
 ```
 
-The layout traces added in this branch emit `ReaderLayoutTrace` and `ReaderTextTrace` events that can be inspected via `adb logcat` once the emulator (or a physical device) is available.
+## Capture layout and text traces
+
+Once the emulator (or a physical device) is available, install the freshly built APK and gather the specialised layout traces that confirm the yellow card, pagination controls, and text frame remain stable across page changes:
+
+```bash
+# Install the debug build produced by the Maven build step above.
+adb install -r android-app/target/com.example.ttreader-android.apk
+
+# Launch the app (replace with the actual launcher intent if needed).
+adb shell monkey -p com.example.ttreader 1
+
+# Collect the layout and text instrumentation added by the code changes.
+adb logcat -s ReaderLayoutTrace ReaderTextTrace
+```
+
+Expect to see the following patterns in the log output while you flip through pages:
+
+* `ReaderLayoutTrace` entries for `pageControls`, `pageNumber`, and `readerPageContainer` with identical `bounds=` values on every page turn.
+* `ReaderLayoutTrace` entries for the yellow card container reporting a consistent `size=` and `screen=` location from the very first frame after launch.
+* `ReaderTextTrace` entries whose `bounds=`, `padding=`, and `layout=` metrics stay constant as `applyPage` messages fire for each new page.
+
+Any deviation indicates that the persisted layout cache is not being honoured and warrants further investigation before considering the regression fixed.
 
 ## Artifacts
 
