@@ -63,6 +63,22 @@ ERROR | x86 emulation currently requires hardware acceleration!
 CPU acceleration status: /dev/kvm is not found: VT disabled in BIOS or KVM kernel module not loaded
 ```
 
+### Troubleshooting "offline" emulators
+
+Without `/dev/kvm` access the x86 system image falls back to pure software emulation.
+The emulator boots, but `adb devices` keeps reporting the instance as `offline` because
+the TCG backend that replaces KVM cannot provide the AVX and F16C CPU instructions that
+the Android 9 x86 userspace expects. The `adb` transport never finishes handshaking, so
+`adb logcat` and `adb install` are effectively blocked.
+
+Installing the ARM64 system image is not a viable fallback either: QEMU2 on an x86_64
+host aborts immediately with `PANIC: Avd's CPU Architecture 'arm64' is not supported`.
+
+To obtain the layout traces in this repository you need to run the emulator (or attach a
+physical API 28 device) on a machine that exposes hardware virtualization (KVM on Linux,
+HVF on macOS, or WHPX/Hyper-V on Windows). Once the emulator reports the device as
+`device` instead of `offline`, follow the steps below to capture the logs.
+
 ## Capture layout and text traces
 
 Once the emulator (or a physical device) is available, install the freshly built APK and gather the specialised layout traces that confirm the yellow card, pagination controls, and text frame remain stable across page changes:
