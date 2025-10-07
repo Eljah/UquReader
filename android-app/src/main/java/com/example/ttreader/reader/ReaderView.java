@@ -89,6 +89,8 @@ public class ReaderView extends TextView {
     private PendingTarget currentPendingTarget;
     private final ArrayDeque<PendingTarget> pendingTargetQueue = new ArrayDeque<>();
     private int currentPageIndex = 0;
+    private int queuedForwardPages = 0;
+    private int queuedBackwardPages = 0;
     private PaginationSpec activePaginationSpec;
     private Runnable pendingInitialCompletion;
     private boolean initialContentDelivered = false;
@@ -293,6 +295,8 @@ public class ReaderView extends TextView {
         loggedExposures.clear();
         pages.clear();
         currentPageIndex = 0;
+        queuedForwardPages = 0;
+        queuedBackwardPages = 0;
         paginationDirty = true;
         paginationCacheLoaded = false;
         paginationLocked = false;
@@ -432,6 +436,116 @@ public class ReaderView extends TextView {
 
     public void scrollToGlobalChar(int globalCharIndex) {
         requestDisplayForChar(globalCharIndex, true);
+    }
+
+    public void requestPageAdvance(int direction) {
+        if (direction == 0) {
+            return;
+        }
+        Log.d(TAG, "requestPageAdvance direction=" + direction
+                + " pending=" + hasPendingTarget
+                + " queuedForward=" + queuedForwardPages
+                + " queuedBackward=" + queuedBackwardPages);
+        boolean paginationReady = isPaginationReadyForNavigation();
+        boolean allowQueueWithoutPagination = !paginationReady;
+        if (direction > 0) {
+            if (!hasNextPage() && !hasPendingTarget && !allowQueueWithoutPagination) {
+                return;
+            }
+            if (hasPendingTarget || !paginationReady) {
+                queueForwardNavigation(direction);
+                return;
+            }
+            int target = findNextPageStart();
+            if (target >= 0) {
+                scrollToGlobalChar(target);
+            }
+        } else {
+            if (!hasPreviousPage() && !hasPendingTarget && !allowQueueWithoutPagination) {
+                return;
+            }
+            if (hasPendingTarget || !paginationReady) {
+                queueBackwardNavigation(-direction);
+                return;
+            }
+            int target = findPreviousPageStart();
+            if (target >= 0) {
+                scrollToGlobalChar(target);
+            }
+        }
+    }
+
+    public void continueQueuedPageNavigation() {
+        if (hasPendingTarget) {
+            return;
+        }
+        if (queuedForwardPages == 0 && queuedBackwardPages == 0) {
+            Log.d(TAG, "continueQueuedPageNavigation nothing queued");
+        } else {
+            Log.d(TAG, "continueQueuedPageNavigation queuedForward=" + queuedForwardPages
+                    + " queuedBackward=" + queuedBackwardPages);
+        }
+        if (queuedForwardPages > 0) {
+            int target = findNextPageStart();
+            if (target >= 0) {
+                queuedForwardPages--;
+                Log.d(TAG, "continueQueuedPageNavigation advancing forward remaining="
+                        + queuedForwardPages + " target=" + target);
+                scrollToGlobalChar(target);
+            } else {
+                queuedForwardPages = 0;
+                Log.d(TAG, "continueQueuedPageNavigation unable to find next page");
+            }
+            return;
+        }
+        if (queuedBackwardPages > 0) {
+            int target = findPreviousPageStart();
+            if (target >= 0) {
+                queuedBackwardPages--;
+                Log.d(TAG, "continueQueuedPageNavigation advancing backward remaining="
+                        + queuedBackwardPages + " target=" + target);
+                scrollToGlobalChar(target);
+            } else {
+                queuedBackwardPages = 0;
+                Log.d(TAG, "continueQueuedPageNavigation unable to find previous page");
+            }
+        }
+    }
+
+    private boolean isPaginationReadyForNavigation() {
+        return !paginationDirty && !pages.isEmpty();
+    }
+
+    private void queueForwardNavigation(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        queuedForwardPages += amount;
+        queuedBackwardPages = 0;
+        Log.d(TAG, "requestPageAdvance queued forward=" + queuedForwardPages);
+        ensureQueuedNavigationTarget();
+    }
+
+    private void queueBackwardNavigation(int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        queuedBackwardPages += amount;
+        queuedForwardPages = 0;
+        Log.d(TAG, "requestPageAdvance queued backward=" + queuedBackwardPages);
+        ensureQueuedNavigationTarget();
+    }
+
+    private void ensureQueuedNavigationTarget() {
+        if (hasPendingTarget) {
+            return;
+        }
+        int docLength = getDocumentLength();
+        int baseTarget = visibleStart;
+        if (baseTarget < 0 || baseTarget > docLength) {
+            baseTarget = clamp(pendingTargetCharIndex, 0, docLength);
+        }
+        requestDisplayForChar(baseTarget, true);
     }
 
     private void requestDisplayForChar(int targetCharIndex, boolean notifyWindowChange) {
