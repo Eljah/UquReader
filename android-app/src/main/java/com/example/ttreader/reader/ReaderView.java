@@ -691,6 +691,18 @@ public class ReaderView extends TextView {
             if (end <= start) {
                 end = Math.min(docLength, start + Math.max(MIN_PAGE_ADVANCE_CHARS, availableWidth));
             }
+
+            if (isAllWhitespace(text, start, end)) {
+                if (!pages.isEmpty()) {
+                    Page previous = pages.remove(pages.size() - 1);
+                    int mergedStart = previous.start;
+                    int mergedEnd = Math.max(previous.end, end);
+                    pages.add(new Page(mergedStart, mergedEnd));
+                }
+                start = end;
+                continue;
+            }
+
             pages.add(new Page(start, end));
             start = end;
         }
@@ -1319,6 +1331,20 @@ public class ReaderView extends TextView {
             result--;
         }
         return Math.max(result, limit);
+    }
+
+    private boolean isAllWhitespace(String content, int start, int end) {
+        if (content == null) {
+            return true;
+        }
+        int safeStart = Math.max(0, start);
+        int safeEnd = Math.min(content.length(), Math.max(start, end));
+        for (int i = safeStart; i < safeEnd; i++) {
+            if (!Character.isWhitespace(content.charAt(i))) {
+                return false;
+            }
+        }
+        return safeEnd > safeStart;
     }
 
     private Spannable getSpannableText() {
