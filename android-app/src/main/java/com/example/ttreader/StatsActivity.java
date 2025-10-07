@@ -18,6 +18,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.SimpleItemAnimator;
 
 import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.UsageStatsDao;
@@ -114,6 +115,14 @@ public class StatsActivity extends Activity {
         statsRecycler.setLayoutManager(new LinearLayoutManager(this));
         statsAdapter = new StatsAdapter();
         statsRecycler.setAdapter(statsAdapter);
+        RecyclerView.ItemAnimator animator = statsRecycler.getItemAnimator();
+        if (animator instanceof SimpleItemAnimator) {
+            // The header hosts an EditText. When we call notifyDataSetChanged() after data load,
+            // DefaultItemAnimator treats it as a change animation and briefly fades the view,
+            // which looks like a flicker at start-up. Disable change animations to keep the
+            // header stable while the adapter refreshes.
+            ((SimpleItemAnimator) animator).setSupportsChangeAnimations(false);
+        }
         statsRecycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);

@@ -1015,7 +1015,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerWindowInitialized = false;
         lastDispatchedViewportHeight = -1;
         lastOverlayClearance = -1;
-        readerView.clearContent();
+        readerView.prepareForDocumentReload();
         runWhenReaderViewportReady(() -> readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
             updateSentenceRanges();
             int speechChar = resolveSavedSpeechChar(work);
