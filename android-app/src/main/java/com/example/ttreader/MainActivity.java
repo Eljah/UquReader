@@ -1126,7 +1126,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                         "afterWindowChanged page=" + currentPageIndex + "/" + Math.max(1, totalPages)
                                 + " height=" + readerHeight);
                 logReaderViewBounds("afterWindowChanged");
-                enforceReaderPageHeight("afterWindowChanged");
+                boolean adjustedHeight = reconcileReaderPageHeightWithContent("afterWindowChanged");
+                if (!adjustedHeight) {
+                    enforceReaderPageHeight("afterWindowChanged");
+                }
                 logPageControlsBounds("afterWindowChanged");
             });
         } else {
@@ -1143,6 +1146,52 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (!restoringReadingState) {
             schedulePersistReadingState();
         }
+    }
+
+    private boolean reconcileReaderPageHeightWithContent(String reason) {
+        if (readerView == null) {
+            return false;
+        }
+        int contentHeight = readerView.getContentHeight();
+        if (contentHeight <= 0) {
+            return false;
+        }
+        int containerPadding = readerPageContainer == null
+                ? 0
+                : readerPageContainer.getPaddingTop() + readerPageContainer.getPaddingBottom();
+        int desiredHeight = contentHeight + containerPadding;
+        if (desiredHeight <= 0) {
+            return false;
+        }
+        if (persistedReaderPageHeight > 0) {
+            int tolerance = Math.round(getResources().getDisplayMetrics().density * 2f);
+            if (persistedReaderPageHeight > desiredHeight + tolerance) {
+                boolean updated = overrideReaderPageHeight(desiredHeight,
+                        "content:" + reason);
+                if (updated) {
+                    enforceReaderPageHeight("override:" + reason);
+                }
+                return updated;
+            }
+        }
+        return false;
+    }
+
+    private boolean overrideReaderPageHeight(int newHeight, String reason) {
+        int safeHeight = Math.max(0, newHeight);
+        if (safeHeight <= 0 || safeHeight == persistedReaderPageHeight) {
+            return false;
+        }
+        persistedReaderPageHeight = safeHeight;
+        logViewEvent("ReaderPageContainer", readerPageContainer,
+                "overridePersistedHeight -> " + safeHeight + " reason=" + reason);
+        if (uiLayoutDao != null) {
+            uiLayoutDao.saveReaderPageHeight(null, safeHeight);
+            if (!TextUtils.isEmpty(activeLayoutWorkId)) {
+                uiLayoutDao.saveReaderPageHeight(activeLayoutWorkId, safeHeight);
+            }
+        }
+        return true;
     }
 
     private void updatePageControls() {
@@ -1381,8 +1430,25 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         } else {
             overlayInsetRetryScheduled = false;
-            lastKnownOverlayHeight = 0;
-            Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: controls hidden");
+            if (persistedPageControlsHeight > 0) {
+                int extra = getResources().getDimensionPixelSize(
+                        R.dimen.reader_page_controls_clearance);
+                overlayClearance = Math.max(0, persistedPageControlsHeight + extra);
+                if (lastKnownOverlayHeight != persistedPageControlsHeight) {
+                    lastKnownOverlayHeight = persistedPageControlsHeight;
+                    Log.d(LAYOUT_LOG_TAG,
+                            "updateReaderBottomInset: controls hidden using persisted overlay height="
+                                    + persistedPageControlsHeight + " extra=" + extra
+                                    + " clearance=" + overlayClearance);
+                } else {
+                    Log.d(LAYOUT_LOG_TAG,
+                            "updateReaderBottomInset: controls hidden retaining persisted overlay clearance="
+                                    + overlayClearance);
+                }
+            } else {
+                lastKnownOverlayHeight = 0;
+                Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: controls hidden");
+            }
         }
 
         if (awaitingMeasurement) {

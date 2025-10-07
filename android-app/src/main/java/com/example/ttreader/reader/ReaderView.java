@@ -167,6 +167,7 @@ public class ReaderView extends TextView {
         setVerticalFadingEdgeEnabled(false);
         setFadingEdgeLength(0);
         setOverScrollMode(OVER_SCROLL_NEVER);
+        setIncludeFontPadding(false);
         sentenceOutlineColor = resolveColorResource(com.example.ttreader.R.color.reader_sentence_outline);
         letterHighlightColor = resolveColorResource(com.example.ttreader.R.color.reader_letter_highlight);
         float density = getResources().getDisplayMetrics().density;
@@ -248,6 +249,19 @@ public class ReaderView extends TextView {
 
     public int getVisibleEnd() {
         return visibleEnd;
+    }
+
+    public int getContentHeight() {
+        Layout layout = getLayout();
+        if (layout == null) {
+            return Math.max(0, getPaddingTop() + getPaddingBottom());
+        }
+        int lineCount = layout.getLineCount();
+        if (lineCount <= 0) {
+            return getPaddingTop() + getPaddingBottom();
+        }
+        int lastBottom = layout.getLineBottom(lineCount - 1);
+        return getPaddingTop() + lastBottom + getPaddingBottom();
     }
 
     public int getDocumentLength() {
@@ -425,7 +439,16 @@ public class ReaderView extends TextView {
             clearContent();
             return;
         }
-        pendingTargetCharIndex = clamp(targetCharIndex, 0, docLength);
+        int target = clamp(targetCharIndex, 0, docLength);
+        if (!paginationDirty && !pages.isEmpty()) {
+            if (visibleEnd > visibleStart && target >= visibleStart && target < visibleEnd) {
+                if (notifyWindowChange && windowChangeListener != null) {
+                    windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
+                }
+                return;
+            }
+        }
+        pendingTargetCharIndex = target;
         hasPendingTarget = true;
         pendingNotifyWindowChange = pendingNotifyWindowChange || notifyWindowChange;
         showPendingTargetIfPossible();
@@ -533,7 +556,8 @@ public class ReaderView extends TextView {
         if (!paginationLocked || activePaginationSpec == null) {
             return false;
         }
-        int contentHeight = Math.max(0, newViewportHeight - getTotalPaddingTop() - getTotalPaddingBottom());
+        int effectiveViewport = Math.max(newViewportHeight, getMinHeight());
+        int contentHeight = Math.max(0, effectiveViewport - getPaddingTop() - getPaddingBottom());
         return activePaginationSpec.contentHeight == contentHeight;
     }
 
@@ -542,7 +566,8 @@ public class ReaderView extends TextView {
             return null;
         }
         int contentWidth = getWidth() - getTotalPaddingLeft() - getTotalPaddingRight();
-        int contentHeight = viewportHeight - getTotalPaddingTop() - getTotalPaddingBottom();
+        int effectiveViewport = Math.max(viewportHeight, getMinHeight());
+        int contentHeight = effectiveViewport - getPaddingTop() - getPaddingBottom();
         if (contentWidth <= 0 || contentHeight <= 0) {
             return null;
         }
@@ -981,7 +1006,7 @@ public class ReaderView extends TextView {
                 int textBottomInView = getPaddingTop() + lastBottom;
                 sb.append(" textBottomInView=").append(textBottomInView);
                 if (cardView != null) {
-                    int textBottomInCard = getTop() + textBottomInView;
+                    int textBottomInCard = cardView.getTop() + getTop() + textBottomInView;
                     int cardInnerBottom = cardView.getBottom() - cardView.getPaddingBottom();
                     int cardInnerTop = cardView.getTop() + cardView.getPaddingTop();
                     sb.append(" cardInnerTop=").append(cardInnerTop);
