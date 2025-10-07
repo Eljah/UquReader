@@ -25,12 +25,15 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -52,6 +55,7 @@ import com.example.ttreader.model.ReadingState;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
+import com.example.ttreader.ui.TokenInfoViewBinder;
 import com.example.ttreader.util.DetailSpeechFormatter;
 import com.example.ttreader.util.GrammarResources;
 import com.example.ttreader.tts.RhvoiceAvailability;
@@ -172,6 +176,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int promptBaseCharIndex = -1;
     private boolean skipBackGoPrevious = false;
     private boolean skipBackRestartArmed = false;
+    private int tokenInfoCardWidthPx = -1;
+    private int tokenInfoCardHeightPx = -1;
 
     private final UtteranceProgressListener synthesisListener = new UtteranceProgressListener() {
         @Override public void onStart(String utteranceId) {
@@ -813,6 +819,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pendingSpeechChar = -1;
         restoringReadingState = true;
         showReaderLoading(true);
+        tokenInfoCardWidthPx = -1;
+        tokenInfoCardHeightPx = -1;
         readerView.clearContent();
         readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
             updateSentenceRanges();
@@ -855,6 +863,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             } else {
                 shouldContinueSpeech = false;
             }
+            ensureTokenCardDimensions(null);
             showReaderLoading(false);
         });
         updateWorkMenuDisplay();
@@ -1163,22 +1172,89 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void showTokenSheet(TokenSpan span, List<String> ruLemmas) {
         if (span == null || span.token == null || span.token.analysis == null) return;
         dismissTokenSheet(false);
-        List<String> combined = ruLemmas == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(ruLemmas);
-        if (span.token != null && span.token.translations != null) {
-            for (String translation : span.token.translations) {
-                if (!TextUtils.isEmpty(translation) && !combined.contains(translation)) {
-                    combined.add(translation);
-                }
-            }
-        }
-        String ruCsv = combined.isEmpty()? "—" : String.join(", ", combined);
+        ensureTokenCardDimensions(span);
+        String ruCsv = buildTranslationText(span, ruLemmas);
         TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, ruCsv);
         sheet.setUsageStatsDao(usageStatsDao);
         String languagePair = currentLanguagePair != null ? currentLanguagePair : LANGUAGE_PAIR_TT_RU;
         WorkInfo work = getCurrentWork();
         String workId = work != null ? work.id : null;
         sheet.setUsageContext(languagePair, workId, span.getStartIndex());
+        sheet.setFixedCardDimensions(tokenInfoCardWidthPx, tokenInfoCardHeightPx);
         sheet.show(getFragmentManager(), "token-info");
+    }
+
+    private String buildTranslationText(TokenSpan span, List<String> extraTranslations) {
+        List<String> combined = new ArrayList<>();
+        if (extraTranslations != null) {
+            for (String value : extraTranslations) {
+                if (!TextUtils.isEmpty(value) && !combined.contains(value)) {
+                    combined.add(value);
+                }
+            }
+        }
+        if (span != null && span.token != null && span.token.translations != null) {
+            for (String translation : span.token.translations) {
+                if (!TextUtils.isEmpty(translation) && !combined.contains(translation)) {
+                    combined.add(translation);
+                }
+            }
+        }
+        if (combined.isEmpty()) {
+            return "—";
+        }
+        return TextUtils.join(", ", combined);
+    }
+
+    private void ensureTokenCardDimensions(TokenSpan preferredSpan) {
+        if (tokenInfoCardWidthPx > 0 && tokenInfoCardHeightPx > 0) {
+            return;
+        }
+        if (readerView == null) {
+            return;
+        }
+        TokenSpan candidate = readerView.getHeaviestTokenSpan();
+        if (candidate == null) {
+            candidate = preferredSpan;
+        }
+        if (candidate == null || candidate.token == null) {
+            return;
+        }
+        List<String> translations = readerView.getTranslations(candidate);
+        String translationText = buildTranslationText(candidate, translations);
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View card = inflater.inflate(R.layout.bottomsheet_token_info, null, false);
+        card.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        TokenInfoViewBinder.bind(card, this, candidate.token.surface, candidate.token.morphology,
+                translationText, null);
+
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        int availableWidth = metrics.widthPixels - dpToPx(48);
+        if (availableWidth <= 0) {
+            availableWidth = metrics.widthPixels;
+        }
+        int widthSpec = View.MeasureSpec.makeMeasureSpec(availableWidth, View.MeasureSpec.AT_MOST);
+        int heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+        card.measure(widthSpec, heightSpec);
+        int measuredWidth = card.getMeasuredWidth();
+        int measuredHeight = card.getMeasuredHeight();
+        if (measuredWidth <= 0) {
+            measuredWidth = ViewGroup.LayoutParams.WRAP_CONTENT;
+        } else {
+            measuredWidth = Math.min(measuredWidth, availableWidth);
+        }
+        if (measuredHeight <= 0) {
+            measuredHeight = ViewGroup.LayoutParams.WRAP_CONTENT;
+        }
+        tokenInfoCardWidthPx = measuredWidth;
+        tokenInfoCardHeightPx = measuredHeight;
+    }
+
+    private int dpToPx(int dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
     }
 
     private void toggleSpeech() {

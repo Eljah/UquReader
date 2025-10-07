@@ -18,6 +18,7 @@ import com.example.ttreader.data.DbHelper;
 import com.example.ttreader.data.DictionaryDao;
 import com.example.ttreader.data.MemoryDao;
 import com.example.ttreader.data.UsageStatsDao;
+import com.example.ttreader.model.MorphFeature;
 import com.example.ttreader.model.Morphology;
 import com.example.ttreader.model.Token;
 import com.example.ttreader.util.MorphDocumentParser;
@@ -86,6 +87,7 @@ public class ReaderView extends TextView {
     private float sentenceOutlineStrokeWidth;
     private float sentenceOutlineCornerRadius;
     private final MovementMethod movementMethod;
+    private TokenSpan heaviestTokenSpan;
 
     public ReaderView(Context context) {
         super(context);
@@ -212,6 +214,7 @@ public class ReaderView extends TextView {
         tokenSpans.clear();
         sentenceRanges.clear();
         loggedExposures.clear();
+        heaviestTokenSpan = null;
         setText("");
         activeSentenceSpan = null;
         activeLetterSpan = null;
@@ -318,6 +321,7 @@ public class ReaderView extends TextView {
         loggedExposures.clear();
         sentenceRanges.clear();
         sentenceRanges.addAll(result.sentenceRanges);
+        heaviestTokenSpan = result.heaviestSpan;
         int target = hasPendingInitialChar ? pendingInitialCharIndex : 0;
         hasPendingInitialChar = false;
         displayWindowAround(target, target, false);
@@ -692,7 +696,7 @@ public class ReaderView extends TextView {
     }
     private LoadResult buildContent(String assetName) throws Exception {
         if (assetName == null || assetName.isEmpty()) {
-            return new LoadResult("", Collections.emptyList(), Collections.emptyList());
+            return new LoadResult("", Collections.emptyList(), Collections.emptyList(), null);
         }
         List<Token> tokens = MorphDocumentParser.loadFromAssets(getContext(), assetName);
         if (Thread.currentThread().isInterrupted()) {
@@ -700,6 +704,8 @@ public class ReaderView extends TextView {
         }
         StringBuilder plain = new StringBuilder();
         List<TokenSpan> spans = new ArrayList<>();
+        TokenSpan bestSpan = null;
+        int bestScore = Integer.MIN_VALUE;
         double halflife = 7.0; // days
         long now = System.currentTimeMillis();
 
@@ -720,11 +726,16 @@ public class ReaderView extends TextView {
                 double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
                 span.lastAlpha = (float) alpha;
                 spans.add(span);
+                int score = estimateCardWeight(t);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestSpan = span;
+                }
             }
         }
 
         List<SentenceRange> ranges = buildSentenceRanges(plain.toString());
-        return new LoadResult(plain.toString(), spans, ranges);
+        return new LoadResult(plain.toString(), spans, ranges, bestSpan);
     }
 
     private int adjustStartToTokenBoundary(int candidate) {
@@ -808,6 +819,10 @@ public class ReaderView extends TextView {
         return getResources().getColor(resId);
     }
 
+    public TokenSpan getHeaviestTokenSpan() {
+        return heaviestTokenSpan;
+    }
+
     private int clamp(int value, int min, int max) {
         if (value < min) return min;
         if (value > max) return max;
@@ -830,15 +845,69 @@ public class ReaderView extends TextView {
         }
     }
 
+    private int estimateCardWeight(Token token) {
+        if (token == null) {
+            return Integer.MIN_VALUE;
+        }
+        int score = 0;
+        if (token.surface != null) {
+            score += token.surface.length();
+        }
+        if (token.translations != null) {
+            for (String translation : token.translations) {
+                if (translation != null) {
+                    score += translation.length();
+                }
+            }
+            score += token.translations.size() * 4;
+        }
+        Morphology morph = token.morphology;
+        if (morph != null) {
+            if (morph.lemma != null) {
+                score += morph.lemma.length();
+            }
+            if (morph.pos != null) {
+                score += morph.pos.length();
+            }
+            if (morph.segments != null) {
+                for (String segment : morph.segments) {
+                    if (segment != null) {
+                        score += segment.length();
+                    }
+                }
+                score += morph.segments.size() * 3;
+            }
+            if (morph.features != null) {
+                score += morph.features.size() * 12;
+                for (MorphFeature feature : morph.features) {
+                    if (feature == null) continue;
+                    if (feature.code != null) {
+                        score += feature.code.length() * 2;
+                    }
+                    if (feature.actual != null) {
+                        score += feature.actual.length();
+                    }
+                    if (feature.canonical != null) {
+                        score += feature.canonical.length();
+                    }
+                }
+            }
+        }
+        return score;
+    }
+
     private static final class LoadResult {
         final String text;
         final List<TokenSpan> tokenSpans;
         final List<SentenceRange> sentenceRanges;
+        final TokenSpan heaviestSpan;
 
-        LoadResult(String text, List<TokenSpan> tokenSpans, List<SentenceRange> sentenceRanges) {
+        LoadResult(String text, List<TokenSpan> tokenSpans, List<SentenceRange> sentenceRanges,
+                TokenSpan heaviestSpan) {
             this.text = text;
             this.tokenSpans = tokenSpans == null ? Collections.emptyList() : tokenSpans;
             this.sentenceRanges = sentenceRanges == null ? Collections.emptyList() : sentenceRanges;
+            this.heaviestSpan = heaviestSpan;
         }
     }
 }
