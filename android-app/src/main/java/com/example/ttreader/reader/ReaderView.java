@@ -93,6 +93,8 @@ public class ReaderView extends TextView {
     private Runnable pendingInitialCompletion;
     private boolean initialContentDelivered = false;
     private int currentDocumentSignature = 0;
+    private int maxPageContentHeight = 0;
+    private int lastComputedPageContentHeight = 0;
     private SentenceOutlineSpan activeSentenceSpan;
     private ForegroundColorSpan activeLetterSpan;
     private int activeSentenceStart = -1;
@@ -302,6 +304,8 @@ public class ReaderView extends TextView {
         pendingInitialCompletion = null;
         initialContentDelivered = false;
         currentDocumentSignature = 0;
+        maxPageContentHeight = 0;
+        lastComputedPageContentHeight = 0;
         logTextEvent("clearContent");
         setText("");
         activeSentenceSpan = null;
@@ -572,6 +576,8 @@ public class ReaderView extends TextView {
         paginationLocked = false;
         paginationCacheLoaded = false;
         activePaginationSpec = null;
+        maxPageContentHeight = 0;
+        lastComputedPageContentHeight = 0;
         if (!pages.isEmpty()) {
             Log.d(TAG, "markPaginationDirty: clearing " + pages.size() + " pages");
             pages.clear();
@@ -668,6 +674,9 @@ public class ReaderView extends TextView {
             paginationDao.deleteSnapshot(languagePair, workId);
             return false;
         }
+        if (spec != null) {
+            maxPageContentHeight = spec.contentHeight + getPaddingTop() + getPaddingBottom();
+        }
         return true;
     }
 
@@ -709,6 +718,7 @@ public class ReaderView extends TextView {
         Log.d(TAG, "recomputePagination: spec="
                 + (spec != null ? spec.contentWidth + "x" + spec.contentHeight : "null"));
         pages.clear();
+        maxPageContentHeight = 0;
         if (currentDocument == null || currentDocument.text == null || spec == null) {
             Log.d(TAG, "recomputePagination: missing document or spec");
             return;
@@ -717,6 +727,8 @@ public class ReaderView extends TextView {
         int docLength = text.length();
         if (docLength == 0) {
             pages.add(new Page(0, 0));
+            maxPageContentHeight = Math.max(maxPageContentHeight,
+                    getPaddingTop() + getPaddingBottom());
             Log.d(TAG, "recomputePagination: empty document");
             return;
         }
@@ -741,12 +753,23 @@ public class ReaderView extends TextView {
             }
 
             pages.add(new Page(start, end));
+            if (lastComputedPageContentHeight > 0) {
+                maxPageContentHeight = Math.max(maxPageContentHeight, lastComputedPageContentHeight);
+            }
             start = end;
         }
         if (pages.isEmpty()) {
             pages.add(new Page(0, docLength));
         }
-        Log.d(TAG, "recomputePagination: pages=" + pages.size());
+        if (maxPageContentHeight <= 0) {
+            maxPageContentHeight = getPaddingTop() + availableHeight + getPaddingBottom();
+        }
+        Log.d(TAG, "recomputePagination: pages=" + pages.size()
+                + " maxHeight=" + maxPageContentHeight);
+    }
+
+    public int getMaxPageContentHeight() {
+        return Math.max(0, maxPageContentHeight);
     }
 
     private int computePageEnd(String text, int start, int availableWidth, int availableHeight) {
@@ -757,11 +780,15 @@ public class ReaderView extends TextView {
         }
         CharSequence chunk = text.subSequence(start, candidateEnd);
         StaticLayout layout = buildStaticLayout(chunk, availableWidth);
+        int paddingHeight = getPaddingTop() + getPaddingBottom();
+        lastComputedPageContentHeight = paddingHeight;
         if (layout == null) {
+            lastComputedPageContentHeight = paddingHeight + availableHeight;
             return candidateEnd;
         }
         int lineCount = layout.getLineCount();
         if (lineCount == 0) {
+            lastComputedPageContentHeight = paddingHeight + Math.min(availableHeight, getLineHeight());
             return Math.min(docLength, start + MIN_PAGE_ADVANCE_CHARS);
         }
         int lastVisibleLine = 0;
@@ -783,6 +810,8 @@ public class ReaderView extends TextView {
                 trimmedLocalEnd = Math.min(chunk.length(), 1);
             }
         }
+        int lastBottom = layout.getLineBottom(lastVisibleLine);
+        lastComputedPageContentHeight = paddingHeight + lastBottom;
         int pageEnd = start + trimmedLocalEnd;
         pageEnd = adjustPageEndToTokenBoundary(start, pageEnd);
         if (pageEnd <= start) {
