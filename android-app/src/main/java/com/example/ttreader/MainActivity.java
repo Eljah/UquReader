@@ -1115,6 +1115,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     pendingVisualPage = approxPageForChar(pendingVisualChar);
                 }
                 updatePageControls();
+                if (readerView != null) {
+                    readerView.continueQueuedPageNavigation();
+                }
                 int currentPageIndex = readerView != null ? readerView.getCurrentPageIndex() + 1 : -1;
                 int totalPages = readerView != null ? readerView.getTotalPageCount() : 0;
                 int cardHeight = readerPageContainer != null ? readerPageContainer.getHeight() : 0;
@@ -1323,20 +1326,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView == null) {
             return;
         }
-        int target = readerView.findPreviousPageStart();
-        if (target >= 0) {
-            readerView.scrollToGlobalChar(target);
-        }
+        readerView.requestPageAdvance(-1);
     }
 
     private void goToNextPage() {
         if (readerView == null) {
             return;
         }
-        int target = readerView.findNextPageStart();
-        if (target >= 0) {
-            readerView.scrollToGlobalChar(target);
-        }
+        readerView.requestPageAdvance(1);
     }
 
     private void schedulePersistReadingState() {
