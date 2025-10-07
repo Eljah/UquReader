@@ -8,6 +8,7 @@ import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.TextUtils;
 import android.text.method.MovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
@@ -86,6 +87,7 @@ public class ReaderView extends TextView {
     private float sentenceOutlineStrokeWidth;
     private float sentenceOutlineCornerRadius;
     private final MovementMethod movementMethod;
+    private TokenSpan cardTemplateSpan;
 
     public ReaderView(Context context) {
         super(context);
@@ -220,6 +222,7 @@ public class ReaderView extends TextView {
         activeLetterIndex = -1;
         viewportStartChar = 0;
         viewportEndChar = 0;
+        cardTemplateSpan = null;
     }
 
     public void loadFromDocumentAsset(String assetName) {
@@ -318,6 +321,7 @@ public class ReaderView extends TextView {
         loggedExposures.clear();
         sentenceRanges.clear();
         sentenceRanges.addAll(result.sentenceRanges);
+        cardTemplateSpan = result.cardTemplateSpan;
         int target = hasPendingInitialChar ? pendingInitialCharIndex : 0;
         hasPendingInitialChar = false;
         displayWindowAround(target, target, false);
@@ -533,6 +537,10 @@ public class ReaderView extends TextView {
         return Collections.unmodifiableList(sentenceRanges);
     }
 
+    public TokenSpan getCardTemplateSpan() {
+        return cardTemplateSpan;
+    }
+
     public SentenceRange findSentenceForCharIndex(int charIndex) {
         if (charIndex < 0) return null;
         for (SentenceRange range : sentenceRanges) {
@@ -700,6 +708,8 @@ public class ReaderView extends TextView {
         }
         StringBuilder plain = new StringBuilder();
         List<TokenSpan> spans = new ArrayList<>();
+        TokenSpan templateSpan = null;
+        double templateScore = Double.NEGATIVE_INFINITY;
         double halflife = 7.0; // days
         long now = System.currentTimeMillis();
 
@@ -720,11 +730,42 @@ public class ReaderView extends TextView {
                 double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
                 span.lastAlpha = (float) alpha;
                 spans.add(span);
+
+                double score = computeCardTemplateScore(t);
+                if (score > templateScore) {
+                    templateScore = score;
+                    templateSpan = span;
+                }
             }
         }
 
         List<SentenceRange> ranges = buildSentenceRanges(plain.toString());
-        return new LoadResult(plain.toString(), spans, ranges);
+        return new LoadResult(plain.toString(), spans, ranges, templateSpan);
+    }
+
+    private double computeCardTemplateScore(Token token) {
+        if (token == null || token.morphology == null) {
+            return Double.NEGATIVE_INFINITY;
+        }
+        Morphology morph = token.morphology;
+        int surfaceLen = safeLength(token.surface);
+        int lemmaLen = safeLength(morph.lemma);
+        int segmentsLen = safeLength(morph.getSegmentedSurface());
+        List<String> featureCodes = morph.getFeatureCodes();
+        int featureCodesLen = 0;
+        if (featureCodes != null && !featureCodes.isEmpty()) {
+            featureCodesLen = TextUtils.join(" + ", featureCodes).length();
+        }
+        int translationLen = 0;
+        if (token.translations != null && !token.translations.isEmpty()) {
+            translationLen = TextUtils.join(", ", token.translations).length();
+        }
+        int featureCount = morph.features != null ? morph.features.size() : 0;
+        return surfaceLen * 1.5 + lemmaLen + segmentsLen + featureCodesLen + translationLen + featureCount * 10L;
+    }
+
+    private int safeLength(String value) {
+        return value == null ? 0 : value.length();
     }
 
     private int adjustStartToTokenBoundary(int candidate) {
@@ -834,11 +875,14 @@ public class ReaderView extends TextView {
         final String text;
         final List<TokenSpan> tokenSpans;
         final List<SentenceRange> sentenceRanges;
+        final TokenSpan cardTemplateSpan;
 
-        LoadResult(String text, List<TokenSpan> tokenSpans, List<SentenceRange> sentenceRanges) {
+        LoadResult(String text, List<TokenSpan> tokenSpans, List<SentenceRange> sentenceRanges,
+                TokenSpan cardTemplateSpan) {
             this.text = text;
             this.tokenSpans = tokenSpans == null ? Collections.emptyList() : tokenSpans;
             this.sentenceRanges = sentenceRanges == null ? Collections.emptyList() : sentenceRanges;
+            this.cardTemplateSpan = cardTemplateSpan;
         }
     }
 }

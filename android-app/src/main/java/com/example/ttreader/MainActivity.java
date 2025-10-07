@@ -28,6 +28,7 @@ import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -52,6 +53,7 @@ import com.example.ttreader.model.ReadingState;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
+import com.example.ttreader.ui.TokenInfoViewBinder;
 import com.example.ttreader.util.DetailSpeechFormatter;
 import com.example.ttreader.util.GrammarResources;
 import com.example.ttreader.tts.RhvoiceAvailability;
@@ -65,6 +67,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -172,6 +175,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int promptBaseCharIndex = -1;
     private boolean skipBackGoPrevious = false;
     private boolean skipBackRestartArmed = false;
+    private TokenSpan cardTemplateSpan;
+    private CardDimensions cardDimensions;
+    private String cardDimensionsWorkId = "";
 
     private final UtteranceProgressListener synthesisListener = new UtteranceProgressListener() {
         @Override public void onStart(String utteranceId) {
@@ -232,6 +238,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 //noinspection ResultOfMethodCallIgnored
                 file.delete();
             }
+        }
+    }
+
+    private static final class CardDimensions {
+        final int widthPx;
+        final int heightPx;
+
+        CardDimensions(int widthPx, int heightPx) {
+            this.widthPx = widthPx;
+            this.heightPx = heightPx;
         }
     }
 
@@ -465,22 +481,20 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override public void onTokenLongPress(TokenSpan span, List<String> ruLemmas) {
+        if (span == null) {
+            return;
+        }
+        List<String> translations = gatherTranslations(span, ruLemmas);
         boolean resumeAfter = isSpeaking || shouldContinueSpeech;
-        speakTokenDetails(span, ruLemmas, resumeAfter);
-        showTokenSheet(span, ruLemmas);
+        speakTokenDetails(span, translations, resumeAfter);
+        showTokenSheet(span, translations);
     }
 
     private void speakTokenDetails(TokenSpan span, List<String> translations, boolean resumeAfter) {
         if (!ttsReady || textToSpeech == null || talgatVoice == null) return;
         if (span == null || span.token == null) return;
-        List<String> combinedTranslations = new ArrayList<>();
-        if (translations != null) {
-            combinedTranslations.addAll(translations);
-        }
-        if (span.token != null && span.token.translations != null) {
-            combinedTranslations.addAll(span.token.translations);
-        }
-        List<String> safeTranslations = DetailSpeechFormatter.sanitizeTranslations(combinedTranslations);
+        List<String> base = translations == null ? Collections.emptyList() : translations;
+        List<String> safeTranslations = DetailSpeechFormatter.sanitizeTranslations(base);
         String detailText = DetailSpeechFormatter.buildDetailSpeech(span, safeTranslations, true);
         if (TextUtils.isEmpty(detailText)) {
             return;
@@ -814,8 +828,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         restoringReadingState = true;
         showReaderLoading(true);
         readerView.clearContent();
+        cardTemplateSpan = null;
+        cardDimensions = null;
+        cardDimensionsWorkId = work != null ? work.id : "";
         readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
             updateSentenceRanges();
+            prepareCardTemplateForCurrentBook();
             int speechChar = resolveSavedSpeechChar(work);
             int focusChar = resolveSavedFocusChar(work);
             if (currentReadingState != null) {
@@ -1160,25 +1178,108 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
-    private void showTokenSheet(TokenSpan span, List<String> ruLemmas) {
+    private void showTokenSheet(TokenSpan span, List<String> translations) {
         if (span == null || span.token == null || span.token.analysis == null) return;
         dismissTokenSheet(false);
-        List<String> combined = ruLemmas == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(ruLemmas);
-        if (span.token != null && span.token.translations != null) {
-            for (String translation : span.token.translations) {
-                if (!TextUtils.isEmpty(translation) && !combined.contains(translation)) {
-                    combined.add(translation);
-                }
-            }
+        List<String> safe = translations == null ? Collections.emptyList() : translations;
+        TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, safe);
+        CardDimensions dimensions = ensureCardDimensions();
+        if (dimensions != null) {
+            sheet.setFixedSize(dimensions.widthPx, dimensions.heightPx);
         }
-        String ruCsv = combined.isEmpty()? "—" : String.join(", ", combined);
-        TokenInfoBottomSheet sheet = TokenInfoBottomSheet.newInstance(span.token.surface, span.token.analysis, ruCsv);
         sheet.setUsageStatsDao(usageStatsDao);
         String languagePair = currentLanguagePair != null ? currentLanguagePair : LANGUAGE_PAIR_TT_RU;
         WorkInfo work = getCurrentWork();
         String workId = work != null ? work.id : null;
         sheet.setUsageContext(languagePair, workId, span.getStartIndex());
         sheet.show(getFragmentManager(), "token-info");
+    }
+
+    private List<String> gatherTranslations(TokenSpan span, List<String> dictionaryTranslations) {
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        addTranslations(unique, dictionaryTranslations);
+        if (span != null && span.token != null && span.token.translations != null) {
+            addTranslations(unique, span.token.translations);
+        }
+        return new ArrayList<>(unique);
+    }
+
+    private void addTranslations(LinkedHashSet<String> target, List<String> translations) {
+        if (translations == null) {
+            return;
+        }
+        for (String translation : translations) {
+            if (translation == null) {
+                continue;
+            }
+            String trimmed = translation.trim();
+            if (!trimmed.isEmpty()) {
+                target.add(trimmed);
+            }
+        }
+    }
+
+    private void prepareCardTemplateForCurrentBook() {
+        if (readerView == null) {
+            cardTemplateSpan = null;
+            cardDimensions = null;
+            return;
+        }
+        if (currentWork != null) {
+            cardDimensionsWorkId = currentWork.id;
+        }
+        cardTemplateSpan = readerView.getCardTemplateSpan();
+        cardDimensions = null;
+        ensureCardDimensions();
+    }
+
+    private CardDimensions ensureCardDimensions() {
+        if (currentWork != null && !TextUtils.equals(cardDimensionsWorkId, currentWork.id)) {
+            cardDimensions = null;
+            cardDimensionsWorkId = currentWork.id;
+        }
+        if (cardDimensions != null) {
+            return cardDimensions;
+        }
+        if (readerView == null) {
+            return null;
+        }
+        TokenSpan template = cardTemplateSpan != null ? cardTemplateSpan : readerView.getCardTemplateSpan();
+        if (template == null || template.token == null) {
+            return null;
+        }
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View view = inflater.inflate(R.layout.bottomsheet_token_info, null, false);
+        List<String> dictionaryTranslations = readerView.getTranslations(template);
+        List<String> translations = gatherTranslations(template, dictionaryTranslations);
+        TokenInfoViewBinder.bind(view, template.token.surface, template.token.morphology, translations, null);
+        int widthSpec = View.MeasureSpec.makeMeasureSpec(getCardMeasurementWidth(), View.MeasureSpec.AT_MOST);
+        int heightSpec = View.MeasureSpec.makeMeasureSpec(getCardMeasurementHeight(), View.MeasureSpec.AT_MOST);
+        view.measure(widthSpec, heightSpec);
+        int measuredWidth = view.getMeasuredWidth();
+        int measuredHeight = view.getMeasuredHeight();
+        if (measuredWidth <= 0) {
+            measuredWidth = getCardMeasurementWidth();
+        }
+        if (measuredHeight <= 0) {
+            measuredHeight = getCardMeasurementHeight();
+        }
+        cardDimensions = new CardDimensions(measuredWidth, measuredHeight);
+        return cardDimensions;
+    }
+
+    private int getCardMeasurementWidth() {
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int margin = getResources().getDimensionPixelSize(R.dimen.token_info_horizontal_margin);
+        int available = screenWidth - margin * 2;
+        return Math.max(screenWidth / 2, available);
+    }
+
+    private int getCardMeasurementHeight() {
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int margin = getResources().getDimensionPixelSize(R.dimen.token_info_vertical_margin);
+        int available = screenHeight - margin * 2;
+        return Math.max(screenHeight / 2, available);
     }
 
     private void toggleSpeech() {
@@ -1757,7 +1858,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return;
         }
         readerView.ensureExposureLogged(target);
-        List<String> translations = readerView.getTranslations(target);
+        List<String> dictionaryTranslations = readerView.getTranslations(target);
+        List<String> translations = gatherTranslations(target, dictionaryTranslations);
         boolean resumeAfter = resolveDetailResumePreference();
         speakTokenDetails(target, translations, resumeAfter);
         showTokenSheet(target, translations);
@@ -2494,7 +2596,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         TokenSpan span = readerView.findSpanForCharIndex(focusIndex);
         if (span == null) return;
         readerView.ensureExposureLogged(span);
-        List<String> translations = readerView.getTranslations(span);
+        List<String> dictionaryTranslations = readerView.getTranslations(span);
+        List<String> translations = gatherTranslations(span, dictionaryTranslations);
         speakTokenDetails(span, translations, false);
         showTokenSheet(span, translations);
     }
