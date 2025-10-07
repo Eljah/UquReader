@@ -167,6 +167,7 @@ public class ReaderView extends TextView {
         setVerticalFadingEdgeEnabled(false);
         setFadingEdgeLength(0);
         setOverScrollMode(OVER_SCROLL_NEVER);
+        setIncludeFontPadding(false);
         sentenceOutlineColor = resolveColorResource(com.example.ttreader.R.color.reader_sentence_outline);
         letterHighlightColor = resolveColorResource(com.example.ttreader.R.color.reader_letter_highlight);
         float density = getResources().getDisplayMetrics().density;
@@ -271,6 +272,15 @@ public class ReaderView extends TextView {
     }
 
     public void clearContent() {
+        resetState(true);
+    }
+
+    public void prepareForDocumentReload() {
+        resetState(false);
+    }
+
+    private void resetState(boolean clearDisplayedText) {
+        clearSpeechHighlights();
         visibleStart = 0;
         visibleEnd = 0;
         currentDocument = null;
@@ -285,12 +295,19 @@ public class ReaderView extends TextView {
         hasPendingTarget = false;
         pendingNotifyWindowChange = false;
         pendingTargetCharIndex = 0;
+        deferredPage = null;
+        deferredPageScheduled = false;
         activePaginationSpec = null;
         pendingInitialCompletion = null;
         initialContentDelivered = false;
         currentDocumentSignature = 0;
-        logTextEvent("clearContent");
-        setText("");
+        logTextEvent(clearDisplayedText ? "clearContent" : "prepareForReload");
+        if (clearDisplayedText) {
+            setText("");
+        } else {
+            setMovementMethod(null);
+            invalidate();
+        }
         activeSentenceSpan = null;
         activeLetterSpan = null;
         activeSentenceStart = -1;
