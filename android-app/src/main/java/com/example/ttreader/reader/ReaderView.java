@@ -45,6 +45,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReaderView extends TextView {
     private static final String TAG = "ReaderViewTrace";
     private static final String TEXT_LOG_TAG = "ReaderTextTrace";
+    public interface PageMetricsListener {
+        void onPageHeightRequired(int requiredHeight, int pageIndex, int totalPages);
+    }
     public interface TokenInfoProvider {
         void onTokenLongPress(TokenSpan span, List<String> ruLemmas);
         void onTokenSingleTap(TokenSpan span);
@@ -105,6 +108,7 @@ public class ReaderView extends TextView {
     private final MovementMethod movementMethod;
     private DeferredPage deferredPage;
     private boolean deferredPageScheduled;
+    private PageMetricsListener pageMetricsListener;
 
     public ReaderView(Context context) {
         super(context);
@@ -147,6 +151,9 @@ public class ReaderView extends TextView {
         logTextEvent("onLayout changed=" + changed + " localBounds=[" + left + ',' + top
                 + " -> " + right + ',' + bottom + "]");
         consumeDeferredPageIfNeeded();
+        if (hasPendingTarget) {
+            post(this::showPendingTargetIfPossible);
+        }
     }
 
     @Override protected void onDraw(Canvas canvas) {
@@ -415,6 +422,10 @@ public class ReaderView extends TextView {
         }
     }
 
+    public void setPageMetricsListener(PageMetricsListener listener) {
+        pageMetricsListener = listener;
+    }
+
     public void scrollToGlobalChar(int globalCharIndex) {
         requestDisplayForChar(globalCharIndex, true);
     }
@@ -453,10 +464,12 @@ public class ReaderView extends TextView {
             return false;
         }
         if (viewportHeight <= 0 || getWidth() <= 0) {
+            Log.d(TAG, "ensurePagination: view not ready");
             return false;
         }
         PaginationSpec spec = captureCurrentSpec();
         if (spec == null) {
+            Log.d(TAG, "ensurePagination: spec unavailable");
             return false;
         }
         if (!paginationCacheLoaded) {
@@ -894,6 +907,7 @@ public class ReaderView extends TextView {
         visibleStart = page.start;
         visibleEnd = page.end;
         SpannableStringBuilder content = page.content;
+        maybeNotifyPageHeightRequirement(content);
         logTextEvent("applyPage render=" + reason + " start=" + visibleStart + " end=" + visibleEnd
                 + " length=" + content.length());
         setText(content);
@@ -906,6 +920,33 @@ public class ReaderView extends TextView {
         if (page.notifyWindowChange && windowChangeListener != null) {
             windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
         }
+    }
+
+    private void maybeNotifyPageHeightRequirement(CharSequence content) {
+        if (pageMetricsListener == null) {
+            return;
+        }
+        int width = getWidth() - getTotalPaddingLeft() - getTotalPaddingRight();
+        if (width <= 0) {
+            return;
+        }
+        StaticLayout previewLayout = buildStaticLayout(content, width);
+        if (previewLayout == null) {
+            return;
+        }
+        int lineCount = previewLayout.getLineCount();
+        if (lineCount <= 0) {
+            return;
+        }
+        int requiredHeight = getTotalPaddingTop()
+                + previewLayout.getLineBottom(lineCount - 1)
+                + Math.max(0, getTotalPaddingBottom());
+        if (requiredHeight <= 0) {
+            return;
+        }
+        int totalPages = getTotalPageCount();
+        int pageIndex = getCurrentPageIndex();
+        pageMetricsListener.onPageHeightRequired(requiredHeight, pageIndex, totalPages);
     }
 
     private void logTextEvent(String action) {
