@@ -1,3 +1,5 @@
 <resources>
     <dimen name="feature_chip_margin_vertical">8dp</dimen>
+    <dimen name="token_info_horizontal_margin">32dp</dimen>
+    <dimen name="token_info_vertical_margin">64dp</dimen>
 </resources>

@@ -7,8 +7,8 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.view.Window;
+import android.view.WindowManager;
 
 import com.example.ttreader.R;
 import com.example.ttreader.data.UsageStatsDao;
@@ -18,24 +18,30 @@ import com.example.ttreader.model.Morphology;
 import com.example.ttreader.util.GrammarResources;
 import com.example.ttreader.util.MorphologyParser;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class TokenInfoBottomSheet extends DialogFragment {
     private static final String ARG_SURFACE = "surface";
     private static final String ARG_ANALYSIS = "analysis";
-    private static final String ARG_RU = "ru";
+    private static final String ARG_TRANSLATIONS = "translations";
 
     private UsageStatsDao usageStatsDao;
     private String languagePair = "";
     private String workId = "";
     private int charIndex = -1;
+    private int fixedWidthPx = 0;
+    private int fixedHeightPx = 0;
 
-    public static TokenInfoBottomSheet newInstance(String surface, String analysis, String ruCsv) {
+    public static TokenInfoBottomSheet newInstance(String surface, String analysis, List<String> translations) {
         TokenInfoBottomSheet f = new TokenInfoBottomSheet();
         Bundle b = new Bundle();
         b.putString(ARG_SURFACE, surface);
         b.putString(ARG_ANALYSIS, analysis);
-        b.putString(ARG_RU, ruCsv);
+        if (translations != null) {
+            b.putStringArrayList(ARG_TRANSLATIONS, new ArrayList<>(translations));
+        }
         f.setArguments(b);
         return f;
     }
@@ -50,83 +56,48 @@ public class TokenInfoBottomSheet extends DialogFragment {
         this.charIndex = charIndex;
     }
 
+    public void setFixedSize(int widthPx, int heightPx) {
+        this.fixedWidthPx = widthPx;
+        this.fixedHeightPx = heightPx;
+    }
+
     @Override public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.bottomsheet_token_info, container, false);
         GrammarResources.initialize(inflater.getContext());
         Bundle a = getArguments();
         String surface = a.getString(ARG_SURFACE, "");
         String analysis = a.getString(ARG_ANALYSIS, null);
-        String ru = a.getString(ARG_RU, "—");
+        List<String> translations = a.getStringArrayList(ARG_TRANSLATIONS);
+        if (translations == null) {
+            translations = Collections.emptyList();
+        }
 
         Morphology morphology = MorphologyParser.parse(surface, analysis);
 
-        TextView tvSurface = v.findViewById(R.id.tvSurface);
-        TextView tvLemma = v.findViewById(R.id.tvLemma);
-        TextView tvPos = v.findViewById(R.id.tvPos);
-        TextView tvSegments = v.findViewById(R.id.tvSegments);
-        TextView tvFeatureCodes = v.findViewById(R.id.tvFeatureCodes);
-        TextView tvTranslation = v.findViewById(R.id.tvTranslation);
-        LinearLayout featureContainer = v.findViewById(R.id.featureContainer);
+        TokenInfoViewBinder.bind(v, surface, morphology, translations,
+                (morph, feature) -> showFeatureDetails(morph, feature));
 
-        tvSurface.setText(surface);
-
-        if (morphology != null) {
-            tvLemma.setText(getString(R.string.lemma_format, morphology.lemma));
-            tvPos.setText(getString(R.string.pos_format, GrammarResources.formatPos(morphology.pos)));
-            String segmented = morphology.getSegmentedSurface();
-            if (!TextUtils.isEmpty(segmented)) {
-                tvSegments.setText(getString(R.string.segments_format, segmented));
-            } else {
-                tvSegments.setVisibility(View.GONE);
-            }
-            List<String> codes = morphology.getFeatureCodes();
-            if (!codes.isEmpty()) {
-                tvFeatureCodes.setText(getString(R.string.feature_codes_format, TextUtils.join(" + ", codes)));
-            } else {
-                tvFeatureCodes.setVisibility(View.GONE);
-            }
-            populateFeatures(featureContainer, morphology);
-        } else {
-            tvLemma.setVisibility(View.GONE);
-            tvPos.setVisibility(View.GONE);
-            tvSegments.setVisibility(View.GONE);
-            tvFeatureCodes.setVisibility(View.GONE);
+        if (fixedWidthPx > 0) {
+            v.setMinimumWidth(fixedWidthPx);
         }
-
-        tvTranslation.setText(getString(R.string.translation_format, ru));
+        if (fixedHeightPx > 0) {
+            v.setMinimumHeight(fixedHeightPx);
+        }
         return v;
     }
 
-    private void populateFeatures(LinearLayout container, Morphology morphology) {
-        container.removeAllViews();
-        List<MorphFeature> features = morphology.features;
-        if (features == null || features.isEmpty()) {
-            TextView tv = new TextView(getActivity());
-            tv.setText(R.string.no_features_placeholder);
-            container.addView(tv);
+    @Override public void onStart() {
+        super.onStart();
+        if (getDialog() == null) {
             return;
         }
-        for (MorphFeature feature : features) {
-            TextView chip = new TextView(getActivity());
-            chip.setBackgroundResource(R.drawable.feature_chip_background);
-            chip.setTextSize(16f);
-            chip.setText(getString(R.string.feature_chip_format,
-                    feature.code,
-                    TextUtils.isEmpty(feature.actual) ? getCanonicalSample(feature.canonical) : feature.actual));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.topMargin = (int) getResources().getDimension(R.dimen.feature_chip_margin_vertical);
-            chip.setLayoutParams(lp);
-            chip.setOnClickListener(v -> showFeatureDetails(morphology, feature));
-            container.addView(chip);
+        Window window = getDialog().getWindow();
+        if (window == null) {
+            return;
         }
-    }
-
-    private String getCanonicalSample(String canonical) {
-        if (TextUtils.isEmpty(canonical)) return getString(R.string.feature_no_form);
-        String first = canonical.split("/")[0];
-        return first.isEmpty() ? getString(R.string.feature_no_form) : first;
+        int width = fixedWidthPx > 0 ? fixedWidthPx : WindowManager.LayoutParams.WRAP_CONTENT;
+        int height = fixedHeightPx > 0 ? fixedHeightPx : WindowManager.LayoutParams.WRAP_CONTENT;
+        window.setLayout(width, height);
     }
 
     private void showFeatureDetails(Morphology morphology, MorphFeature feature) {
@@ -148,8 +119,10 @@ public class TokenInfoBottomSheet extends DialogFragment {
                         TextUtils.join("\n", metadata.examples)));
             }
         } else {
-            message.append(getString(R.string.feature_dialog_actual,
-                    TextUtils.isEmpty(feature.actual) ? getCanonicalSample(feature.canonical) : feature.actual));
+            String actual = TextUtils.isEmpty(feature.actual)
+                    ? getCanonicalSample(feature.canonical)
+                    : feature.actual;
+            message.append(getString(R.string.feature_dialog_actual, actual));
         }
 
         new AlertDialog.Builder(getActivity())
@@ -162,5 +135,11 @@ public class TokenInfoBottomSheet extends DialogFragment {
             usageStatsDao.recordEvent(languagePair, workId, morphology.lemma, morphology.pos, feature.code,
                     UsageStatsDao.EVENT_FEATURE, System.currentTimeMillis(), charIndex);
         }
+    }
+
+    private String getCanonicalSample(String canonical) {
+        if (TextUtils.isEmpty(canonical)) return getString(R.string.feature_no_form);
+        String first = canonical.split("/")[0];
+        return first.isEmpty() ? getString(R.string.feature_no_form) : first;
     }
 }
