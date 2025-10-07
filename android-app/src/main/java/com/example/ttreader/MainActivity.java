@@ -7,6 +7,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
@@ -373,7 +374,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         paginationDao = new PaginationDao(db);
         uiLayoutDao = new UiLayoutDao(db);
         Integer storedHeight = uiLayoutDao.getPageControlsHeight();
-        persistedPageControlsHeight = storedHeight == null ? 0 : Math.max(0, storedHeight);
+        int loadedHeight = storedHeight == null ? 0 : Math.max(0, storedHeight);
+        persistedPageControlsHeight = clampPageControlsHeight(loadedHeight);
         Log.d(LAYOUT_LOG_TAG, "Loaded persisted page controls height: " + persistedPageControlsHeight);
 
         readerPrefs = getSharedPreferences(PREFS_READER_STATE, MODE_PRIVATE);
@@ -424,6 +426,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 logViewEvent("ReaderView", readerView,
                         "onLayout height=" + newHeight + " oldHeight=" + previousHeight);
             });
+            readerView.setPageMetricsListener((requiredHeight, pageIndex, totalPages) ->
+                    ensureReaderPageCapacity(requiredHeight, "pageLayout"));
         }
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
         pagePreviousButton = findViewById(R.id.pagePreviousButton);
@@ -1497,6 +1501,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return 0;
         }
         int overlayHeight = Math.max(pageControls.getHeight(), pageControls.getMeasuredHeight());
+        overlayHeight = clampPageControlsHeight(overlayHeight);
         if (overlayHeight <= 0 && persistedPageControlsHeight > 0) {
             overlayHeight = persistedPageControlsHeight;
             logViewEvent("PageControls", pageControls,
@@ -1509,20 +1514,24 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void maybePersistPageControlsHeight(int candidateHeight, String reason) {
-        int safeHeight = Math.max(0, candidateHeight);
-        if (safeHeight <= 0 || safeHeight <= persistedPageControlsHeight) {
+        int safeHeight = clampPageControlsHeight(candidateHeight);
+        if (safeHeight <= 0 || safeHeight == persistedPageControlsHeight) {
             return;
         }
+        boolean shrinking = persistedPageControlsHeight > 0
+                && safeHeight < persistedPageControlsHeight;
         persistedPageControlsHeight = safeHeight;
         if (uiLayoutDao != null) {
             uiLayoutDao.savePageControlsHeight(safeHeight);
         }
         enforcePageControlsMinHeight("persist:" + reason);
         logViewEvent("PageControls", pageControls,
-                "persistHeight -> " + safeHeight + " reason=" + reason);
+                "persistHeight -> " + safeHeight + " reason=" + reason
+                        + (shrinking ? " (shrink)" : ""));
     }
 
     private void enforcePageControlsMinHeight(String reason) {
+        persistedPageControlsHeight = clampPageControlsHeight(persistedPageControlsHeight);
         if (pageControls == null || persistedPageControlsHeight <= 0) {
             return;
         }
@@ -1536,6 +1545,24 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pageControls.requestLayout();
         logViewEvent("PageControls", pageControls,
                 "enforceMinHeight -> " + minHeight + " reason=" + reason);
+    }
+
+    private int clampPageControlsHeight(int rawHeight) {
+        int safeHeight = Math.max(0, rawHeight);
+        if (safeHeight <= 0) {
+            return 0;
+        }
+        Resources resources = getResources();
+        if (resources == null) {
+            return safeHeight;
+        }
+        int maxHeight = resources.getDimensionPixelSize(R.dimen.reader_page_controls_max_height);
+        if (maxHeight > 0 && safeHeight > maxHeight) {
+            logViewEvent("PageControls", pageControls,
+                    "clampHeight -> " + maxHeight + " raw=" + safeHeight);
+            return maxHeight;
+        }
+        return safeHeight;
     }
 
     private void refreshPersistedReaderPageHeight(String reason) {
@@ -1585,10 +1612,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return;
         }
         if (readerPageContainer != null) {
-            readerPageContainer.setMinimumHeight(persistedReaderPageHeight);
-            readerPageContainer.requestLayout();
-            logViewEvent("ReaderPageContainer", readerPageContainer,
-                    "enforceMinHeight -> " + persistedReaderPageHeight + " reason=" + reason);
+            int currentMin = readerPageContainer.getMinimumHeight();
+            boolean updated = currentMin != persistedReaderPageHeight;
+            if (updated) {
+                readerPageContainer.setMinimumHeight(persistedReaderPageHeight);
+                readerPageContainer.requestLayout();
+                logViewEvent("ReaderPageContainer", readerPageContainer,
+                        "enforceMinHeight -> " + persistedReaderPageHeight + " reason=" + reason);
+            } else {
+                logViewEvent("ReaderPageContainer", readerPageContainer,
+                        "enforceMinHeight no-op -> " + persistedReaderPageHeight + " reason=" + reason);
+            }
         } else {
             logViewEvent("ReaderPageContainer", null,
                     "enforceMinHeight skipped reason=" + reason);
@@ -1601,10 +1635,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 targetContentHeight = Math.max(0, persistedReaderPageHeight - padding);
             }
             if (targetContentHeight > 0) {
-                readerView.setMinHeight(targetContentHeight);
-                readerView.requestLayout();
-                logViewEvent("ReaderView", readerView,
-                        "enforceMinHeight -> " + targetContentHeight + " reason=" + reason);
+                boolean updated = readerView.getMinHeight() != targetContentHeight;
+                if (updated) {
+                    readerView.setMinHeight(targetContentHeight);
+                    readerView.requestLayout();
+                    logViewEvent("ReaderView", readerView,
+                            "enforceMinHeight -> " + targetContentHeight + " reason=" + reason);
+                } else {
+                    logViewEvent("ReaderView", readerView,
+                            "enforceMinHeight no-op -> " + targetContentHeight + " reason=" + reason);
+                }
             } else {
                 logViewEvent("ReaderView", readerView,
                         "enforceMinHeight skipped contentHeight<=0 reason=" + reason);
@@ -1612,6 +1652,18 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } else {
             logViewEvent("ReaderView", null,
                     "enforceMinHeight skipped reason=" + reason);
+        }
+    }
+
+    private void ensureReaderPageCapacity(int requiredHeight, String reason) {
+        int safeHeight = Math.max(0, requiredHeight);
+        if (safeHeight <= 0) {
+            return;
+        }
+        if (safeHeight > persistedReaderPageHeight) {
+            maybePersistReaderPageHeight(safeHeight, reason);
+        } else {
+            enforceReaderPageHeight(reason);
         }
     }
 

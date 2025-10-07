@@ -13,6 +13,7 @@ import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.method.MovementMethod;
+import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -46,6 +47,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReaderView extends TextView {
     private static final String TAG = "ReaderViewTrace";
     private static final String TEXT_LOG_TAG = "ReaderTextTrace";
+    private static final String TEXT_METRICS_TAG = "ReaderTextMetrics";
+    public interface PageMetricsListener {
+        void onPageHeightRequired(int requiredHeight, int pageIndex, int totalPages);
+    }
     public interface TokenInfoProvider {
         void onTokenLongPress(TokenSpan span, List<String> ruLemmas);
         void onTokenSingleTap(TokenSpan span);
@@ -105,6 +110,16 @@ public class ReaderView extends TextView {
     private final MovementMethod movementMethod;
     private DeferredPage deferredPage;
     private boolean deferredPageScheduled;
+    private PageMetricsListener pageMetricsListener;
+    private int renderedContentVersion;
+    private int lastLoggedDrawVersion = -1;
+    private boolean renderedMetricsDirty;
+    private int renderedContentLength;
+    private String renderedContentReason = "";
+    private int renderedContentStart;
+    private int renderedContentEnd;
+    private int previewLineCount = -1;
+    private int previewLastBottom = -1;
 
     public ReaderView(Context context) {
         super(context);
@@ -147,17 +162,176 @@ public class ReaderView extends TextView {
         logTextEvent("onLayout changed=" + changed + " localBounds=[" + left + ',' + top
                 + " -> " + right + ',' + bottom + "]");
         consumeDeferredPageIfNeeded();
+        if (hasPendingTarget) {
+            post(this::showPendingTargetIfPossible);
+        }
     }
 
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         logTextEvent("onDraw");
+        logDrawnTextMetrics();
     }
 
     @Override public void setText(CharSequence text, BufferType type) {
         super.setText(text, type);
         int length = text == null ? 0 : text.length();
         logTextEvent("setText length=" + length);
+    }
+
+    private void markRenderedContent(String reason, int start, int end, int length,
+            StaticLayout previewLayout) {
+        renderedContentVersion++;
+        renderedContentReason = reason;
+        renderedContentStart = start;
+        renderedContentEnd = end;
+        renderedContentLength = length;
+        renderedMetricsDirty = true;
+        if (previewLayout != null && previewLayout.getLineCount() > 0) {
+            int lastIndex = previewLayout.getLineCount() - 1;
+            previewLineCount = previewLayout.getLineCount();
+            previewLastBottom = previewLayout.getLineBottom(lastIndex);
+        } else {
+            previewLineCount = -1;
+            previewLastBottom = -1;
+        }
+        logTextChangeMetrics(previewLayout);
+    }
+
+    private void logTextChangeMetrics(StaticLayout previewLayout) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("phase=textChanged");
+        sb.append(" version=").append(renderedContentVersion);
+        sb.append(" reason=").append(renderedContentReason);
+        sb.append(" start=").append(renderedContentStart);
+        sb.append(" end=").append(renderedContentEnd);
+        sb.append(" length=").append(renderedContentLength);
+        if (previewLayout != null) {
+            int lineCount = previewLayout.getLineCount();
+            sb.append(" previewLines=").append(lineCount);
+            if (lineCount > 0) {
+                int lastIndex = lineCount - 1;
+                int lastBottom = previewLayout.getLineBottom(lastIndex);
+                int estimatedBottomInView = getPaddingTop() + lastBottom;
+                int estimatedBottomInCard = getTop() + estimatedBottomInView;
+                sb.append(" previewLastBottom=").append(lastBottom);
+                sb.append(" previewBottomInView=").append(estimatedBottomInView);
+                sb.append(" previewBottomInCard=").append(estimatedBottomInCard);
+                appendCardMetrics(sb, estimatedBottomInCard, estimatedBottomInView);
+            } else {
+                appendCardMetrics(sb, -1, -1);
+            }
+        } else {
+            sb.append(" previewLines=-1");
+            appendCardMetrics(sb, -1, -1);
+        }
+        Log.d(TEXT_METRICS_TAG, sb.toString());
+    }
+
+    private void logDrawnTextMetrics() {
+        if (!renderedMetricsDirty || renderedContentVersion == lastLoggedDrawVersion) {
+            return;
+        }
+        Layout layout = getLayout();
+        if (layout == null) {
+            return;
+        }
+        int lineCount = layout.getLineCount();
+        StringBuilder sb = new StringBuilder();
+        sb.append("phase=drawn");
+        sb.append(" version=").append(renderedContentVersion);
+        sb.append(" reason=").append(renderedContentReason);
+        sb.append(" start=").append(renderedContentStart);
+        sb.append(" end=").append(renderedContentEnd);
+        sb.append(" length=").append(renderedContentLength);
+        sb.append(" lines=").append(lineCount);
+        int bottomInCard = -1;
+        int bottomInView = -1;
+        if (lineCount > 0) {
+            int lastIndex = lineCount - 1;
+            int lastBottom = layout.getLineBottom(lastIndex);
+            int firstTop = layout.getLineTop(0);
+            int lastBaseline = layout.getLineBaseline(lastIndex);
+            sb.append(" firstLineTop=").append(firstTop);
+            sb.append(" lastBaseline=").append(lastBaseline);
+            sb.append(" lastBottom=").append(lastBottom);
+            bottomInView = getPaddingTop() + lastBottom;
+            bottomInCard = getTop() + bottomInView;
+            sb.append(" bottomInView=").append(bottomInView);
+        }
+        appendCardMetrics(sb, bottomInCard, bottomInView);
+        int[] textOnScreen = new int[2];
+        if (getLocationOnScreenSafe(this, textOnScreen) && bottomInView >= 0) {
+            int textBottomOnScreen = textOnScreen[1] + bottomInView;
+            sb.append(" textBottomOnScreen=").append(textBottomOnScreen);
+        }
+        if (previewLineCount >= 0) {
+            sb.append(" previewLines=").append(previewLineCount);
+        }
+        if (previewLastBottom >= 0) {
+            sb.append(" previewLastBottom=").append(previewLastBottom);
+        }
+        Log.d(TEXT_METRICS_TAG, sb.toString());
+        lastLoggedDrawVersion = renderedContentVersion;
+        renderedMetricsDirty = false;
+    }
+
+    private void appendCardMetrics(StringBuilder sb, int textBottomInCard, int textBottomInView) {
+        View cardView = findCardView();
+        if (cardView == null) {
+            sb.append(" card=<none>");
+            return;
+        }
+        sb.append(" cardBounds=")
+                .append('[').append(cardView.getLeft()).append(',').append(cardView.getTop())
+                .append(" -> ").append(cardView.getRight()).append(',').append(cardView.getBottom())
+                .append(']');
+        sb.append(" cardPadding=")
+                .append('[').append(cardView.getPaddingLeft()).append(',')
+                .append(cardView.getPaddingTop()).append(" -> ")
+                .append(cardView.getPaddingRight()).append(',')
+                .append(cardView.getPaddingBottom()).append(']');
+        sb.append(" cardHeight=").append(cardView.getHeight());
+        int cardInnerTop = cardView.getTop() + cardView.getPaddingTop();
+        int cardInnerBottom = cardView.getBottom() - cardView.getPaddingBottom();
+        sb.append(" cardInnerTop=").append(cardInnerTop);
+        sb.append(" cardInnerBottom=").append(cardInnerBottom);
+        if (textBottomInCard >= 0) {
+            sb.append(" textBottomInCard=").append(textBottomInCard);
+            sb.append(" cardClearance=").append(cardInnerBottom - textBottomInCard);
+        }
+        if (textBottomInView >= 0) {
+            sb.append(" textBottomInView=").append(textBottomInView);
+        }
+        int[] cardLocation = new int[2];
+        if (getLocationOnScreenSafe(cardView, cardLocation)) {
+            sb.append(" cardScreen=")
+                    .append('[').append(cardLocation[0]).append(',').append(cardLocation[1])
+                    .append(" -> ").append(cardLocation[0] + cardView.getWidth()).append(',')
+                    .append(cardLocation[1] + cardView.getHeight()).append(']');
+        } else {
+            sb.append(" cardScreen=[unavailable]");
+        }
+    }
+
+    private View findCardView() {
+        ViewParent parent = getParent();
+        return parent instanceof View ? (View) parent : null;
+    }
+
+    private boolean getLocationOnScreenSafe(View view, int[] location) {
+        if (view == null || location == null || location.length < 2) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && !view.isAttachedToWindow()) {
+            return false;
+        }
+        try {
+            view.getLocationOnScreen(location);
+            return true;
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
 
     private void init() {
@@ -430,6 +604,10 @@ public class ReaderView extends TextView {
         }
     }
 
+    public void setPageMetricsListener(PageMetricsListener listener) {
+        pageMetricsListener = listener;
+    }
+
     public void scrollToGlobalChar(int globalCharIndex) {
         requestDisplayForChar(globalCharIndex, true);
     }
@@ -509,10 +687,12 @@ public class ReaderView extends TextView {
             return false;
         }
         if (viewportHeight <= 0 || getWidth() <= 0) {
+            Log.d(TAG, "ensurePagination: view not ready");
             return false;
         }
         PaginationSpec spec = captureCurrentSpec();
         if (spec == null) {
+            Log.d(TAG, "ensurePagination: spec unavailable");
             return false;
         }
         if (!paginationCacheLoaded) {
@@ -965,12 +1145,26 @@ public class ReaderView extends TextView {
         if (page == null) {
             return;
         }
+        if (visibleStart == page.start && visibleEnd == page.end) {
+            CharSequence currentContent = getText();
+            if (currentContent != null && currentContent.length() == page.content.length()
+                    && TextUtils.equals(currentContent, page.content)) {
+                logTextEvent("renderPage skip duplicate start=" + page.start + " end=" + page.end
+                        + " reason=" + reason);
+                if (page.notifyWindowChange && windowChangeListener != null) {
+                    windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
+                }
+                return;
+            }
+        }
         visibleStart = page.start;
         visibleEnd = page.end;
         SpannableStringBuilder content = page.content;
+        StaticLayout previewLayout = maybeNotifyPageHeightRequirement(content);
         logTextEvent("applyPage render=" + reason + " start=" + visibleStart + " end=" + visibleEnd
                 + " length=" + content.length());
         setText(content);
+        markRenderedContent(reason, page.start, page.end, content.length(), previewLayout);
         deliverInitialContentIfNeeded();
         if (getMovementMethod() != movementMethod) {
             setMovementMethod(movementMethod);
@@ -980,6 +1174,33 @@ public class ReaderView extends TextView {
         if (page.notifyWindowChange && windowChangeListener != null) {
             windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
         }
+    }
+
+    private StaticLayout maybeNotifyPageHeightRequirement(CharSequence content) {
+        int width = getWidth() - getTotalPaddingLeft() - getTotalPaddingRight();
+        if (width <= 0) {
+            return null;
+        }
+        StaticLayout previewLayout = buildStaticLayout(content, width);
+        if (previewLayout == null) {
+            return null;
+        }
+        int lineCount = previewLayout.getLineCount();
+        if (lineCount <= 0) {
+            return previewLayout;
+        }
+        int requiredHeight = getTotalPaddingTop()
+                + previewLayout.getLineBottom(lineCount - 1)
+                + Math.max(0, getTotalPaddingBottom());
+        if (requiredHeight <= 0) {
+            return previewLayout;
+        }
+        if (pageMetricsListener != null) {
+            int totalPages = getTotalPageCount();
+            int pageIndex = getCurrentPageIndex();
+            pageMetricsListener.onPageHeightRequired(requiredHeight, pageIndex, totalPages);
+        }
+        return previewLayout;
     }
 
     private void logTextEvent(String action) {
