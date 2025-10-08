@@ -2,4 +2,5 @@
     <dimen name="feature_chip_margin_vertical">8dp</dimen>
     <dimen name="reader_page_controls_clearance">16dp</dimen>
     <dimen name="reader_bottom_panel_min_height">32dp</dimen>
+    <dimen name="reader_page_controls_bottom_margin">0dp</dimen>
 </resources>
