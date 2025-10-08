@@ -2665,6 +2665,21 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         try {
             sentencePlayer.setDataSource(request.file.getAbsolutePath());
             sentencePlayer.setOnPreparedListener(mp -> {
+                if (sentencePlayer != mp || currentSentenceRequest != request || !shouldContinueSpeech) {
+                    if (currentSentenceRequest == request) {
+                        currentSentenceRequest = null;
+                    }
+                    request.deleteFile();
+                    try {
+                        mp.release();
+                    } catch (IllegalStateException ignored) {
+                    }
+                    if (sentencePlayer == mp) {
+                        sentencePlayer = null;
+                    }
+                    updateSpeechButtons();
+                    return;
+                }
                 long duration = request.durationMs > 0 ? request.durationMs : mp.getDuration();
                 if (duration <= 0) {
                     duration = estimateSentenceDurationMs(request.sentenceRange);
@@ -2673,7 +2688,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 currentLetterIntervalMs = computeLetterInterval(request.sentenceRange, duration);
                 mp.start();
                 isSpeaking = true;
-                shouldContinueSpeech = true;
                 updatePlaybackState(PlaybackState.STATE_PLAYING);
                 updateSpeechButtons();
                 startProgressUpdates();
