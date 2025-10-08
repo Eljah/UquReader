@@ -197,6 +197,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int readerBasePaddingTop;
     private int readerBasePaddingRight;
     private int readerBasePaddingBottom;
+    private int readerExtraBottomPadding;
     private View readerOverlaySpacer;
     private int readerOverlaySpacerBaseHeight;
     private int readerViewportBottomInset;
@@ -475,6 +476,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerBasePaddingTop = readerView.getPaddingTop();
             readerBasePaddingRight = readerView.getPaddingRight();
             readerBasePaddingBottom = readerView.getPaddingBottom();
+            readerExtraBottomPadding = Math.max(0, Math.round(readerView.getLineHeight() * 2f));
+            readerView.setPadding(readerBasePaddingLeft, readerBasePaddingTop,
+                    readerBasePaddingRight, readerBasePaddingBottom + readerExtraBottomPadding);
             readerView.setup(dbHelper, memoryDao, usageStatsDao, paginationDao, this);
             readerView.setWindowChangeListener(this::handleReaderWindowChanged);
         }
@@ -1461,7 +1465,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int left = readerBasePaddingLeft;
         int top = readerBasePaddingTop;
         int right = readerBasePaddingRight;
-        int bottom = readerBasePaddingBottom;
+        int bottom = readerBasePaddingBottom + readerExtraBottomPadding;
 
         Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: begin overlayVisible="
                 + (pageControls != null && pageControls.getVisibility() == View.VISIBLE));
