@@ -1566,24 +1566,75 @@ public class ReaderView extends TextView {
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedException();
             }
-            if (t.prefix != null && !t.prefix.isEmpty()) plain.append(t.prefix);
+            int prefixStart = plain.length();
+            if (t.prefix != null && !t.prefix.isEmpty()) {
+                plain.append(t.prefix);
+            }
+            int prefixEnd = plain.length();
+            if (prefixEnd > prefixStart) {
+                TokenSpan prefixSpan = createSyntheticSpan(plain, prefixStart, prefixEnd);
+                if (prefixSpan != null) {
+                    spans.add(prefixSpan);
+                }
+            }
+
             int start = plain.length();
-            if (t.surface != null) plain.append(t.surface);
+            if (t.surface != null && !t.surface.isEmpty()) {
+                plain.append(t.surface);
+            }
             int end = plain.length();
 
-            if (t.hasMorphology() && t.surface != null && !t.surface.isEmpty()) {
-                Morphology morph = t.morphology;
-                TokenSpan span = new TokenSpan(t);
-                span.setCharacterRange(start, end);
-                double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
-                double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
-                span.lastAlpha = (float) alpha;
-                spans.add(span);
+            if (end > start) {
+                if (t.hasMorphology()) {
+                    Morphology morph = t.morphology;
+                    TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
+                    double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
+                    double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
+                    span.lastAlpha = (float) alpha;
+                    spans.add(span);
+                } else {
+                    TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
+                    spans.add(span);
+                }
+            }
+        }
+
+        if (plain.length() > 0) {
+            int coveredEnd = 0;
+            for (TokenSpan span : spans) {
+                if (span == null) {
+                    continue;
+                }
+                coveredEnd = Math.max(coveredEnd, span.getEndIndex());
+            }
+            if (coveredEnd < plain.length()) {
+                TokenSpan tailSpan = createSyntheticSpan(plain, coveredEnd, plain.length());
+                if (tailSpan != null) {
+                    spans.add(tailSpan);
+                }
             }
         }
 
         List<SentenceRange> ranges = buildSentenceRanges(plain.toString());
         return new LoadResult(plain.toString(), spans, ranges);
+    }
+
+    private TokenSpan createSyntheticSpan(CharSequence content, int start, int end) {
+        if (content == null) {
+            return null;
+        }
+        int safeStart = Math.max(0, Math.min(start, content.length()));
+        int safeEnd = Math.max(safeStart, Math.min(end, content.length()));
+        if (safeEnd <= safeStart) {
+            return null;
+        }
+        Token synthetic = new Token();
+        synthetic.surface = content.subSequence(safeStart, safeEnd).toString();
+        TokenSpan span = new TokenSpan(synthetic);
+        span.setCharacterRange(safeStart, safeEnd);
+        return span;
     }
 
     private List<SentenceRange> buildSentenceRanges(String text) {
