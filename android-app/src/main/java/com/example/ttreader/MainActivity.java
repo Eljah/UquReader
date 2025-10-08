@@ -85,8 +85,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private static final int APPROX_CHARS_PER_PAGE = 1000;
     private static final float PAGE_CONTROLS_LOADING_ALPHA = 0.5f;
-    private static final int READER_PAGE_HEIGHT_REDUCTION_LINES = 2;
-    private static final String PREF_KEY_PAGE_HEIGHT_REDUCTION_APPLIED =
+    private static final int READER_PAGE_HEIGHT_ADJUSTMENT_LINES = -2;
+    private static final String PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED =
+            "reader.page.height.adjustment.applied.v2";
+    private static final String PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED_LEGACY =
             "reader.page.height.reduction.applied";
     private static final class WorkInfo {
         final String id;
@@ -202,9 +204,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int readerViewportBottomInset;
     private int lastDispatchedViewportHeight = -1;
     private boolean readerViewportDispatchScheduled;
-    private boolean readerPageHeightReductionApplied;
+    private boolean readerPageHeightAdjustmentApplied;
     private boolean readerPageHeightFixed;
-    private boolean readerPageHeightReductionRetryScheduled;
+    private boolean readerPageHeightAdjustmentRetryScheduled;
     private final List<Runnable> pendingViewportReadyActions = new ArrayList<>();
     private boolean awaitingViewportMeasurement;
     private boolean readerViewportReady;
@@ -394,9 +396,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
         if (readerPrefs != null) {
-            readerPageHeightReductionApplied = readerPrefs.getBoolean(
-                    PREF_KEY_PAGE_HEIGHT_REDUCTION_APPLIED, false);
-            readerPageHeightFixed = readerPageHeightReductionApplied;
+            readerPageHeightAdjustmentApplied = readerPrefs.getBoolean(
+                    PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED, false);
+            if (readerPrefs.contains(PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED_LEGACY)) {
+                readerPrefs.edit().remove(PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED_LEGACY).apply();
+            }
+            readerPageHeightFixed = readerPageHeightAdjustmentApplied;
         }
 
         toolbar = findViewById(R.id.topToolbar);
@@ -1638,7 +1643,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     "loadPersistedHeight -> " + persistedReaderPageHeight
                             + " work=" + activeLayoutWorkId + " reason=" + reason);
             enforceReaderPageHeight(reason);
-            maybeApplyReaderPageHeightReduction("refresh:" + reason);
+            maybeApplyReaderPageHeightAdjustment("refresh:" + reason);
         } else {
             logViewEvent("ReaderPageContainer", readerPageContainer,
                     "loadPersistedHeight -> none work=" + activeLayoutWorkId
@@ -1679,79 +1684,100 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 uiLayoutDao.saveReaderPageHeight(activeLayoutWorkId, safeHeight);
             }
         }
-        maybeApplyReaderPageHeightReduction("persist:" + reason);
+        maybeApplyReaderPageHeightAdjustment("persist:" + reason);
     }
 
-    private void markReaderPageHeightReductionApplied() {
-        if (!readerPageHeightReductionApplied) {
-            readerPageHeightReductionApplied = true;
+    private void markReaderPageHeightAdjustmentApplied() {
+        if (!readerPageHeightAdjustmentApplied) {
+            readerPageHeightAdjustmentApplied = true;
             if (readerPrefs != null) {
-                readerPrefs.edit().putBoolean(PREF_KEY_PAGE_HEIGHT_REDUCTION_APPLIED, true).apply();
+                readerPrefs.edit().putBoolean(PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED, true).apply();
             }
         }
         readerPageHeightFixed = true;
-        readerPageHeightReductionRetryScheduled = false;
+        readerPageHeightAdjustmentRetryScheduled = false;
     }
 
-    private void maybeApplyReaderPageHeightReduction(String reason) {
+    private void maybeApplyReaderPageHeightAdjustment(String reason) {
         if (readerView == null) {
             return;
         }
         if (persistedReaderPageHeight <= 0) {
             return;
         }
-        if (readerPageHeightReductionApplied) {
+        if (readerPageHeightAdjustmentApplied) {
             readerPageHeightFixed = true;
-            enforceReaderPageHeight("reduction:alreadyApplied:" + reason);
+            enforceReaderPageHeight("adjustment:alreadyApplied:" + reason);
             return;
         }
         int lineHeight = Math.max(0, readerView.getLineHeight());
         if (lineHeight <= 0) {
-            scheduleReaderPageHeightReductionRetry(reason + ":lineHeightUnavailable");
+            scheduleReaderPageHeightAdjustmentRetry(reason + ":lineHeightUnavailable");
             return;
         }
-        int totalReduction = lineHeight * READER_PAGE_HEIGHT_REDUCTION_LINES;
-        if (totalReduction <= 0) {
+        int lineDelta = READER_PAGE_HEIGHT_ADJUSTMENT_LINES;
+        if (lineDelta == 0) {
+            markReaderPageHeightAdjustmentApplied();
+            enforceReaderPageHeight("adjustment:none:" + reason);
             return;
         }
-        int newHeight = persistedReaderPageHeight - totalReduction;
-        int minimumHeight = lineHeight;
-        if (readerPageContainer != null) {
-            int containerPadding = readerPageContainer.getPaddingTop()
-                    + readerPageContainer.getPaddingBottom();
-            minimumHeight = Math.max(minimumHeight, containerPadding + lineHeight);
-        }
-        int minimumPersistable = computeMinimumPersistableReaderHeight();
-        if (newHeight < minimumHeight) {
-            newHeight = minimumHeight;
-        }
-        if (newHeight < minimumPersistable) {
-            newHeight = minimumPersistable;
-        }
-        if (newHeight == persistedReaderPageHeight) {
-            markReaderPageHeightReductionApplied();
-            enforceReaderPageHeight("reduction:noChange:" + reason);
+        int totalAdjustment = lineHeight * Math.abs(lineDelta);
+        if (totalAdjustment <= 0) {
+            markReaderPageHeightAdjustmentApplied();
+            enforceReaderPageHeight("adjustment:zero:" + reason);
             return;
         }
-        boolean updated = overrideReaderPageHeight(newHeight, "reduction:" + reason);
+        if (lineDelta > 0) {
+            int newHeight = persistedReaderPageHeight - totalAdjustment;
+            int minimumHeight = lineHeight;
+            if (readerPageContainer != null) {
+                int containerPadding = readerPageContainer.getPaddingTop()
+                        + readerPageContainer.getPaddingBottom();
+                minimumHeight = Math.max(minimumHeight, containerPadding + lineHeight);
+            }
+            int minimumPersistable = computeMinimumPersistableReaderHeight();
+            if (newHeight < minimumHeight) {
+                newHeight = minimumHeight;
+            }
+            if (newHeight < minimumPersistable) {
+                newHeight = minimumPersistable;
+            }
+            if (newHeight == persistedReaderPageHeight) {
+                markReaderPageHeightAdjustmentApplied();
+                enforceReaderPageHeight("adjustment:reductionNoChange:" + reason);
+                return;
+            }
+            boolean updated = overrideReaderPageHeight(newHeight, "adjustment:reduce:" + reason);
+            markReaderPageHeightAdjustmentApplied();
+            if (updated) {
+                enforceReaderPageHeight("adjustment:reductionApplied:" + reason);
+            } else {
+                enforceReaderPageHeight("adjustment:reductionNoUpdate:" + reason);
+            }
+            return;
+        }
+        int newHeight = persistedReaderPageHeight + totalAdjustment;
+        boolean updated = overrideReaderPageHeight(newHeight, "adjustment:increase:" + reason);
+        markReaderPageHeightAdjustmentApplied();
         if (updated) {
-            markReaderPageHeightReductionApplied();
-            enforceReaderPageHeight("reduction:applied:" + reason);
+            enforceReaderPageHeight("adjustment:increaseApplied:" + reason);
+        } else {
+            enforceReaderPageHeight("adjustment:increaseNoChange:" + reason);
         }
     }
 
-    private void scheduleReaderPageHeightReductionRetry(String reason) {
-        if (readerView == null || readerPageHeightReductionRetryScheduled
-                || readerPageHeightReductionApplied) {
+    private void scheduleReaderPageHeightAdjustmentRetry(String reason) {
+        if (readerView == null || readerPageHeightAdjustmentRetryScheduled
+                || readerPageHeightAdjustmentApplied) {
             return;
         }
-        readerPageHeightReductionRetryScheduled = true;
+        readerPageHeightAdjustmentRetryScheduled = true;
         readerView.post(() -> {
-            readerPageHeightReductionRetryScheduled = false;
-            maybeApplyReaderPageHeightReduction("retry:" + reason);
+            readerPageHeightAdjustmentRetryScheduled = false;
+            maybeApplyReaderPageHeightAdjustment("retry:" + reason);
         });
         logViewEvent("ReaderPageContainer", readerPageContainer,
-                "scheduleHeightReductionRetry reason=" + reason);
+                "scheduleHeightAdjustmentRetry reason=" + reason);
     }
 
     private int computeMinimumPersistableReaderHeight() {
@@ -1779,10 +1805,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         boolean hadPersistedHeight = persistedReaderPageHeight > 0;
         persistedReaderPageHeight = 0;
         readerPageHeightFixed = false;
-        if (readerPageHeightReductionApplied) {
-            readerPageHeightReductionApplied = false;
+        if (readerPageHeightAdjustmentApplied) {
+            readerPageHeightAdjustmentApplied = false;
             if (readerPrefs != null) {
-                readerPrefs.edit().putBoolean(PREF_KEY_PAGE_HEIGHT_REDUCTION_APPLIED, false).apply();
+                readerPrefs.edit().putBoolean(PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED, false).apply();
             }
         }
         if (uiLayoutDao != null) {
