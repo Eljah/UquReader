@@ -1236,7 +1236,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         float nextAlpha = nextEnabled ? 1f : 0.3f;
         setAlphaWithLogging(pageNextButton, "PageNextButton", nextAlpha);
 
-        if (readerView != null && readerView.getDocumentLength() > 0) {
+        boolean hasRenderablePages = readerView != null
+                && (readerView.hasRenderedContent() || readerView.getTotalPageCount() > 0);
+        if (hasRenderablePages) {
             int current = readerView.getCurrentPageIndex() + 1;
             int total = Math.max(1, readerView.getTotalPageCount());
             String formatted = String.format(Locale.getDefault(), "%d / %d", current, total);
@@ -1259,7 +1261,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             lastLoggedPageIndex = -1;
             lastLoggedPageTotal = -1;
         }
-        if (readerView != null && readerView.getDocumentLength() > 0) {
+        if (hasRenderablePages) {
             int current = readerView.getCurrentPageIndex() + 1;
             int total = Math.max(1, readerView.getTotalPageCount());
             logPageProgress("updatePageControls", current, total);
@@ -1461,7 +1463,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int left = readerBasePaddingLeft;
         int top = readerBasePaddingTop;
         int right = readerBasePaddingRight;
-        int bottom = readerBasePaddingBottom;
+
+        int overlayHeight = 0;
+        int overlayExtraClearance = 0;
 
         Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: begin overlayVisible="
                 + (pageControls != null && pageControls.getVisibility() == View.VISIBLE));
@@ -1469,7 +1473,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int overlayClearance = 0;
         boolean awaitingMeasurement = false;
         if (pageControls != null && pageControls.getVisibility() == View.VISIBLE) {
-            int overlayHeight = resolvePageControlsOverlayHeight();
+            overlayHeight = resolvePageControlsOverlayHeight();
             if (overlayHeight <= 0) {
                 if (!overlayInsetRetryScheduled) {
                     overlayInsetRetryScheduled = true;
@@ -1483,23 +1487,25 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: awaiting overlay measurement");
             } else {
                 overlayInsetRetryScheduled = false;
-                int extra = getResources().getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
-                overlayClearance = Math.max(0, overlayHeight + extra);
+                overlayExtraClearance = getResources()
+                        .getDimensionPixelSize(R.dimen.reader_page_controls_clearance);
+                overlayClearance = Math.max(0, overlayHeight + overlayExtraClearance);
                 lastKnownOverlayHeight = overlayHeight;
                 Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: overlayHeight=" + overlayHeight
-                        + " extra=" + extra + " clearance=" + overlayClearance);
+                        + " extra=" + overlayExtraClearance + " clearance=" + overlayClearance);
             }
         } else {
             overlayInsetRetryScheduled = false;
             if (persistedPageControlsHeight > 0) {
-                int extra = getResources().getDimensionPixelSize(
+                overlayExtraClearance = getResources().getDimensionPixelSize(
                         R.dimen.reader_page_controls_clearance);
-                overlayClearance = Math.max(0, persistedPageControlsHeight + extra);
+                overlayHeight = persistedPageControlsHeight;
+                overlayClearance = Math.max(0, overlayHeight + overlayExtraClearance);
                 if (lastKnownOverlayHeight != persistedPageControlsHeight) {
                     lastKnownOverlayHeight = persistedPageControlsHeight;
                     Log.d(LAYOUT_LOG_TAG,
                             "updateReaderBottomInset: controls hidden using persisted overlay height="
-                                    + persistedPageControlsHeight + " extra=" + extra
+                                    + persistedPageControlsHeight + " extra=" + overlayExtraClearance
                                     + " clearance=" + overlayClearance);
                 } else {
                     Log.d(LAYOUT_LOG_TAG,
@@ -1523,14 +1529,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: overlay clearance changed -> " + overlayClearance);
         }
 
+        int desiredBottomPadding = readerBasePaddingBottom + overlayExtraClearance;
         boolean readerPaddingChanged = readerView.getPaddingLeft() != left
                 || readerView.getPaddingTop() != top
                 || readerView.getPaddingRight() != right
-                || readerView.getPaddingBottom() != bottom;
+                || readerView.getPaddingBottom() != desiredBottomPadding;
         if (readerPaddingChanged) {
-            readerView.setPadding(left, top, right, bottom);
+            readerView.setPadding(left, top, right, desiredBottomPadding);
             Log.d(LAYOUT_LOG_TAG, "updateReaderBottomInset: reader padding -> L" + left
-                    + " T" + top + " R" + right + " B" + bottom);
+                    + " T" + top + " R" + right + " B" + desiredBottomPadding);
         }
 
         boolean spacerChanged = false;
