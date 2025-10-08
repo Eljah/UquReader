@@ -88,6 +88,14 @@ public class ReaderView extends TextView {
     private boolean paginationLocked = false;
     private PendingTarget currentPendingTarget;
     private final ArrayDeque<PendingTarget> pendingTargetQueue = new ArrayDeque<>();
+    private boolean processingPendingTarget;
+    private boolean ensurePaginationRetryScheduled;
+    private final Runnable ensurePaginationRetryRunnable = new Runnable() {
+        @Override public void run() {
+            ensurePaginationRetryScheduled = false;
+            showPendingTargetIfPossible();
+        }
+    };
     private int currentPageIndex = 0;
     private PaginationSpec activePaginationSpec;
     private Runnable pendingInitialCompletion;
@@ -271,6 +279,17 @@ public class ReaderView extends TextView {
         return currentDocument.text.length();
     }
 
+    public boolean hasRenderedContent() {
+        if (currentDocument == null || currentDocument.text == null) {
+            return false;
+        }
+        if (pages.isEmpty()) {
+            return false;
+        }
+        CharSequence currentText = getText();
+        return currentText != null && currentText.length() > 0 && visibleEnd > visibleStart;
+    }
+
     public int toLocalCharIndex(int globalIndex) {
         CharSequence text = getText();
         int length = text == null ? 0 : text.length();
@@ -298,6 +317,8 @@ public class ReaderView extends TextView {
         paginationLocked = false;
         currentPendingTarget = null;
         pendingTargetQueue.clear();
+        processingPendingTarget = false;
+        cancelEnsurePaginationRetry();
         activePaginationSpec = null;
         pendingInitialCompletion = null;
         initialContentDelivered = false;
@@ -415,6 +436,8 @@ public class ReaderView extends TextView {
         currentDocumentSignature = computeDocumentSignature(result.text);
         currentPendingTarget = null;
         pendingTargetQueue.clear();
+        processingPendingTarget = false;
+        cancelEnsurePaginationRetry();
         int target = hasPendingInitialChar ? pendingInitialCharIndex : 0;
         hasPendingInitialChar = false;
         requestDisplayForChar(target, true);
@@ -453,30 +476,57 @@ public class ReaderView extends TextView {
     }
 
     private void enqueuePendingTarget(int targetCharIndex, boolean notifyWindowChange) {
-        if (currentPendingTarget == null) {
-            currentPendingTarget = new PendingTarget(targetCharIndex, notifyWindowChange);
-        } else {
-            if (currentPendingTarget.charIndex == targetCharIndex) {
-                if (notifyWindowChange && !currentPendingTarget.notifyWindowChange) {
-                    currentPendingTarget = new PendingTarget(targetCharIndex, true);
+        boolean effectiveNotify = notifyWindowChange;
+        if (!effectiveNotify) {
+            if (currentPendingTarget != null && currentPendingTarget.notifyWindowChange) {
+                effectiveNotify = true;
+            } else {
+                for (PendingTarget queued : pendingTargetQueue) {
+                    if (queued != null && queued.notifyWindowChange) {
+                        effectiveNotify = true;
+                        break;
+                    }
                 }
-                showPendingTargetIfPossible();
-                return;
             }
+        }
+
+        if (processingPendingTarget) {
             PendingTarget last = pendingTargetQueue.peekLast();
             if (last != null && last.charIndex == targetCharIndex) {
-                if (notifyWindowChange && !last.notifyWindowChange) {
+                if (effectiveNotify && !last.notifyWindowChange) {
                     pendingTargetQueue.pollLast();
                     pendingTargetQueue.addLast(new PendingTarget(targetCharIndex, true));
                 }
             } else {
-                pendingTargetQueue.addLast(new PendingTarget(targetCharIndex, notifyWindowChange));
+                pendingTargetQueue.clear();
+                pendingTargetQueue.addLast(new PendingTarget(targetCharIndex, effectiveNotify));
             }
+            return;
         }
+
+        if (currentPendingTarget == null) {
+            currentPendingTarget = new PendingTarget(targetCharIndex, effectiveNotify);
+            showPendingTargetIfPossible();
+            return;
+        }
+
+        if (currentPendingTarget.charIndex == targetCharIndex) {
+            if (effectiveNotify && !currentPendingTarget.notifyWindowChange) {
+                currentPendingTarget = new PendingTarget(targetCharIndex, true);
+            }
+            showPendingTargetIfPossible();
+            return;
+        }
+
+        currentPendingTarget = new PendingTarget(targetCharIndex, effectiveNotify);
+        pendingTargetQueue.clear();
         showPendingTargetIfPossible();
     }
 
     private void showPendingTargetIfPossible() {
+        if (processingPendingTarget) {
+            return;
+        }
         if (currentPendingTarget == null) {
             if (pendingTargetQueue.isEmpty()) {
                 return;
@@ -489,13 +539,19 @@ public class ReaderView extends TextView {
         Log.d(TAG, "showPendingTargetIfPossible: pendingTarget=" + currentPendingTarget.charIndex);
         if (!ensurePagination()) {
             Log.d(TAG, "showPendingTargetIfPossible: pagination not ready");
+            scheduleEnsurePaginationRetry();
             return;
         }
         PendingTarget target = currentPendingTarget;
         currentPendingTarget = null;
+        processingPendingTarget = true;
         Log.d(TAG, "showPendingTargetIfPossible: displaying target=" + target.charIndex
                 + " notify=" + target.notifyWindowChange);
-        showPageForChar(target.charIndex, target.notifyWindowChange);
+        try {
+            showPageForChar(target.charIndex, target.notifyWindowChange);
+        } finally {
+            processingPendingTarget = false;
+        }
         if (!pendingTargetQueue.isEmpty()) {
             currentPendingTarget = pendingTargetQueue.pollFirst();
             if (currentPendingTarget != null) {
@@ -504,15 +560,39 @@ public class ReaderView extends TextView {
         }
     }
 
+    private boolean hasPendingNavigationRequest() {
+        if (currentPendingTarget != null) {
+            return true;
+        }
+        if (!pendingTargetQueue.isEmpty()) {
+            return true;
+        }
+        if (deferredPage != null) {
+            return true;
+        }
+        if (processingPendingTarget) {
+            return true;
+        }
+        if (deferredPageScheduled) {
+            return true;
+        }
+        return ensurePaginationRetryScheduled;
+    }
+
     private boolean ensurePagination() {
         if (currentDocument == null || currentDocument.text == null) {
+            Log.d(TAG, "ensurePagination: no document");
             return false;
         }
         if (viewportHeight <= 0 || getWidth() <= 0) {
+            Log.d(TAG, "ensurePagination: viewport not ready height=" + viewportHeight
+                    + " width=" + getWidth());
             return false;
         }
         PaginationSpec spec = captureCurrentSpec();
         if (spec == null) {
+            Log.d(TAG, "ensurePagination: spec null height=" + viewportHeight
+                    + " width=" + getWidth());
             return false;
         }
         if (!paginationCacheLoaded) {
@@ -580,11 +660,15 @@ public class ReaderView extends TextView {
             currentPendingTarget = new PendingTarget(preservedTarget,
                     preservedNotify || !hadPendingTarget);
             pendingTargetQueue.clear();
+            processingPendingTarget = false;
+            cancelEnsurePaginationRetry();
             Log.d(TAG, "markPaginationDirty: preservedTarget=" + preservedTarget
                     + " notify=" + currentPendingTarget.notifyWindowChange);
         } else {
             currentPendingTarget = null;
             pendingTargetQueue.clear();
+            processingPendingTarget = false;
+            cancelEnsurePaginationRetry();
             Log.d(TAG, "markPaginationDirty: cleared pending target");
         }
     }
@@ -1108,6 +1192,35 @@ public class ReaderView extends TextView {
 
     public int getViewportEndChar() {
         return visibleEnd;
+    }
+
+    public boolean isNavigationReady() {
+        if (currentDocument == null || currentDocument.text == null) {
+            return false;
+        }
+        if (paginationDirty) {
+            return false;
+        }
+        if (!paginationLocked) {
+            return false;
+        }
+        return !hasPendingNavigationRequest();
+    }
+
+    private void scheduleEnsurePaginationRetry() {
+        if (ensurePaginationRetryScheduled) {
+            return;
+        }
+        ensurePaginationRetryScheduled = true;
+        post(ensurePaginationRetryRunnable);
+    }
+
+    private void cancelEnsurePaginationRetry() {
+        if (!ensurePaginationRetryScheduled) {
+            return;
+        }
+        ensurePaginationRetryScheduled = false;
+        removeCallbacks(ensurePaginationRetryRunnable);
     }
 
     public int findNextPageStart() {

@@ -25,6 +25,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -216,6 +217,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean flushingViewportActions;
     private boolean overlayInsetRetryScheduled;
     private boolean readerWindowInitialized;
+    private boolean readerHasRenderableContent;
     private ReadingState currentReadingState;
     private SharedPreferences readerPrefs;
     private final Handler readingStateHandler = new Handler(Looper.getMainLooper());
@@ -1025,6 +1027,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         restoringReadingState = true;
         showReaderLoading(true);
         readerWindowInitialized = false;
+        readerHasRenderableContent = false;
         lastDispatchedViewportHeight = -1;
         lastOverlayClearance = -1;
         readerView.clearContent();
@@ -1116,6 +1119,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 if (!readerWindowInitialized) {
                     readerWindowInitialized = true;
                     resetReaderScrollOffset();
+                }
+                boolean hasContent = readerView != null && readerView.hasRenderedContent();
+                if (hasContent && !readerHasRenderableContent) {
+                    readerHasRenderableContent = true;
+                    int containerHeight = readerPageContainer != null
+                            ? readerPageContainer.getHeight() : 0;
+                    if (containerHeight > 0) {
+                        maybePersistReaderPageHeight(containerHeight,
+                                "windowInitialized");
+                    }
                 }
                 int viewportStart = readerView.getViewportStartChar();
                 if (viewportStart >= 0) {
@@ -1212,12 +1225,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updatePageControls() {
-        boolean prevEnabled = readerView != null && readerView.hasPreviousPage();
+        boolean navigationReady = readerView != null && readerView.isNavigationReady();
+        boolean prevEnabled = navigationReady && readerView != null && readerView.hasPreviousPage();
         setEnabledWithLogging(pagePreviousButton, "PagePreviousButton", prevEnabled);
         float prevAlpha = prevEnabled ? 1f : 0.3f;
         setAlphaWithLogging(pagePreviousButton, "PagePreviousButton", prevAlpha);
 
-        boolean nextEnabled = readerView != null && readerView.hasNextPage();
+        boolean nextEnabled = navigationReady && readerView != null && readerView.hasNextPage();
         setEnabledWithLogging(pageNextButton, "PageNextButton", nextEnabled);
         float nextAlpha = nextEnabled ? 1f : 0.3f;
         setAlphaWithLogging(pageNextButton, "PageNextButton", nextAlpha);
@@ -1345,20 +1359,32 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView == null) {
             return;
         }
+        if (!readerView.isNavigationReady()) {
+            logViewEvent("PagePreviousButton", pagePreviousButton, "navigationLocked");
+            updatePageControls();
+            return;
+        }
         int target = readerView.findPreviousPageStart();
         if (target >= 0) {
             readerView.scrollToGlobalChar(target);
         }
+        updatePageControls();
     }
 
     private void goToNextPage() {
         if (readerView == null) {
             return;
         }
+        if (!readerView.isNavigationReady()) {
+            logViewEvent("PageNextButton", pageNextButton, "navigationLocked");
+            updatePageControls();
+            return;
+        }
         int target = readerView.findNextPageStart();
         if (target >= 0) {
             readerView.scrollToGlobalChar(target);
         }
+        updatePageControls();
     }
 
     private void schedulePersistReadingState() {
@@ -1584,6 +1610,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 storedHeight = Math.max(0, specific);
             }
         }
+        int minimumHeight = computeMinimumPersistableReaderHeight();
+        if (storedHeight > 0 && storedHeight < minimumHeight) {
+            logViewEvent("ReaderPageContainer", readerPageContainer,
+                    "loadPersistedHeight discarded height=" + storedHeight
+                            + " min=" + minimumHeight + " reason=" + reason);
+            clearPersistedReaderPageHeight("refreshBelowMinimum:" + reason);
+            storedHeight = 0;
+        }
         persistedReaderPageHeight = storedHeight;
         if (persistedReaderPageHeight > 0) {
             logViewEvent("ReaderPageContainer", readerPageContainer,
@@ -1600,6 +1634,18 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void maybePersistReaderPageHeight(int candidateHeight, String reason) {
         int safeHeight = Math.max(0, candidateHeight);
+        if (!readerHasRenderableContent) {
+            logViewEvent("ReaderPageContainer", readerPageContainer,
+                    "persistReaderHeight skipped contentNotReady reason=" + reason);
+            return;
+        }
+        int minimumHeight = computeMinimumPersistableReaderHeight();
+        if (safeHeight > 0 && safeHeight < minimumHeight) {
+            logViewEvent("ReaderPageContainer", readerPageContainer,
+                    "persistReaderHeight skipped belowMinimum height=" + safeHeight
+                            + " min=" + minimumHeight + " reason=" + reason);
+            return;
+        }
         if (safeHeight <= 0 || safeHeight <= persistedReaderPageHeight) {
             return;
         }
@@ -1661,8 +1707,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     + readerPageContainer.getPaddingBottom();
             minimumHeight = Math.max(minimumHeight, containerPadding + lineHeight);
         }
+        int minimumPersistable = computeMinimumPersistableReaderHeight();
         if (newHeight < minimumHeight) {
             newHeight = minimumHeight;
+        }
+        if (newHeight < minimumPersistable) {
+            newHeight = minimumPersistable;
         }
         if (newHeight == persistedReaderPageHeight) {
             markReaderPageHeightReductionApplied();
@@ -1688,6 +1738,48 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         });
         logViewEvent("ReaderPageContainer", readerPageContainer,
                 "scheduleHeightReductionRetry reason=" + reason);
+    }
+
+    private int computeMinimumPersistableReaderHeight() {
+        int lineHeight = 0;
+        if (readerView != null) {
+            lineHeight = readerView.getLineHeight();
+        }
+        if (lineHeight <= 0) {
+            DisplayMetrics metrics = getResources().getDisplayMetrics();
+            lineHeight = Math.round(metrics.scaledDensity * 24f);
+        }
+        int minContent = Math.max(0, lineHeight * 4);
+        int padding = readerPageContainer == null
+                ? 0
+                : readerPageContainer.getPaddingTop() + readerPageContainer.getPaddingBottom();
+        int minimum = minContent + padding;
+        int absoluteMinimum = Math.round(getResources().getDisplayMetrics().density * 160f);
+        if (minimum < absoluteMinimum) {
+            minimum = absoluteMinimum;
+        }
+        return Math.max(0, minimum);
+    }
+
+    private void clearPersistedReaderPageHeight(String reason) {
+        boolean hadPersistedHeight = persistedReaderPageHeight > 0;
+        persistedReaderPageHeight = 0;
+        readerPageHeightFixed = false;
+        if (readerPageHeightReductionApplied) {
+            readerPageHeightReductionApplied = false;
+            if (readerPrefs != null) {
+                readerPrefs.edit().putBoolean(PREF_KEY_PAGE_HEIGHT_REDUCTION_APPLIED, false).apply();
+            }
+        }
+        if (uiLayoutDao != null) {
+            uiLayoutDao.saveReaderPageHeight(null, 0);
+            if (!TextUtils.isEmpty(activeLayoutWorkId)) {
+                uiLayoutDao.saveReaderPageHeight(activeLayoutWorkId, 0);
+            }
+        }
+        logViewEvent("ReaderPageContainer", readerPageContainer,
+                "clearPersistedHeight reason=" + reason + " hadValue=" + hadPersistedHeight);
+        enforceReaderPageHeight("clear:" + reason);
     }
 
     private void enforceReaderPageHeight(String reason) {
@@ -1950,7 +2042,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView != null) {
             int readerHeight = readerView.getHeight();
             if (readerHeight > 0 && height > readerHeight) {
-                height = readerHeight;
+                CharSequence currentText = readerView.getText();
+                boolean hasRenderedContent = currentText != null && currentText.length() > 0;
+                if (hasRenderedContent) {
+                    height = readerHeight;
+                }
             }
         }
         if (!readerViewportReady && awaitingViewportMeasurement) {
