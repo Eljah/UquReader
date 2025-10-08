@@ -388,11 +388,26 @@ while true; do
 done
 
 temp_remote_apk="/data/local/tmp/$(basename "$apk_to_install")"
+ADB_INSTALL_TIMEOUT_SECONDS="${CODEX_INSTALL_TIMEOUT_SECONDS:-120}"
 
 attempt_streaming_install() {
   echo "[codex-install] Attempting streaming adb install..." >&2
-  if "$ADB_BIN" -s "$target_serial" install -r "$apk_to_install"; then
-    return 0
+  local -a install_cmd=("$ADB_BIN" -s "$target_serial" install -r "$apk_to_install")
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${ADB_INSTALL_TIMEOUT_SECONDS}s" "${install_cmd[@]}"
+    local exit_code=$?
+    if [[ $exit_code -eq 0 ]]; then
+      return 0
+    fi
+    if [[ $exit_code -eq 124 ]]; then
+      echo "[codex-install] Streaming install timed out after ${ADB_INSTALL_TIMEOUT_SECONDS}s; will try fallback." >&2
+    else
+      echo "[codex-install] Streaming install exited with status $exit_code; will try fallback." >&2
+    fi
+  else
+    if "${install_cmd[@]}"; then
+      return 0
+    fi
   fi
   return 1
 }
@@ -403,8 +418,22 @@ attempt_push_install() {
     echo "[codex-install] Failed to push APK to device." >&2
     return 1
   fi
-  if "$ADB_BIN" -s "$target_serial" shell pm install -r "$temp_remote_apk"; then
-    return 0
+  local -a pm_cmd=("$ADB_BIN" -s "$target_serial" shell pm install -r "$temp_remote_apk")
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${ADB_INSTALL_TIMEOUT_SECONDS}s" "${pm_cmd[@]}"
+    local exit_code=$?
+    if [[ $exit_code -eq 0 ]]; then
+      return 0
+    fi
+    if [[ $exit_code -eq 124 ]]; then
+      echo "[codex-install] pm install timed out after ${ADB_INSTALL_TIMEOUT_SECONDS}s." >&2
+    else
+      echo "[codex-install] pm install exited with status $exit_code." >&2
+    fi
+  else
+    if "${pm_cmd[@]}"; then
+      return 0
+    fi
   fi
   echo "[codex-install] pm install fallback failed." >&2
   return 1

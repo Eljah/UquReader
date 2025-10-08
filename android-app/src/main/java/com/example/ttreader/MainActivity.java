@@ -203,6 +203,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean readerViewportDispatchScheduled;
     private boolean readerPageHeightReductionApplied;
     private boolean readerPageHeightFixed;
+    private boolean readerPageHeightReductionRetryScheduled;
     private final List<Runnable> pendingViewportReadyActions = new ArrayList<>();
     private boolean awaitingViewportMeasurement;
     private boolean readerViewportReady;
@@ -1629,6 +1630,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
         readerPageHeightFixed = true;
+        readerPageHeightReductionRetryScheduled = false;
     }
 
     private void maybeApplyReaderPageHeightReduction(String reason) {
@@ -1645,6 +1647,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         int lineHeight = Math.max(0, readerView.getLineHeight());
         if (lineHeight <= 0) {
+            scheduleReaderPageHeightReductionRetry(reason + ":lineHeightUnavailable");
             return;
         }
         int totalReduction = lineHeight * READER_PAGE_HEIGHT_REDUCTION_LINES;
@@ -1671,6 +1674,20 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             markReaderPageHeightReductionApplied();
             enforceReaderPageHeight("reduction:applied:" + reason);
         }
+    }
+
+    private void scheduleReaderPageHeightReductionRetry(String reason) {
+        if (readerView == null || readerPageHeightReductionRetryScheduled
+                || readerPageHeightReductionApplied) {
+            return;
+        }
+        readerPageHeightReductionRetryScheduled = true;
+        readerView.post(() -> {
+            readerPageHeightReductionRetryScheduled = false;
+            maybeApplyReaderPageHeightReduction("retry:" + reason);
+        });
+        logViewEvent("ReaderPageContainer", readerPageContainer,
+                "scheduleHeightReductionRetry reason=" + reason);
     }
 
     private void enforceReaderPageHeight(String reason) {
