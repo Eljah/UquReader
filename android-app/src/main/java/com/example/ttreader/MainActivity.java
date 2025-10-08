@@ -85,7 +85,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private static final int APPROX_CHARS_PER_PAGE = 1000;
     private static final float PAGE_CONTROLS_LOADING_ALPHA = 0.5f;
-    private static final int READER_PAGE_HEIGHT_ADJUSTMENT_LINES = -2;
+    private static final int READER_PAGE_HEIGHT_ADJUSTMENT_LINES = -1;
     private static final String PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED =
             "reader.page.height.adjustment.applied.v2";
     private static final String PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED_LEGACY =
