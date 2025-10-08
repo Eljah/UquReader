@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -189,6 +190,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private View pageControls;
     private TextView pageNumberText;
     private final ViewBoundsSnapshot pageControlsBounds = new ViewBoundsSnapshot();
+    private int pageControlsBasePaddingBottom = -1;
     private final ViewBoundsSnapshot pageNumberBounds = new ViewBoundsSnapshot();
     private final ViewBoundsSnapshot readerViewBounds = new ViewBoundsSnapshot();
     private int lastLoggedPageIndex = -1;
@@ -437,6 +439,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 int previousHeight = Math.max(0, oldBottom - oldTop);
                 logViewEvent("ReaderView", readerView,
                         "onLayout height=" + newHeight + " oldHeight=" + previousHeight);
+                applyPageControlsBottomPadding("readerViewLayout");
             });
         }
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
@@ -446,9 +449,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pageNumberText = findViewById(R.id.pageNumberText);
 
         if (pageControls != null) {
+            if (pageControlsBasePaddingBottom < 0) {
+                pageControlsBasePaddingBottom = pageControls.getPaddingBottom();
+            }
             enforcePageControlsMinHeight("onCreate");
             logViewEvent("PageControls", pageControls,
                     "initialize persistedHeight=" + persistedPageControlsHeight);
+            applyPageControlsBottomPadding("onCreate");
         }
         if (pageNumberText != null) {
             pageNumberText.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop,
@@ -532,6 +539,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (pageControls != null) {
             pageControls.post(() -> {
                 logViewEvent("PageControls", pageControls, "postUpdateReaderBottomInset");
+                applyPageControlsBottomPadding("post");
                 updateReaderBottomInset();
             });
         } else {
@@ -1567,6 +1575,43 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             maybePersistPageControlsHeight(overlayHeight, "resolveOverlayHeight");
         }
         return overlayHeight;
+    }
+
+    private void applyPageControlsBottomPadding(String reason) {
+        if (pageControls == null) {
+            return;
+        }
+        if (pageControlsBasePaddingBottom < 0) {
+            pageControlsBasePaddingBottom = pageControls.getPaddingBottom();
+        }
+        int doubleLineHeight = resolveReaderDoubleLineHeight();
+        if (doubleLineHeight <= 0) {
+            return;
+        }
+        int targetPaddingBottom = pageControlsBasePaddingBottom + doubleLineHeight;
+        if (pageControls.getPaddingBottom() == targetPaddingBottom) {
+            return;
+        }
+        pageControls.setPadding(pageControls.getPaddingLeft(), pageControls.getPaddingTop(),
+                pageControls.getPaddingRight(), targetPaddingBottom);
+        logViewEvent("PageControls", pageControls,
+                "applyBottomPadding reason=" + reason + " -> " + targetPaddingBottom);
+        pageControls.requestLayout();
+    }
+
+    private int resolveReaderDoubleLineHeight() {
+        if (readerView == null) {
+            return 0;
+        }
+        int lineHeight = readerView.getLineHeight();
+        if (lineHeight <= 0 && readerView.getPaint() != null) {
+            Paint.FontMetricsInt metrics = readerView.getPaint().getFontMetricsInt();
+            lineHeight = Math.max(0, metrics.descent - metrics.ascent);
+        }
+        if (lineHeight <= 0) {
+            return 0;
+        }
+        return lineHeight * 2;
     }
 
     private void maybePersistPageControlsHeight(int candidateHeight, String reason) {
