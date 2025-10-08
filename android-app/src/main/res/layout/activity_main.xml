@@ -39,25 +39,27 @@
             <LinearLayout
                 android:id="@+id/readerScrollContent"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:orientation="vertical">
 
                 <LinearLayout
                     android:id="@+id/readerPageContainer"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="0dp"
                     android:layout_marginStart="24dp"
                     android:layout_marginTop="24dp"
                     android:layout_marginEnd="24dp"
                     android:layout_marginBottom="24dp"
+                    android:layout_weight="1"
                     android:background="@drawable/reader_page_background"
                     android:orientation="vertical">
 
                     <com.example.ttreader.reader.ReaderView
                         android:id="@+id/readerView"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
                         android:background="@android:color/transparent"
+                        android:gravity="top|start"
                         android:padding="24dp"
                         android:textColor="@color/reader_text_primary" />
                 </LinearLayout>
@@ -79,6 +81,7 @@
             android:background="@drawable/vintage_card"
             android:elevation="4dp"
             android:orientation="horizontal"
+            android:minWidth="@dimen/reader_page_controls_min_width"
             android:paddingStart="16dp"
             android:paddingTop="8dp"
             android:paddingEnd="16dp"
@@ -100,6 +103,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:minEms="7"
                 android:text="—"
                 android:textAppearance="@style/TextAppearance.UquReader.PageIndicator" />
 

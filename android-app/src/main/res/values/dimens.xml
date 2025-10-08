@@ -3,4 +3,5 @@
     <dimen name="reader_page_controls_clearance">0dp</dimen>
     <dimen name="reader_bottom_panel_min_height">32dp</dimen>
     <dimen name="reader_page_controls_bottom_margin">0dp</dimen>
+    <dimen name="reader_page_controls_min_width">260dp</dimen>
 </resources>
