@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Typeface;
 import android.os.Build;
+import android.os.SystemClock;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Layout;
@@ -113,6 +114,15 @@ public class ReaderView extends TextView {
     private final MovementMethod movementMethod;
     private DeferredPage deferredPage;
     private boolean deferredPageScheduled;
+    private PageBuffer activeBuffer;
+    private PageBuffer pendingBuffer;
+    private boolean applyingBufferedText;
+    private boolean pageDwellActive;
+    private long pageDwellStartRealtime;
+    private int pageDwellStartIndex;
+    private int pageDwellEndIndex;
+
+    private static final long PAGE_DWELL_THRESHOLD_MS = 5000L;
 
     public ReaderView(Context context) {
         super(context);
@@ -141,6 +151,9 @@ public class ReaderView extends TextView {
         }
         logTextEvent("onSizeChanged w=" + w + " h=" + h + " old=" + oldw + "x" + oldh);
         consumeDeferredPageIfNeeded();
+        if (w != oldw && activeBuffer != null) {
+            rebuildActiveBuffer();
+        }
     }
 
     @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -158,11 +171,25 @@ public class ReaderView extends TextView {
     }
 
     @Override protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+        PageBuffer buffer = activeBuffer;
+        if (buffer == null || buffer.layout == null) {
+            super.onDraw(canvas);
+        } else {
+            int save = canvas.save();
+            canvas.translate(getPaddingLeft(), getPaddingTop());
+            buffer.layout.draw(canvas);
+            canvas.restoreToCount(save);
+        }
         logTextEvent("onDraw");
     }
 
     @Override public void setText(CharSequence text, BufferType type) {
+        if (applyingBufferedText) {
+            activeBuffer = pendingBuffer;
+        } else {
+            activeBuffer = null;
+        }
+        pendingBuffer = null;
         super.setText(text, type);
         int length = text == null ? 0 : text.length();
         logTextEvent("setText length=" + length);
@@ -304,6 +331,7 @@ public class ReaderView extends TextView {
     }
 
     public void clearContent() {
+        finalizePageDwellIfNeeded(false, SystemClock.elapsedRealtime());
         visibleStart = 0;
         visibleEnd = 0;
         currentDocument = null;
@@ -330,6 +358,9 @@ public class ReaderView extends TextView {
         activeSentenceStart = -1;
         activeSentenceEnd = -1;
         activeLetterIndex = -1;
+        activeBuffer = null;
+        pendingBuffer = null;
+        pageDwellActive = false;
     }
 
     public void loadFromDocumentAsset(String assetName) {
@@ -396,6 +427,7 @@ public class ReaderView extends TextView {
     }
 
     @Override protected void onDetachedFromWindow() {
+        finalizePageDwellIfNeeded(false, SystemClock.elapsedRealtime());
         super.onDetachedFromWindow();
         Future<?> task;
         synchronized (loadTaskLock) {
@@ -1049,20 +1081,35 @@ public class ReaderView extends TextView {
         if (page == null) {
             return;
         }
+        long nowRealtime = SystemClock.elapsedRealtime();
+        boolean samePage = pageDwellActive && visibleStart == page.start && visibleEnd == page.end;
+        finalizePageDwellIfNeeded(samePage, nowRealtime);
         visibleStart = page.start;
         visibleEnd = page.end;
         SpannableStringBuilder content = page.content;
         logTextEvent("applyPage render=" + reason + " start=" + visibleStart + " end=" + visibleEnd
                 + " length=" + content.length());
-        setText(content);
+        PageBuffer buffer = buildPageBuffer(content);
+        pendingBuffer = buffer;
+        applyingBufferedText = true;
+        try {
+            setText(content, BufferType.SPANNABLE);
+        } finally {
+            applyingBufferedText = false;
+        }
         deliverInitialContentIfNeeded();
         if (getMovementMethod() != movementMethod) {
             setMovementMethod(movementMethod);
         }
         reapplySpeechHighlights();
-        logVisibleExposures();
+        if (!samePage) {
+            startPageDwellTracking(visibleStart, visibleEnd, nowRealtime);
+        }
         if (page.notifyWindowChange && windowChangeListener != null) {
             windowChangeListener.onWindowChanged(visibleStart, visibleEnd);
+        }
+        if (buffer != null) {
+            invalidate();
         }
     }
 
@@ -1355,6 +1402,18 @@ public class ReaderView extends TextView {
         recordExposure(span, System.currentTimeMillis());
     }
 
+    public void markTokenSpoken(TokenSpan span) {
+        recordExposure(span, System.currentTimeMillis());
+    }
+
+    public void markTokenSpokenAtChar(int charIndex) {
+        if (charIndex < 0) return;
+        TokenSpan span = findSpanForCharIndex(charIndex);
+        if (span != null) {
+            recordExposure(span, System.currentTimeMillis());
+        }
+    }
+
     public List<TokenSpan> getTokenSpans() {
         return Collections.unmodifiableList(tokenSpans);
     }
@@ -1382,18 +1441,17 @@ public class ReaderView extends TextView {
         }
     }
 
-    private void logVisibleExposures() {
-        if (usageDao == null || tokenSpans.isEmpty()) return;
-        if (visibleEnd <= visibleStart) return;
-        long now = System.currentTimeMillis();
+    private void recordExposureForRange(int start, int end, long timestamp) {
+        if (tokenSpans.isEmpty()) return;
+        if (end <= start) return;
         for (TokenSpan span : tokenSpans) {
-            if (span == null || loggedExposures.contains(span)) continue;
+            if (span == null) continue;
             int globalStart = span.getStartIndex();
             int globalEnd = span.getEndIndex();
-            if (globalEnd <= visibleStart || globalStart >= visibleEnd) {
+            if (globalEnd <= start || globalStart >= end) {
                 continue;
             }
-            recordExposure(span, now);
+            recordExposure(span, timestamp);
         }
     }
 
@@ -1404,6 +1462,84 @@ public class ReaderView extends TextView {
         Morphology morph = span.token.morphology;
         usageDao.recordEvent(languagePair, workId, morph.lemma, morph.pos, null,
                 UsageStatsDao.EVENT_EXPOSURE, timestamp, span.getStartIndex());
+    }
+
+    public void finalizeCurrentPageExposure() {
+        finalizePageDwellIfNeeded(false, SystemClock.elapsedRealtime());
+    }
+
+    @Override protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (visibility != VISIBLE) {
+            finalizePageDwellIfNeeded(false, SystemClock.elapsedRealtime());
+        }
+    }
+
+    private void startPageDwellTracking(int start, int end, long nowRealtime) {
+        if (end <= start) {
+            pageDwellActive = false;
+            return;
+        }
+        pageDwellActive = true;
+        pageDwellStartRealtime = nowRealtime;
+        pageDwellStartIndex = start;
+        pageDwellEndIndex = end;
+    }
+
+    private void finalizePageDwellIfNeeded(boolean samePage, long nowRealtime) {
+        if (!pageDwellActive) {
+            return;
+        }
+        if (samePage) {
+            return;
+        }
+        long elapsed = nowRealtime - pageDwellStartRealtime;
+        if (elapsed >= PAGE_DWELL_THRESHOLD_MS) {
+            recordExposureForRange(pageDwellStartIndex, pageDwellEndIndex, System.currentTimeMillis());
+        }
+        pageDwellActive = false;
+    }
+
+    private void rebuildActiveBuffer() {
+        CharSequence current = getText();
+        if (current == null || current.length() == 0) {
+            activeBuffer = null;
+            return;
+        }
+        PageBuffer buffer = buildPageBuffer(current);
+        if (buffer != null) {
+            activeBuffer = buffer;
+            invalidate();
+        }
+    }
+
+    private PageBuffer buildPageBuffer(CharSequence content) {
+        if (content == null) {
+            return null;
+        }
+        int availableWidth = getWidth() - getPaddingLeft() - getPaddingRight();
+        if (availableWidth <= 0) {
+            return null;
+        }
+        TextPaint paint = new TextPaint(getPaint());
+        StaticLayout layout;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            StaticLayout.Builder builder = StaticLayout.Builder.obtain(content, 0, content.length(), paint, availableWidth)
+                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                    .setIncludePad(getIncludeFontPadding())
+                    .setLineSpacing(getLineSpacingExtra(), getLineSpacingMultiplier())
+                    .setHyphenationFrequency(getHyphenationFrequency())
+                    .setBreakStrategy(getBreakStrategy());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                builder.setJustificationMode(getJustificationMode());
+            }
+            layout = builder.build();
+        } else {
+            //noinspection deprecation
+            layout = new StaticLayout(content, paint, availableWidth, Layout.Alignment.ALIGN_NORMAL,
+                    getLineSpacingMultiplier(), getLineSpacingExtra(), getIncludeFontPadding());
+        }
+        return new PageBuffer(layout);
     }
     private LoadResult buildContent(String assetName) throws Exception {
         if (assetName == null || assetName.isEmpty()) {
@@ -1604,6 +1740,14 @@ public class ReaderView extends TextView {
             this.start = start;
             this.end = end;
             this.notifyWindowChange = notifyWindowChange;
+        }
+    }
+
+    private static final class PageBuffer {
+        final StaticLayout layout;
+
+        PageBuffer(StaticLayout layout) {
+            this.layout = layout;
         }
     }
 

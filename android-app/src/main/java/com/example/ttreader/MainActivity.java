@@ -623,6 +623,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override protected void onPause() {
+        if (readerView != null) {
+            readerView.finalizeCurrentPageExposure();
+        }
         persistReadingStateNow();
         super.onPause();
     }
@@ -2641,6 +2644,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 estimatedUtteranceDurationMs = duration;
                 currentLetterIntervalMs = computeLetterInterval(request.sentenceRange, duration);
                 mp.start();
+                if (readerView != null && request.sentenceRange != null) {
+                    readerView.markTokenSpokenAtChar(request.sentenceRange.start);
+                }
                 isSpeaking = true;
                 shouldContinueSpeech = true;
                 updatePlaybackState(PlaybackState.STATE_PLAYING);
@@ -2693,6 +2699,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         updatePendingSpeechChar(currentCharIndex);
         if (readerView != null) {
             readerView.highlightLetter(highlightIndex);
+            readerView.markTokenSpokenAtChar(highlightIndex);
         }
     }
 
@@ -3381,6 +3388,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             detailPlayer.setDataSource(request.file.getAbsolutePath());
             detailPlayer.setOnPreparedListener(mp -> {
                 mp.start();
+                if (readerView != null && request.tokenSpan != null) {
+                    readerView.markTokenSpoken(request.tokenSpan);
+                }
                 updatePlaybackState(PlaybackState.STATE_PLAYING);
             });
             detailPlayer.setOnCompletionListener(mp -> handleDetailPlaybackComplete());
