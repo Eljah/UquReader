@@ -1235,12 +1235,30 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void updatePageControls() {
         boolean navigationReady = readerView != null && readerView.isNavigationReady();
+        boolean speechModeActive = isSpeechModeActive();
+        boolean loadingVisible = readerLoadingIndicator != null
+                && readerLoadingIndicator.getVisibility() == View.VISIBLE;
+
         boolean prevEnabled = navigationReady && readerView != null && readerView.hasPreviousPage();
+        boolean nextEnabled = navigationReady && readerView != null && readerView.hasNextPage();
+
+        boolean controlsEnabled = !speechModeActive && !loadingVisible;
+        if (!controlsEnabled) {
+            prevEnabled = false;
+            nextEnabled = false;
+        }
+
+        setEnabledWithLogging(pageControls, "PageControls", controlsEnabled);
+        if (speechModeActive) {
+            setAlphaWithLogging(pageControls, "PageControls", PAGE_CONTROLS_LOADING_ALPHA);
+        } else if (!loadingVisible) {
+            setAlphaWithLogging(pageControls, "PageControls", 1f);
+        }
+
         setEnabledWithLogging(pagePreviousButton, "PagePreviousButton", prevEnabled);
         float prevAlpha = prevEnabled ? 1f : 0.3f;
         setAlphaWithLogging(pagePreviousButton, "PagePreviousButton", prevAlpha);
 
-        boolean nextEnabled = navigationReady && readerView != null && readerView.hasNextPage();
         setEnabledWithLogging(pageNextButton, "PageNextButton", nextEnabled);
         float nextAlpha = nextEnabled ? 1f : 0.3f;
         setAlphaWithLogging(pageNextButton, "PageNextButton", nextAlpha);
@@ -2284,8 +2302,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void toggleSpeech() {
-        if (isSpeaking) {
-            pauseSpeech();
+        if (isSpeechModeActive()) {
+            stopSpeech();
         } else {
             startSpeech();
         }
@@ -3463,30 +3481,33 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         mediaSession.setPlaybackState(builder.build());
     }
 
+    private boolean isSpeechModeActive() {
+        return shouldContinueSpeech;
+    }
+
     private void updateSpeechButtons() {
+        boolean speechModeActive = isSpeechModeActive();
         boolean voiceAvailable = ttsReady && talgatVoice != null;
         if (toggleSpeechMenuItem != null) {
-            toggleSpeechMenuItem.setEnabled(voiceAvailable);
-            int descriptionRes = isSpeaking
-                    ? R.string.speech_toggle_content_pause
+            boolean toggleEnabled = voiceAvailable || speechModeActive;
+            toggleSpeechMenuItem.setEnabled(toggleEnabled);
+            int descriptionRes = speechModeActive
+                    ? R.string.speech_stop_content
                     : R.string.speech_toggle_content_start;
-            Drawable toggleIcon = getDrawable(isSpeaking ? R.drawable.ic_pause : R.drawable.ic_voice);
+            Drawable toggleIcon = getDrawable(speechModeActive
+                    ? R.drawable.ic_stop
+                    : R.drawable.ic_radio_point);
             if (toggleIcon != null) {
                 toggleIcon = toggleIcon.mutate();
-                toggleIcon.setAlpha(voiceAvailable ? 255 : 100);
+                toggleIcon.setAlpha(toggleEnabled ? 255 : 100);
                 toggleSpeechMenuItem.setIcon(toggleIcon);
             }
             toggleSpeechMenuItem.setTitle(getString(descriptionRes));
         }
         if (stopSpeechMenuItem != null) {
-            stopSpeechMenuItem.setEnabled(voiceAvailable);
-            Drawable stopIcon = getDrawable(R.drawable.ic_stop);
-            if (stopIcon != null) {
-                stopIcon = stopIcon.mutate();
-                stopIcon.setAlpha(voiceAvailable ? 255 : 100);
-                stopSpeechMenuItem.setIcon(stopIcon);
-            }
+            stopSpeechMenuItem.setVisible(false);
         }
+        updatePageControls();
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
