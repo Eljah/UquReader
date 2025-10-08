@@ -358,6 +358,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean ttsReady = false;
     private boolean rhVoiceInstalled = false;
     private boolean shouldContinueSpeech = false;
+    private boolean speechSessionActive = false;
     private boolean isSpeaking = false;
     private int currentSentenceIndex = 0;
     private int currentSentenceStart = -1;
@@ -2304,8 +2305,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void toggleSpeech() {
-        if (isSpeechModeActive()) {
-            stopSpeech();
+        if (isSpeaking) {
+            pauseSpeech();
         } else {
             startSpeech();
         }
@@ -2321,6 +2322,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (currentSentenceIndex < 0 || currentSentenceIndex >= sentenceRanges.size()) {
             currentSentenceIndex = 0;
         }
+        speechSessionActive = true;
         awaitingResumeAfterDetail = false;
         shouldContinueSpeech = true;
         if (mediaSession != null) {
@@ -2344,6 +2346,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void pauseSpeech() {
+        if (speechSessionActive || isSpeaking || shouldContinueSpeech) {
+            speechSessionActive = true;
+        }
         shouldContinueSpeech = false;
         isSpeaking = false;
         stopProgressUpdates();
@@ -2364,6 +2369,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void stopSpeech() {
         shouldContinueSpeech = false;
         isSpeaking = false;
+        speechSessionActive = false;
         awaitingResumeAfterDetail = false;
         stopProgressUpdates();
         exitPromptMode();
@@ -3314,6 +3320,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void pauseSpeechForDetail() {
+        if (speechSessionActive || isSpeaking || shouldContinueSpeech) {
+            speechSessionActive = true;
+        }
         stopProgressUpdates();
         exitPromptMode();
         if (sentencePlayer != null) {
@@ -3334,6 +3343,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         detailAutoResume = false;
         awaitingResumeAfterDetail = false;
         dismissTokenSheet(true);
+        speechSessionActive = true;
         if (sentencePlayer != null) {
             try {
                 sentencePlayer.start();
@@ -3377,6 +3387,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         cancelPendingDetailRequest();
         detailAutoResume = false;
         awaitingResumeAfterDetail = true;
+        if (speechSessionActive || isSpeaking || shouldContinueSpeech) {
+            speechSessionActive = true;
+        }
         updatePlaybackState(PlaybackState.STATE_PAUSED);
         updateSpeechButtons();
         return true;
@@ -3485,7 +3498,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private boolean isSpeechModeActive() {
-        return shouldContinueSpeech
+        return speechSessionActive
+                || shouldContinueSpeech
                 || isSpeaking
                 || awaitingResumeAfterDetail
                 || detailPlaybackActive()
@@ -3494,17 +3508,27 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updateSpeechButtons() {
-        boolean speechModeActive = isSpeechModeActive();
         boolean voiceAvailable = ttsReady && talgatVoice != null;
+        boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
         if (toggleSpeechMenuItem != null) {
-            boolean toggleEnabled = voiceAvailable || speechModeActive;
+            int iconRes;
+            int descriptionRes;
+            boolean toggleEnabled;
+            if (!sessionActive) {
+                iconRes = R.drawable.ic_radio_point;
+                descriptionRes = R.string.speech_toggle_content_start;
+                toggleEnabled = voiceAvailable;
+            } else if (isSpeaking) {
+                iconRes = R.drawable.ic_pause;
+                descriptionRes = R.string.speech_toggle_content_pause;
+                toggleEnabled = true;
+            } else {
+                iconRes = R.drawable.ic_play;
+                descriptionRes = R.string.speech_toggle_content_resume;
+                toggleEnabled = true;
+            }
             toggleSpeechMenuItem.setEnabled(toggleEnabled);
-            int descriptionRes = speechModeActive
-                    ? R.string.speech_stop_content
-                    : R.string.speech_toggle_content_start;
-            Drawable toggleIcon = getDrawable(speechModeActive
-                    ? R.drawable.ic_stop
-                    : R.drawable.ic_radio_point);
+            Drawable toggleIcon = getDrawable(iconRes);
             if (toggleIcon != null) {
                 toggleIcon = toggleIcon.mutate();
                 toggleIcon.setAlpha(toggleEnabled ? 255 : 100);
@@ -3513,7 +3537,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             toggleSpeechMenuItem.setTitle(getString(descriptionRes));
         }
         if (stopSpeechMenuItem != null) {
-            stopSpeechMenuItem.setVisible(false);
+            boolean stopVisible = sessionActive;
+            stopSpeechMenuItem.setVisible(stopVisible);
+            boolean stopEnabled = sessionActive;
+            stopSpeechMenuItem.setEnabled(stopEnabled);
+            Drawable stopIcon = getDrawable(R.drawable.ic_stop);
+            if (stopIcon != null) {
+                stopIcon = stopIcon.mutate();
+                stopIcon.setAlpha(stopEnabled ? 255 : 100);
+                stopSpeechMenuItem.setIcon(stopIcon);
+            }
         }
         updatePageControls();
     }
