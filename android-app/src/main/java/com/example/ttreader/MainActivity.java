@@ -1963,7 +1963,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView != null) {
             int readerHeight = readerView.getHeight();
             if (readerHeight > 0 && height > readerHeight) {
-                height = readerHeight;
+                CharSequence currentText = readerView.getText();
+                boolean hasRenderedContent = currentText != null && currentText.length() > 0;
+                if (hasRenderedContent) {
+                    height = readerHeight;
+                }
             }
         }
         if (!readerViewportReady && awaitingViewportMeasurement) {

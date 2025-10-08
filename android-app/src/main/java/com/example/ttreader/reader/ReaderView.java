@@ -570,13 +570,18 @@ public class ReaderView extends TextView {
 
     private boolean ensurePagination() {
         if (currentDocument == null || currentDocument.text == null) {
+            Log.d(TAG, "ensurePagination: no document");
             return false;
         }
         if (viewportHeight <= 0 || getWidth() <= 0) {
+            Log.d(TAG, "ensurePagination: viewport not ready height=" + viewportHeight
+                    + " width=" + getWidth());
             return false;
         }
         PaginationSpec spec = captureCurrentSpec();
         if (spec == null) {
+            Log.d(TAG, "ensurePagination: spec null height=" + viewportHeight
+                    + " width=" + getWidth());
             return false;
         }
         if (!paginationCacheLoaded) {
