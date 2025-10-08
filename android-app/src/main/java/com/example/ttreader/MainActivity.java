@@ -235,6 +235,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private MenuItem workMenuItem;
     private MenuItem toggleSpeechMenuItem;
     private MenuItem stopSpeechMenuItem;
+    private MenuItem skipBackMenuItem;
+    private MenuItem skipForwardMenuItem;
     private MenuItem installTalgatMenuItem;
     private AlertDialog rhvoiceDialog;
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
@@ -568,6 +570,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         workMenuItem = menu.findItem(R.id.action_select_work);
         toggleSpeechMenuItem = menu.findItem(R.id.action_toggle_speech);
         stopSpeechMenuItem = menu.findItem(R.id.action_stop_speech);
+        skipBackMenuItem = menu.findItem(R.id.action_skip_back);
+        skipForwardMenuItem = menu.findItem(R.id.action_skip_forward);
         installTalgatMenuItem = menu.findItem(R.id.action_install_talgat);
         setupLanguagePairActionView();
         setupWorkMenuItem();
@@ -606,6 +610,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             return true;
         } else if (id == R.id.action_stop_speech) {
             stopSpeech();
+            return true;
+        } else if (id == R.id.action_skip_forward) {
+            handleMediaSkip(true);
+            return true;
+        } else if (id == R.id.action_skip_back) {
+            handleMediaSkip(false);
             return true;
         } else if (id == R.id.action_install_talgat) {
             openTalgatInstall();
@@ -663,6 +673,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         int start = Math.max(0, span.getStartIndex());
         currentCharIndex = start;
         updatePendingSpeechChar(currentCharIndex);
+        if (!isSpeechModeActive()) {
+            markLastModeVisual();
+        }
         adjustSentenceIndexForChar(start);
         if (readerView != null) {
             ReaderView.SentenceRange sentence = readerView.findSentenceForCharIndex(start);
@@ -1119,7 +1132,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } else {
             pendingVisualPage = approxPageForChar(pendingVisualChar);
         }
-        pendingLastMode = ReadingState.MODE_VISUAL;
+        markLastModeVisual();
         if (readerView != null) {
             readerView.post(() -> {
                 Log.d(LAYOUT_LOG_TAG, "handleReaderWindowChanged: window=" + start + "-" + end
@@ -2135,13 +2148,26 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void updatePendingSpeechChar(int charIndex) {
         pendingSpeechChar = charIndex;
-        if (charIndex >= 0) {
-            pendingLastMode = ReadingState.MODE_VOICE;
-        } else {
-            pendingLastMode = ReadingState.MODE_VISUAL;
-        }
         if (!restoringReadingState) {
             schedulePersistReadingState();
+        }
+    }
+
+    private void markLastModeVoice() {
+        if (!ReadingState.MODE_VOICE.equals(pendingLastMode)) {
+            pendingLastMode = ReadingState.MODE_VOICE;
+            if (!restoringReadingState) {
+                schedulePersistReadingState();
+            }
+        }
+    }
+
+    private void markLastModeVisual() {
+        if (!ReadingState.MODE_VISUAL.equals(pendingLastMode)) {
+            pendingLastMode = ReadingState.MODE_VISUAL;
+            if (!restoringReadingState) {
+                schedulePersistReadingState();
+            }
         }
     }
 
@@ -2322,6 +2348,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (currentSentenceIndex < 0 || currentSentenceIndex >= sentenceRanges.size()) {
             currentSentenceIndex = 0;
         }
+        int focusChar = resolveFocusCharIndex();
+        if (focusChar >= 0) {
+            adjustSentenceIndexForChar(focusChar);
+        }
         speechSessionActive = true;
         awaitingResumeAfterDetail = false;
         shouldContinueSpeech = true;
@@ -2330,6 +2360,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         if (sentencePlayer != null && currentSentenceRequest != null) {
             try {
+                markLastModeVoice();
                 sentencePlayer.start();
                 isSpeaking = true;
                 updatePlaybackState(PlaybackState.STATE_PLAYING);
@@ -2341,6 +2372,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 releaseSentencePlayer();
             }
         }
+        markLastModeVoice();
         updateSpeechButtons();
         speakCurrentSentence();
     }
@@ -2367,6 +2399,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void stopSpeech() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread(this::stopSpeechInternal);
+            return;
+        }
+        stopSpeechInternal();
+    }
+
+    private void stopSpeechInternal() {
+        int resumeChar = resolveFocusCharIndex();
         shouldContinueSpeech = false;
         isSpeaking = false;
         speechSessionActive = false;
@@ -2388,17 +2429,23 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             currentSentenceRequest = null;
         }
         clearPreparedAudio();
-        currentSentenceIndex = 0;
-        currentSentenceStart = -1;
-        currentSentenceEnd = -1;
-        currentCharIndex = -1;
-        updatePendingSpeechChar(-1);
-        pendingLastMode = ReadingState.MODE_VISUAL;
         estimatedUtteranceDurationMs = 0L;
-        pendingPlaybackSentenceIndex = -1;
         if (readerView != null) {
             readerView.clearSpeechHighlights();
         }
+        updateSentenceRanges();
+        if (resumeChar >= 0) {
+            currentCharIndex = resumeChar;
+            updatePendingSpeechChar(resumeChar);
+            adjustSentenceIndexForChar(resumeChar);
+        } else {
+            currentSentenceIndex = -1;
+            currentSentenceStart = -1;
+            currentSentenceEnd = -1;
+            currentCharIndex = -1;
+            updatePendingSpeechChar(-1);
+        }
+        markLastModeVisual();
         updatePlaybackState(PlaybackState.STATE_STOPPED);
         updateSpeechButtons();
     }
@@ -2416,6 +2463,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             speakCurrentSentence();
             return;
         }
+        markLastModeVoice();
         currentSentenceStart = sentence.start;
         currentSentenceEnd = sentence.end;
         currentCharIndex = sentence.start;
@@ -2956,6 +3004,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (sentencePlayer != null) {
             try {
                 sentencePlayer.seekTo(0);
+                markLastModeVoice();
                 sentencePlayer.start();
                 isSpeaking = true;
                 shouldContinueSpeech = true;
@@ -3336,6 +3385,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void pauseSpeechForDetail() {
         if (speechSessionActive || isSpeaking || shouldContinueSpeech) {
             speechSessionActive = true;
+            markLastModeVoice();
         }
         stopProgressUpdates();
         exitPromptMode();
@@ -3360,6 +3410,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         speechSessionActive = true;
         if (sentencePlayer != null) {
             try {
+                markLastModeVoice();
                 sentencePlayer.start();
                 isSpeaking = true;
                 shouldContinueSpeech = true;
@@ -3371,6 +3422,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 releaseSentencePlayer();
             }
         }
+        markLastModeVoice();
         shouldContinueSpeech = true;
         speakCurrentSentence();
     }
@@ -3403,6 +3455,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         awaitingResumeAfterDetail = true;
         if (speechSessionActive || isSpeaking || shouldContinueSpeech) {
             speechSessionActive = true;
+            markLastModeVoice();
         }
         updatePlaybackState(PlaybackState.STATE_PAUSED);
         updateSpeechButtons();
@@ -3560,6 +3613,30 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 stopIcon = stopIcon.mutate();
                 stopIcon.setAlpha(stopEnabled ? 255 : 100);
                 stopSpeechMenuItem.setIcon(stopIcon);
+            }
+        }
+        if (skipBackMenuItem != null) {
+            boolean skipVisible = sessionActive;
+            skipBackMenuItem.setVisible(skipVisible);
+            boolean skipEnabled = sessionActive;
+            skipBackMenuItem.setEnabled(skipEnabled);
+            Drawable backIcon = getDrawable(R.drawable.ic_skip_back);
+            if (backIcon != null) {
+                backIcon = backIcon.mutate();
+                backIcon.setAlpha(skipEnabled ? 255 : 100);
+                skipBackMenuItem.setIcon(backIcon);
+            }
+        }
+        if (skipForwardMenuItem != null) {
+            boolean skipVisible = sessionActive;
+            skipForwardMenuItem.setVisible(skipVisible);
+            boolean skipEnabled = sessionActive;
+            skipForwardMenuItem.setEnabled(skipEnabled);
+            Drawable forwardIcon = getDrawable(R.drawable.ic_skip_forward);
+            if (forwardIcon != null) {
+                forwardIcon = forwardIcon.mutate();
+                forwardIcon.setAlpha(skipEnabled ? 255 : 100);
+                skipForwardMenuItem.setIcon(forwardIcon);
             }
         }
         updatePageControls();

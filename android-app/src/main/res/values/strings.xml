@@ -65,6 +65,8 @@
     <string name="speech_toggle_content_pause">Поставить озвучку на паузу</string>
     <string name="speech_toggle_content_resume">Продолжить озвучку</string>
     <string name="speech_stop_content">Остановить озвучку</string>
+    <string name="speech_skip_back_content">Прокрутить назад</string>
+    <string name="speech_skip_forward_content">Прокрутить вперёд</string>
     <string name="speech_install_talgat">Установить RHVoice Talgat</string>
     <string name="rhvoice_button_install">Установить RHVoice Talgat</string>
     <string name="rhvoice_install_title">Требуется RHVoice</string>
