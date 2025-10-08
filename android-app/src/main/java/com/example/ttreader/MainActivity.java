@@ -2136,6 +2136,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pendingSpeechChar = charIndex;
         if (charIndex >= 0) {
             pendingLastMode = ReadingState.MODE_VOICE;
+        } else {
+            pendingLastMode = ReadingState.MODE_VISUAL;
         }
         if (!restoringReadingState) {
             schedulePersistReadingState();
@@ -2385,6 +2387,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         currentSentenceEnd = -1;
         currentCharIndex = -1;
         updatePendingSpeechChar(-1);
+        pendingLastMode = ReadingState.MODE_VISUAL;
         estimatedUtteranceDurationMs = 0L;
         pendingPlaybackSentenceIndex = -1;
         if (readerView != null) {
@@ -3482,7 +3485,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private boolean isSpeechModeActive() {
-        return shouldContinueSpeech;
+        return shouldContinueSpeech
+                || isSpeaking
+                || awaitingResumeAfterDetail
+                || detailPlaybackActive()
+                || activeDetailRequest != null
+                || pendingDetailRequest != null;
     }
 
     private void updateSpeechButtons() {
