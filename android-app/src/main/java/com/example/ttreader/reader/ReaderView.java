@@ -18,6 +18,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewParent;
+import android.view.ViewTreeObserver;
 import android.widget.TextView;
 
 import com.example.ttreader.data.DbHelper;
@@ -55,6 +56,10 @@ public class ReaderView extends TextView {
         void onWindowChanged(int globalStart, int globalEnd);
     }
 
+    public interface NavigationStateListener {
+        void onNavigationStateChanged(boolean navigationReady);
+    }
+
     private static final int PAGE_CHUNK_SIZE = 4000;
     private static final int MIN_PAGE_ADVANCE_CHARS = 64;
     private static final float FLOAT_TOLERANCE = 0.01f;
@@ -66,6 +71,7 @@ public class ReaderView extends TextView {
     private PaginationDao paginationDao;
     private TokenInfoProvider provider;
     private WindowChangeListener windowChangeListener;
+    private NavigationStateListener navigationStateListener;
     private String languagePair = "";
     private String workId = "";
     private final List<TokenSpan> tokenSpans = new ArrayList<>();
@@ -113,6 +119,64 @@ public class ReaderView extends TextView {
     private final MovementMethod movementMethod;
     private DeferredPage deferredPage;
     private boolean deferredPageScheduled;
+    private boolean renderPassPending;
+    private boolean renderUnlockListenerRegistered;
+    private final ViewTreeObserver.OnPreDrawListener renderUnlockListener =
+            new ViewTreeObserver.OnPreDrawListener() {
+                @Override public boolean onPreDraw() {
+                    ViewTreeObserver observer = getViewTreeObserver();
+                    if (observer != null && observer.isAlive()) {
+                        observer.removeOnPreDrawListener(this);
+                    }
+                    renderUnlockListenerRegistered = false;
+                    if (renderPassPending) {
+                        renderPassPending = false;
+                        dispatchNavigationStateChanged();
+                    }
+                    return true;
+                }
+            };
+
+    private void beginRenderPass() {
+        renderPassPending = true;
+        ensureRenderUnlockListener();
+        dispatchNavigationStateChanged();
+    }
+
+    private void ensureRenderUnlockListener() {
+        if (renderUnlockListenerRegistered) {
+            return;
+        }
+        ViewTreeObserver observer = getViewTreeObserver();
+        if (observer != null && observer.isAlive()) {
+            observer.addOnPreDrawListener(renderUnlockListener);
+            renderUnlockListenerRegistered = true;
+        } else {
+            post(this::ensureRenderUnlockListener);
+        }
+    }
+
+    private void cancelRenderPassPending() {
+        renderPassPending = false;
+        removeRenderUnlockListener();
+    }
+
+    private void removeRenderUnlockListener() {
+        if (!renderUnlockListenerRegistered) {
+            return;
+        }
+        ViewTreeObserver observer = getViewTreeObserver();
+        if (observer != null && observer.isAlive()) {
+            observer.removeOnPreDrawListener(renderUnlockListener);
+        }
+        renderUnlockListenerRegistered = false;
+    }
+
+    private void dispatchNavigationStateChanged() {
+        if (navigationStateListener != null) {
+            navigationStateListener.onNavigationStateChanged(isNavigationReady());
+        }
+    }
 
     public ReaderView(Context context) {
         super(context);
@@ -240,6 +304,11 @@ public class ReaderView extends TextView {
         this.windowChangeListener = listener;
     }
 
+    public void setNavigationStateListener(NavigationStateListener listener) {
+        this.navigationStateListener = listener;
+        dispatchNavigationStateChanged();
+    }
+
     public void setInitialCharIndex(int charIndex) {
         if (charIndex < 0) {
             charIndex = 0;
@@ -304,6 +373,7 @@ public class ReaderView extends TextView {
     }
 
     public void clearContent() {
+        cancelRenderPassPending();
         visibleStart = 0;
         visibleEnd = 0;
         currentDocument = null;
@@ -396,6 +466,7 @@ public class ReaderView extends TextView {
     }
 
     @Override protected void onDetachedFromWindow() {
+        cancelRenderPassPending();
         super.onDetachedFromWindow();
         Future<?> task;
         synchronized (loadTaskLock) {
@@ -561,6 +632,9 @@ public class ReaderView extends TextView {
     }
 
     private boolean hasPendingNavigationRequest() {
+        if (renderPassPending) {
+            return true;
+        }
         if (currentPendingTarget != null) {
             return true;
         }
@@ -1054,6 +1128,7 @@ public class ReaderView extends TextView {
         SpannableStringBuilder content = page.content;
         logTextEvent("applyPage render=" + reason + " start=" + visibleStart + " end=" + visibleEnd
                 + " length=" + content.length());
+        beginRenderPass();
         setText(content);
         deliverInitialContentIfNeeded();
         if (getMovementMethod() != movementMethod) {
@@ -1202,6 +1277,9 @@ public class ReaderView extends TextView {
             return false;
         }
         if (!paginationLocked) {
+            return false;
+        }
+        if (renderPassPending) {
             return false;
         }
         return !hasPendingNavigationRequest();

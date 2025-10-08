@@ -482,6 +482,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             readerBasePaddingBottom = readerView.getPaddingBottom();
             readerView.setup(dbHelper, memoryDao, usageStatsDao, paginationDao, this);
             readerView.setWindowChangeListener(this::handleReaderWindowChanged);
+            readerView.setNavigationStateListener(ready -> {
+                logViewEvent("ReaderView", readerView, "navigationState -> " + ready);
+                updatePageControls();
+            });
         }
 
         if (readerScrollView != null) {
