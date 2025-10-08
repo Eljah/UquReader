@@ -2,19 +2,23 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/app_background"
     android:orientation="vertical">
 
     <android.widget.Toolbar
         android:id="@+id/topToolbar"
         android:layout_width="match_parent"
         android:layout_height="?android:attr/actionBarSize"
-        android:background="?android:colorBackground"
+        android:layout_marginBottom="8dp"
+        android:popupTheme="@android:style/ThemeOverlay.Material.Light"
+        android:theme="@android:style/ThemeOverlay.Material.Dark"
+        android:background="@color/app_primary"
         android:elevation="4dp"
         android:gravity="center_vertical"
         android:logo="@mipmap/ic_launcher"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:popupTheme="@android:style/ThemeOverlay.Material.Light"
+        style="@style/Widget.UquReader.Toolbar"
         android:title="@null"
         android:subtitle="@null" />
 
@@ -23,44 +27,98 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <ScrollView
+        <com.example.ttreader.widget.StaticPageScrollView
             android:id="@+id/readerScrollView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:fadingEdgeLength="0dp"
+            android:overScrollMode="never"
+            android:requiresFadingEdge="none">
 
-            <com.example.ttreader.reader.ReaderView
-                android:id="@+id/readerView"
+            <LinearLayout
+                android:id="@+id/readerScrollContent"
                 android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/readerPageContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginStart="24dp"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginEnd="24dp"
+                    android:layout_marginBottom="24dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/reader_page_background"
+                    android:orientation="vertical">
+
+                    <com.example.ttreader.reader.ReaderView
+                        android:id="@+id/readerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:gravity="top|start"
+                        android:padding="24dp"
+                        android:textColor="@color/reader_text_primary" />
+                </LinearLayout>
+
+                <View
+                    android:id="@+id/readerOverlaySpacer"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:background="@android:color/transparent" />
+            </LinearLayout>
+        </com.example.ttreader.widget.StaticPageScrollView>
+
+        <LinearLayout
+            android:id="@+id/pageControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="@dimen/reader_page_controls_bottom_margin"
+            android:background="@drawable/vintage_card"
+            android:elevation="4dp"
+            android:orientation="horizontal"
+            android:minWidth="@dimen/reader_page_controls_min_width"
+            android:paddingStart="16dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp">
+
+            <ImageButton
+                android:id="@+id/pagePreviousButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/reader_page_previous"
+                android:padding="6dp"
+                android:src="@drawable/ic_page_previous"
+                android:tint="@color/reader_letter_highlight" />
+
+            <TextView
+                android:id="@+id/pageNumberText"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:padding="16dp" />
-        </ScrollView>
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:minEms="7"
+                android:text="—"
+                android:textAppearance="@style/TextAppearance.UquReader.PageIndicator" />
 
-        <ImageButton
-            android:id="@+id/pagePreviousButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="bottom|start"
-            android:layout_marginStart="16dp"
-            android:layout_marginBottom="16dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/reader_page_previous"
-            android:padding="8dp"
-            android:src="@drawable/ic_page_previous"
-            android:tint="@color/reader_letter_highlight" />
-
-        <ImageButton
-            android:id="@+id/pageNextButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="16dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/reader_page_next"
-            android:padding="8dp"
-            android:src="@drawable/ic_page_next"
-            android:tint="@color/reader_letter_highlight" />
+            <ImageButton
+                android:id="@+id/pageNextButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/reader_page_next"
+                android:padding="6dp"
+                android:src="@drawable/ic_page_next"
+                android:tint="@color/reader_letter_highlight" />
+        </LinearLayout>
 
         <ProgressBar
             android:id="@+id/readerLoadingIndicator"
