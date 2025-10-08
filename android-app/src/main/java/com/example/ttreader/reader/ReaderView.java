@@ -984,6 +984,10 @@ public class ReaderView extends TextView {
                 break;
             }
         }
+        int extended = extendPageEndThroughPunctuation(best, clamped);
+        if (extended > best) {
+            best = extended;
+        }
         if (best <= start && currentDocument != null && currentDocument.text != null) {
             for (int i = clamped; i > start + 1; i--) {
                 char c = currentDocument.text.charAt(i - 1);
@@ -998,6 +1002,68 @@ public class ReaderView extends TextView {
             best = clamped;
         }
         return best;
+    }
+
+    private int extendPageEndThroughPunctuation(int baseIndex, int limit) {
+        if (currentDocument == null || currentDocument.text == null) {
+            return baseIndex;
+        }
+        String content = currentDocument.text;
+        int docLength = content.length();
+        if (baseIndex < 0 || baseIndex >= docLength) {
+            return baseIndex;
+        }
+        int upperBound = Math.min(Math.max(baseIndex, limit), docLength);
+        int cursor = baseIndex;
+        int extended = baseIndex;
+        while (cursor < upperBound) {
+            char c = content.charAt(cursor);
+            if (Character.isWhitespace(c)) {
+                break;
+            }
+            if (!isTrailingPunctuationChar(c)) {
+                break;
+            }
+            cursor++;
+            extended = cursor;
+        }
+        return extended;
+    }
+
+    private boolean isTrailingPunctuationChar(char c) {
+        switch (c) {
+            case ',':
+            case '.':
+            case ';':
+            case ':':
+            case '!':
+            case '?':
+            case '-':
+            case '\u2010': // hyphen
+            case '\u2011': // non-breaking hyphen
+            case '\u2012': // figure dash
+            case '\u2013': // en dash
+            case '\u2014': // em dash
+            case '\u2015': // horizontal bar
+            case '\u02bc':
+            case '\u2024': // one dot leader
+            case '\u2025': // two dot leader
+            case '\u2026': // ellipsis
+            case '\u203a':
+            case '\u00bb':
+            case '\'':
+            case '"':
+            case ')':
+            case ']':
+            case '}':
+                return true;
+            default:
+                int type = Character.getType(c);
+                return type == Character.FINAL_QUOTE_PUNCTUATION
+                        || type == Character.END_PUNCTUATION
+                        || type == Character.OTHER_PUNCTUATION
+                        || type == Character.DASH_PUNCTUATION;
+        }
     }
 
     private void showPageForChar(int charIndex, boolean notifyWindowChange) {
