@@ -75,7 +75,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="@dimen/reader_page_controls_bottom_margin"
             android:background="@drawable/vintage_card"
             android:elevation="4dp"
             android:orientation="horizontal"
