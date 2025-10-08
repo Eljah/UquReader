@@ -9,6 +9,8 @@ android-app/tools/base64encoder/*.jar
 *.keystore
 !tools/debug-keystore/debug.keystore
 !android-app/tools/debug-keystore/debug.keystore
+# Local artifacts captured during emulator runs
+artifacts/
 
 # Morphology transducer binaries
 web-app/src/main/resources/morphology/*.hfstol
