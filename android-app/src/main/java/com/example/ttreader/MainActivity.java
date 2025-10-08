@@ -83,6 +83,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final String KEY_LAST_WORK = "reader.last.work";
 
     private static final int APPROX_CHARS_PER_PAGE = 1000;
+    private static final float PAGE_CONTROLS_LOADING_ALPHA = 0.5f;
     private static final class WorkInfo {
         final String id;
         final String asset;
@@ -1251,6 +1252,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 .append(" page=").append(current).append('/')
                 .append(safeTotal);
         if (lastLoggedPageIndex >= 0) {
+            if (current == lastLoggedPageIndex && lastLoggedPageTotal == safeTotal) {
+                action.append(" delta=0 steady");
+                logViewEvent("PageNumberText", pageNumberText, action.toString());
+                return;
+            }
             int delta = current - lastLoggedPageIndex;
             if (delta == 1) {
                 action.append(" delta=+").append(delta).append(" monotonic=true");
@@ -1380,16 +1386,29 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void showReaderLoading(boolean show) {
         if (readerLoadingIndicator != null) {
             readerLoadingIndicator.setVisibility(show ? View.VISIBLE : View.GONE);
+            if (show) {
+                readerLoadingIndicator.bringToFront();
+            }
         }
         if (readerScrollView != null) {
-            readerScrollView.setVisibility(show ? View.INVISIBLE : View.VISIBLE);
+            setVisibilityWithLogging(readerScrollView, "ReaderScrollView", View.VISIBLE);
         }
-        setVisibilityWithLogging(pageControls, "PageControls",
-                show ? View.INVISIBLE : View.VISIBLE);
-        setVisibilityWithLogging(pagePreviousButton, "PagePreviousButton",
-                show ? View.INVISIBLE : View.VISIBLE);
-        setVisibilityWithLogging(pageNextButton, "PageNextButton",
-                show ? View.INVISIBLE : View.VISIBLE);
+        setVisibilityWithLogging(pageControls, "PageControls", View.VISIBLE);
+        setVisibilityWithLogging(pagePreviousButton, "PagePreviousButton", View.VISIBLE);
+        setVisibilityWithLogging(pageNextButton, "PageNextButton", View.VISIBLE);
+
+        if (show) {
+            setAlphaWithLogging(pageControls, "PageControls", PAGE_CONTROLS_LOADING_ALPHA);
+            setEnabledWithLogging(pageControls, "PageControls", false);
+            setEnabledWithLogging(pagePreviousButton, "PagePreviousButton", false);
+            setEnabledWithLogging(pageNextButton, "PageNextButton", false);
+            setAlphaWithLogging(pagePreviousButton, "PagePreviousButton", 0.3f);
+            setAlphaWithLogging(pageNextButton, "PageNextButton", 0.3f);
+        } else {
+            setEnabledWithLogging(pageControls, "PageControls", true);
+            setAlphaWithLogging(pageControls, "PageControls", 1f);
+            updatePageControls();
+        }
         updateReaderBottomInset();
     }
 
