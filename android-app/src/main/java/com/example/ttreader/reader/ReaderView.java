@@ -279,6 +279,17 @@ public class ReaderView extends TextView {
         return currentDocument.text.length();
     }
 
+    public boolean hasRenderedContent() {
+        if (currentDocument == null || currentDocument.text == null) {
+            return false;
+        }
+        if (pages.isEmpty()) {
+            return false;
+        }
+        CharSequence currentText = getText();
+        return currentText != null && currentText.length() > 0 && visibleEnd > visibleStart;
+    }
+
     public int toLocalCharIndex(int globalIndex) {
         CharSequence text = getText();
         int length = text == null ? 0 : text.length();
