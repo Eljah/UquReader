@@ -453,26 +453,33 @@ public class ReaderView extends TextView {
     }
 
     private void enqueuePendingTarget(int targetCharIndex, boolean notifyWindowChange) {
-        if (currentPendingTarget == null) {
+        if (currentPendingTarget == null && pendingTargetQueue.isEmpty()) {
             currentPendingTarget = new PendingTarget(targetCharIndex, notifyWindowChange);
-        } else {
-            if (currentPendingTarget.charIndex == targetCharIndex) {
-                if (notifyWindowChange && !currentPendingTarget.notifyWindowChange) {
-                    currentPendingTarget = new PendingTarget(targetCharIndex, true);
+            showPendingTargetIfPossible();
+            return;
+        }
+
+        boolean effectiveNotify = notifyWindowChange;
+        if (currentPendingTarget != null && currentPendingTarget.notifyWindowChange) {
+            effectiveNotify = true;
+        } else if (!effectiveNotify && !pendingTargetQueue.isEmpty()) {
+            for (PendingTarget queued : pendingTargetQueue) {
+                if (queued != null && queued.notifyWindowChange) {
+                    effectiveNotify = true;
+                    break;
                 }
-                showPendingTargetIfPossible();
-                return;
-            }
-            PendingTarget last = pendingTargetQueue.peekLast();
-            if (last != null && last.charIndex == targetCharIndex) {
-                if (notifyWindowChange && !last.notifyWindowChange) {
-                    pendingTargetQueue.pollLast();
-                    pendingTargetQueue.addLast(new PendingTarget(targetCharIndex, true));
-                }
-            } else {
-                pendingTargetQueue.addLast(new PendingTarget(targetCharIndex, notifyWindowChange));
             }
         }
+
+        if (currentPendingTarget != null && currentPendingTarget.charIndex == targetCharIndex) {
+            currentPendingTarget = new PendingTarget(targetCharIndex, effectiveNotify);
+            pendingTargetQueue.clear();
+            showPendingTargetIfPossible();
+            return;
+        }
+
+        currentPendingTarget = new PendingTarget(targetCharIndex, effectiveNotify);
+        pendingTargetQueue.clear();
         showPendingTargetIfPossible();
     }
 
