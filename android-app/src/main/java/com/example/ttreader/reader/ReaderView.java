@@ -1008,7 +1008,17 @@ public class ReaderView extends TextView {
         if (currentDocument == null || currentDocument.text == null) {
             return baseIndex;
         }
-        String content = currentDocument.text;
+        return extendIndexThroughPunctuation(currentDocument.text, baseIndex, limit);
+    }
+
+    /**
+     * Ensures trailing punctuation stays attached to the preceding text by
+     * extending the slice through optional whitespace and punctuation.
+     */
+    static int extendIndexThroughPunctuation(CharSequence content, int baseIndex, int limit) {
+        if (content == null) {
+            return baseIndex;
+        }
         int docLength = content.length();
         if (baseIndex < 0 || baseIndex >= docLength) {
             return baseIndex;
@@ -1016,21 +1026,37 @@ public class ReaderView extends TextView {
         int upperBound = Math.min(Math.max(baseIndex, limit), docLength);
         int cursor = baseIndex;
         int extended = baseIndex;
+        boolean sawPunctuation = false;
+        int pendingWhitespaceStart = -1;
         while (cursor < upperBound) {
             char c = content.charAt(cursor);
             if (Character.isWhitespace(c)) {
-                break;
+                if (sawPunctuation) {
+                    cursor++;
+                    extended = cursor;
+                } else {
+                    if (pendingWhitespaceStart < 0) {
+                        pendingWhitespaceStart = cursor;
+                    }
+                    cursor++;
+                }
+                continue;
             }
             if (!isTrailingPunctuationChar(c)) {
                 break;
             }
+            sawPunctuation = true;
+            if (pendingWhitespaceStart >= 0 && extended < pendingWhitespaceStart) {
+                extended = pendingWhitespaceStart;
+            }
+            pendingWhitespaceStart = -1;
             cursor++;
             extended = cursor;
         }
-        return extended;
+        return sawPunctuation ? extended : baseIndex;
     }
 
-    private boolean isTrailingPunctuationChar(char c) {
+    private static boolean isTrailingPunctuationChar(char c) {
         switch (c) {
             case ',':
             case '.':
