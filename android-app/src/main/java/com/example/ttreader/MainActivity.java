@@ -1212,12 +1212,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updatePageControls() {
-        boolean prevEnabled = readerView != null && readerView.hasPreviousPage();
+        boolean navigationReady = readerView != null && readerView.isNavigationReady();
+        boolean prevEnabled = navigationReady && readerView != null && readerView.hasPreviousPage();
         setEnabledWithLogging(pagePreviousButton, "PagePreviousButton", prevEnabled);
         float prevAlpha = prevEnabled ? 1f : 0.3f;
         setAlphaWithLogging(pagePreviousButton, "PagePreviousButton", prevAlpha);
 
-        boolean nextEnabled = readerView != null && readerView.hasNextPage();
+        boolean nextEnabled = navigationReady && readerView != null && readerView.hasNextPage();
         setEnabledWithLogging(pageNextButton, "PageNextButton", nextEnabled);
         float nextAlpha = nextEnabled ? 1f : 0.3f;
         setAlphaWithLogging(pageNextButton, "PageNextButton", nextAlpha);
@@ -1345,20 +1346,32 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (readerView == null) {
             return;
         }
+        if (!readerView.isNavigationReady()) {
+            logViewEvent("PagePreviousButton", pagePreviousButton, "navigationLocked");
+            updatePageControls();
+            return;
+        }
         int target = readerView.findPreviousPageStart();
         if (target >= 0) {
             readerView.scrollToGlobalChar(target);
         }
+        updatePageControls();
     }
 
     private void goToNextPage() {
         if (readerView == null) {
             return;
         }
+        if (!readerView.isNavigationReady()) {
+            logViewEvent("PageNextButton", pageNextButton, "navigationLocked");
+            updatePageControls();
+            return;
+        }
         int target = readerView.findNextPageStart();
         if (target >= 0) {
             readerView.scrollToGlobalChar(target);
         }
+        updatePageControls();
     }
 
     private void schedulePersistReadingState() {

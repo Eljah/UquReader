@@ -504,6 +504,19 @@ public class ReaderView extends TextView {
         }
     }
 
+    private boolean hasPendingNavigationRequest() {
+        if (currentPendingTarget != null) {
+            return true;
+        }
+        if (!pendingTargetQueue.isEmpty()) {
+            return true;
+        }
+        if (deferredPage != null) {
+            return true;
+        }
+        return deferredPageScheduled;
+    }
+
     private boolean ensurePagination() {
         if (currentDocument == null || currentDocument.text == null) {
             return false;
@@ -1108,6 +1121,19 @@ public class ReaderView extends TextView {
 
     public int getViewportEndChar() {
         return visibleEnd;
+    }
+
+    public boolean isNavigationReady() {
+        if (currentDocument == null || currentDocument.text == null) {
+            return false;
+        }
+        if (paginationDirty) {
+            return false;
+        }
+        if (!paginationLocked) {
+            return false;
+        }
+        return !hasPendingNavigationRequest();
     }
 
     public int findNextPageStart() {
