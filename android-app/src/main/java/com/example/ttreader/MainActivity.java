@@ -1982,6 +1982,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         return String.valueOf(visibility);
     }
 
+    private void runOnUiThreadIfNeeded(Runnable action) {
+        if (action == null) {
+            return;
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run();
+        } else {
+            runOnUiThread(action);
+        }
+    }
+
     private void logViewEvent(String component, View view, String action) {
         StringBuilder sb = new StringBuilder();
         sb.append(component).append(": ").append(action);
@@ -3575,6 +3586,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updateSpeechButtons() {
+        runOnUiThreadIfNeeded(this::updateSpeechButtonsInternal);
+    }
+
+    private void updateSpeechButtonsInternal() {
         boolean voiceAvailable = ttsReady && talgatVoice != null;
         boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
         if (toggleSpeechMenuItem != null) {
@@ -3763,6 +3778,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updateInstallButtonVisibility() {
+        runOnUiThreadIfNeeded(this::updateInstallButtonVisibilityInternal);
+    }
+
+    private void updateInstallButtonVisibilityInternal() {
         if (installTalgatMenuItem == null) return;
         boolean show = rhVoiceInstalled && (talgatVoice == null);
         installTalgatMenuItem.setVisible(show);
