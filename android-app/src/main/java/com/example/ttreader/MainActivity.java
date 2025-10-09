@@ -3608,6 +3608,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         boolean voiceAvailable = ttsReady && talgatVoice != null;
         boolean sessionActive = (speechSessionActive || isSpeaking || shouldContinueSpeech)
                 && !speechStoppingInProgress;
+        Log.d(TAG, "updateSpeechButtons: voiceAvailable=" + voiceAvailable
+                + ", sessionActive=" + sessionActive
+                + ", speechStoppingInProgress=" + speechStoppingInProgress
+                + ", isSpeaking=" + isSpeaking
+                + ", shouldContinueSpeech=" + shouldContinueSpeech
+                + ", awaitingResumeAfterDetail=" + awaitingResumeAfterDetail
+                + ", detailPlaybackActive=" + detailPlaybackActive());
         if (toggleSpeechMenuItem != null) {
             int iconRes;
             int descriptionRes;
@@ -3628,6 +3635,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (speechStoppingInProgress) {
                 toggleEnabled = false;
             }
+            String toggleIconName = getResources().getResourceEntryName(iconRes);
+            Log.d(TAG, "updateSpeechButtons: toggle icon=" + toggleIconName
+                    + ", enabled=" + toggleEnabled
+                    + ", descriptionRes=" + getResources().getResourceEntryName(descriptionRes));
             toggleSpeechMenuItem.setEnabled(toggleEnabled);
             Drawable toggleIcon = getDrawable(iconRes);
             if (toggleIcon != null) {
@@ -3642,6 +3653,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             stopSpeechMenuItem.setVisible(stopVisible);
             boolean stopEnabled = sessionActive;
             stopSpeechMenuItem.setEnabled(stopEnabled);
+            Log.d(TAG, "updateSpeechButtons: stop icon visible=" + stopVisible
+                    + ", enabled=" + stopEnabled);
             Drawable stopIcon = getDrawable(R.drawable.ic_stop);
             if (stopIcon != null) {
                 stopIcon = stopIcon.mutate();
