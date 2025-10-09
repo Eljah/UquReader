@@ -360,7 +360,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private Voice talgatVoice;
     private boolean ttsReady = false;
     private boolean rhVoiceInstalled = false;
-    private boolean simulateSpeechFallback = false;
     private boolean shouldContinueSpeech = false;
     private boolean speechSessionActive = false;
     private boolean isSpeaking = false;
@@ -2342,7 +2341,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void startSpeech() {
         finalizePendingDevicePauseEvent();
-        if ((!ttsReady || talgatVoice == null) && !simulateSpeechFallback) return;
+        if (!ttsReady || talgatVoice == null) return;
         dismissTokenSheet(true);
         exitPromptMode();
         updateSentenceRanges();
@@ -2360,7 +2359,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (mediaSession != null) {
             mediaSession.setActive(true);
         }
-        if (!simulateSpeechFallback && sentencePlayer != null && currentSentenceRequest != null) {
+        if (sentencePlayer != null && currentSentenceRequest != null) {
             try {
                 markLastModeVoice();
                 sentencePlayer.start();
@@ -2375,15 +2374,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
         markLastModeVoice();
-        if (simulateSpeechFallback) {
-            isSpeaking = true;
-            updatePlaybackState(PlaybackState.STATE_PLAYING);
-            updateSpeechButtons();
-            startProgressUpdates();
-            prefetchUpcomingSentences(currentSentenceIndex + 1);
-            Log.w(TAG, "startSpeech: using simulated speech fallback");
-            return;
-        }
         updateSpeechButtons();
         speakCurrentSentence();
     }
@@ -2418,7 +2408,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void stopSpeechInternal() {
-        Log.d(TAG, "stopSpeechInternal: invoked, simulateFallback=" + simulateSpeechFallback);
         int resumeChar = resolveFocusCharIndex();
         shouldContinueSpeech = false;
         isSpeaking = false;
@@ -2600,8 +2589,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 locateTalgatVoice();
             } else {
                 talgatVoice = null;
-                simulateSpeechFallback = true;
-                Log.w(TAG, "initTextToSpeech: TTS engine unavailable, enabling simulated speech fallback");
+                Log.w(TAG, "initTextToSpeech: TTS engine unavailable");
             }
             updateInstallButtonVisibility();
             updateSpeechButtons();
@@ -2612,33 +2600,19 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         talgatVoice = null;
         if (textToSpeech == null) return;
         Set<Voice> voices = textToSpeech.getVoices();
-        if (voices != null) {
-            for (Voice voice : voices) {
-                if (voice == null || voice.getName() == null) continue;
-                String name = voice.getName().toLowerCase(Locale.US);
-                if (name.contains(TALGAT_NAME_KEYWORD)) {
-                    talgatVoice = voice;
-                    break;
-                }
-            }
-        }
-        if (talgatVoice == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Voice defaultVoice = textToSpeech.getDefaultVoice();
-            if (defaultVoice != null) {
-                talgatVoice = defaultVoice;
-                Log.w(TAG, "locateTalgatVoice: default voice fallback -> " + defaultVoice.getName());
-            }
-        }
-        if (talgatVoice == null && voices != null) {
-            for (Voice voice : voices) {
-                if (voice == null) continue;
+        if (voices == null) return;
+        for (Voice voice : voices) {
+            if (voice == null || voice.getName() == null) continue;
+            String name = voice.getName().toLowerCase(Locale.US);
+            if (name.contains(TALGAT_NAME_KEYWORD)) {
                 talgatVoice = voice;
-                Log.w(TAG, "locateTalgatVoice: generic voice fallback -> " + voice.getName());
                 break;
             }
         }
         if (talgatVoice != null) {
             textToSpeech.setVoice(talgatVoice);
+        } else {
+            Log.w(TAG, "locateTalgatVoice: Talgat voice not found");
         }
     }
 
@@ -3605,7 +3579,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updateSpeechButtons() {
-        boolean voiceAvailable = (ttsReady && talgatVoice != null) || simulateSpeechFallback;
+        boolean voiceAvailable = ttsReady && talgatVoice != null;
         boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
         if (toggleSpeechMenuItem != null) {
             int iconRes;
@@ -3630,6 +3604,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 toggleIcon = toggleIcon.mutate();
                 toggleIcon.setAlpha(toggleEnabled ? 255 : 100);
                 toggleSpeechMenuItem.setIcon(toggleIcon);
+                Log.d(TAG,
+                        "updateSpeechButtons: applied toggle icon with alpha="
+                                + (toggleEnabled ? 255 : 100));
+            } else {
+                Log.w(TAG, "updateSpeechButtons: toggle icon drawable missing for resource=" + iconRes);
             }
             toggleSpeechMenuItem.setTitle(getString(descriptionRes));
             try {
@@ -3641,8 +3620,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                                 + ", enabled=" + toggleEnabled
                                 + ", sessionActive=" + sessionActive
                                 + ", isSpeaking=" + isSpeaking
-                                + ", voiceAvailable=" + voiceAvailable
-                                + ", simulateFallback=" + simulateSpeechFallback);
+                                + ", voiceAvailable=" + voiceAvailable);
             } catch (Resources.NotFoundException e) {
                 Log.d(TAG,
                         "updateSpeechButtons: toggle resources missing for iconRes=" + iconRes
@@ -3659,13 +3637,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 stopIcon = stopIcon.mutate();
                 stopIcon.setAlpha(stopEnabled ? 255 : 100);
                 stopSpeechMenuItem.setIcon(stopIcon);
+                Log.d(TAG,
+                        "updateSpeechButtons: applied stop icon with alpha="
+                                + (stopEnabled ? 255 : 100));
+            } else {
+                Log.w(TAG, "updateSpeechButtons: stop icon drawable missing");
             }
             Log.d(TAG,
                     "updateSpeechButtons: stop icon=ic_stop"
                             + ", visible=" + stopVisible
                             + ", enabled=" + stopEnabled
-                            + ", sessionActive=" + sessionActive
-                            + ", simulateFallback=" + simulateSpeechFallback);
+                            + ", sessionActive=" + sessionActive);
         }
         if (skipBackMenuItem != null) {
             boolean skipVisible = sessionActive;
