@@ -214,6 +214,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int lastKnownOverlayHeight = -1;
     private int persistedPageControlsHeight;
     private int persistedReaderPageHeight;
+    private boolean readerPageHeightFinalized;
     private String activeLayoutWorkId = "";
     private ViewTreeObserver.OnPreDrawListener viewportReadyListener;
     private boolean flushingViewportActions;
@@ -1015,6 +1016,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void reloadReaderForCurrentSelection() {
         WorkInfo work = getCurrentWork();
         if (readerView == null || work == null) return;
+        readerPageHeightFinalized = false;
         String workId = work.id == null ? "" : work.id;
         if (!TextUtils.equals(activeLayoutWorkId, workId)) {
             activeLayoutWorkId = workId;
@@ -1041,6 +1043,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         lastOverlayClearance = -1;
         readerView.clearContent();
         runWhenReaderViewportReady(() -> readerView.loadFromDocumentAsset(work.asset, initialChar, () -> {
+            applyReaderPageMaxHeight("initialLoad");
             updateSentenceRanges();
             int speechChar = resolveSavedSpeechChar(work);
             int focusChar = resolveSavedFocusChar(work);
@@ -1183,6 +1186,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private boolean reconcileReaderPageHeightWithContent(String reason) {
+        if (readerPageHeightFinalized) {
+            return false;
+        }
         if (readerView == null) {
             return false;
         }
@@ -1231,6 +1237,36 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
         return true;
+    }
+
+    private void applyReaderPageMaxHeight(String reason) {
+        if (readerView == null) {
+            return;
+        }
+        int maxContentHeight = readerView.getMaxPageContentHeight();
+        if (maxContentHeight <= 0) {
+            int fallback = readerView.getContentHeight();
+            if (fallback > 0) {
+                maxContentHeight = fallback;
+            }
+        }
+        if (maxContentHeight <= 0) {
+            return;
+        }
+        int containerPadding = readerPageContainer == null
+                ? 0
+                : readerPageContainer.getPaddingTop() + readerPageContainer.getPaddingBottom();
+        int desiredHeight = Math.max(0, maxContentHeight + containerPadding);
+        if (desiredHeight <= 0) {
+            return;
+        }
+        boolean changed = overrideReaderPageHeight(desiredHeight, "max:" + reason);
+        readerPageHeightFinalized = true;
+        if (changed || persistedReaderPageHeight == desiredHeight) {
+            enforceReaderPageHeight("max:" + reason);
+        } else {
+            enforceReaderPageHeight("maxExisting:" + reason);
+        }
     }
 
     private void updatePageControls() {
@@ -1656,6 +1692,11 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void maybePersistReaderPageHeight(int candidateHeight, String reason) {
+        if (readerPageHeightFinalized) {
+            logViewEvent("ReaderPageContainer", readerPageContainer,
+                    "persistReaderHeight skipped finalized reason=" + reason);
+            return;
+        }
         int safeHeight = Math.max(0, candidateHeight);
         if (!readerHasRenderableContent) {
             logViewEvent("ReaderPageContainer", readerPageContainer,
