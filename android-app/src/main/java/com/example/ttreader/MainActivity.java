@@ -246,6 +246,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int listeningProgressColor;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
+    private final Handler speechStopHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
     private final Map<String, SpeechRequest> pendingRequests = new HashMap<>();
     private final Map<Integer, SpeechRequest> preparedSentenceRequests = new HashMap<>();
@@ -361,6 +362,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean rhVoiceInstalled = false;
     private boolean shouldContinueSpeech = false;
     private boolean speechSessionActive = false;
+    private boolean speechStoppingInProgress = false;
     private boolean isSpeaking = false;
     private int currentSentenceIndex = 0;
     private int currentSentenceStart = -1;
@@ -2331,6 +2333,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void toggleSpeech() {
+        if (speechStoppingInProgress) {
+            return;
+        }
         if (isSpeaking) {
             pauseSpeech();
         } else {
@@ -2399,55 +2404,77 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void stopSpeech() {
+        Runnable stopAction = this::requestSpeechStop;
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            runOnUiThread(this::stopSpeechInternal);
+            runOnUiThread(stopAction);
             return;
         }
-        stopSpeechInternal();
+        stopAction.run();
+    }
+
+    private void requestSpeechStop() {
+        if (!beginSpeechStop()) {
+            return;
+        }
+        speechStopHandler.post(this::stopSpeechInternal);
+    }
+
+    private boolean beginSpeechStop() {
+        if (speechStoppingInProgress) {
+            return false;
+        }
+        pauseSpeech();
+        awaitingResumeAfterDetail = false;
+        speechStoppingInProgress = true;
+        return true;
     }
 
     private void stopSpeechInternal() {
-        int resumeChar = resolveFocusCharIndex();
-        shouldContinueSpeech = false;
-        isSpeaking = false;
-        speechSessionActive = false;
-        awaitingResumeAfterDetail = false;
-        stopProgressUpdates();
-        exitPromptMode();
-        clearSkipBackBehavior();
-        clearPendingDevicePauseEvent();
-        if (textToSpeech != null) {
-            textToSpeech.stop();
+        try {
+            int resumeChar = resolveFocusCharIndex();
+            shouldContinueSpeech = false;
+            isSpeaking = false;
+            speechSessionActive = false;
+            awaitingResumeAfterDetail = false;
+            stopProgressUpdates();
+            exitPromptMode();
+            clearSkipBackBehavior();
+            clearPendingDevicePauseEvent();
+            if (textToSpeech != null) {
+                textToSpeech.stop();
+            }
+            stopDetailPlayback();
+            cancelPendingDetailRequest();
+            activeDetailRequest = null;
+            detailAutoResume = false;
+            releaseSentencePlayer();
+            if (currentSentenceRequest != null) {
+                currentSentenceRequest.deleteFile();
+                currentSentenceRequest = null;
+            }
+            clearPreparedAudio();
+            estimatedUtteranceDurationMs = 0L;
+            if (readerView != null) {
+                readerView.clearSpeechHighlights();
+            }
+            updateSentenceRanges();
+            if (resumeChar >= 0) {
+                currentCharIndex = resumeChar;
+                updatePendingSpeechChar(resumeChar);
+                adjustSentenceIndexForChar(resumeChar);
+            } else {
+                currentSentenceIndex = -1;
+                currentSentenceStart = -1;
+                currentSentenceEnd = -1;
+                currentCharIndex = -1;
+                updatePendingSpeechChar(-1);
+            }
+            markLastModeVisual();
+            updatePlaybackState(PlaybackState.STATE_STOPPED);
+        } finally {
+            speechStoppingInProgress = false;
+            updateSpeechButtons();
         }
-        stopDetailPlayback();
-        cancelPendingDetailRequest();
-        activeDetailRequest = null;
-        detailAutoResume = false;
-        releaseSentencePlayer();
-        if (currentSentenceRequest != null) {
-            currentSentenceRequest.deleteFile();
-            currentSentenceRequest = null;
-        }
-        clearPreparedAudio();
-        estimatedUtteranceDurationMs = 0L;
-        if (readerView != null) {
-            readerView.clearSpeechHighlights();
-        }
-        updateSentenceRanges();
-        if (resumeChar >= 0) {
-            currentCharIndex = resumeChar;
-            updatePendingSpeechChar(resumeChar);
-            adjustSentenceIndexForChar(resumeChar);
-        } else {
-            currentSentenceIndex = -1;
-            currentSentenceStart = -1;
-            currentSentenceEnd = -1;
-            currentCharIndex = -1;
-            updatePendingSpeechChar(-1);
-        }
-        markLastModeVisual();
-        updatePlaybackState(PlaybackState.STATE_STOPPED);
-        updateSpeechButtons();
     }
 
     private void speakCurrentSentence() {
@@ -3565,6 +3592,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private boolean isSpeechModeActive() {
+        if (speechStoppingInProgress) {
+            return false;
+        }
         return speechSessionActive
                 || shouldContinueSpeech
                 || isSpeaking
@@ -3576,7 +3606,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void updateSpeechButtons() {
         boolean voiceAvailable = ttsReady && talgatVoice != null;
-        boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
+        boolean sessionActive = (speechSessionActive || isSpeaking || shouldContinueSpeech)
+                && !speechStoppingInProgress;
+        Log.d(TAG, "updateSpeechButtons: voiceAvailable=" + voiceAvailable
+                + ", sessionActive=" + sessionActive
+                + ", speechStoppingInProgress=" + speechStoppingInProgress
+                + ", isSpeaking=" + isSpeaking
+                + ", shouldContinueSpeech=" + shouldContinueSpeech
+                + ", awaitingResumeAfterDetail=" + awaitingResumeAfterDetail
+                + ", detailPlaybackActive=" + detailPlaybackActive());
         if (toggleSpeechMenuItem != null) {
             int iconRes;
             int descriptionRes;
@@ -3594,6 +3632,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 descriptionRes = R.string.speech_toggle_content_resume;
                 toggleEnabled = true;
             }
+            if (speechStoppingInProgress) {
+                toggleEnabled = false;
+            }
+            String toggleIconName = getResources().getResourceEntryName(iconRes);
+            Log.d(TAG, "updateSpeechButtons: toggle icon=" + toggleIconName
+                    + ", enabled=" + toggleEnabled
+                    + ", descriptionRes=" + getResources().getResourceEntryName(descriptionRes));
             toggleSpeechMenuItem.setEnabled(toggleEnabled);
             Drawable toggleIcon = getDrawable(iconRes);
             if (toggleIcon != null) {
@@ -3608,6 +3653,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             stopSpeechMenuItem.setVisible(stopVisible);
             boolean stopEnabled = sessionActive;
             stopSpeechMenuItem.setEnabled(stopEnabled);
+            Log.d(TAG, "updateSpeechButtons: stop icon visible=" + stopVisible
+                    + ", enabled=" + stopEnabled);
             Drawable stopIcon = getDrawable(R.drawable.ic_stop);
             if (stopIcon != null) {
                 stopIcon = stopIcon.mutate();
