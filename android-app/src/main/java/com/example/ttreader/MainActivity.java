@@ -246,6 +246,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private int listeningProgressColor;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
+    private final Handler speechStopHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
     private final Map<String, SpeechRequest> pendingRequests = new HashMap<>();
     private final Map<Integer, SpeechRequest> preparedSentenceRequests = new HashMap<>();
@@ -2400,10 +2401,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void stopSpeech() {
-        Runnable stopAction = () -> {
-            beginSpeechStop();
-            stopSpeechInternal();
-        };
+        Runnable stopAction = this::requestSpeechStop;
         if (Looper.myLooper() != Looper.getMainLooper()) {
             runOnUiThread(stopAction);
             return;
@@ -2411,9 +2409,16 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         stopAction.run();
     }
 
-    private void beginSpeechStop() {
-        if (speechStoppingInProgress) {
+    private void requestSpeechStop() {
+        if (!beginSpeechStop()) {
             return;
+        }
+        speechStopHandler.post(this::stopSpeechInternal);
+    }
+
+    private boolean beginSpeechStop() {
+        if (speechStoppingInProgress) {
+            return false;
         }
         speechStoppingInProgress = true;
         shouldContinueSpeech = false;
@@ -2422,6 +2427,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         awaitingResumeAfterDetail = false;
         stopProgressUpdates();
         updateSpeechButtons();
+        return true;
     }
 
     private void stopSpeechInternal() {
