@@ -574,6 +574,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         skipBackMenuItem = menu.findItem(R.id.action_skip_back);
         skipForwardMenuItem = menu.findItem(R.id.action_skip_forward);
         installTalgatMenuItem = menu.findItem(R.id.action_install_talgat);
+        Log.d(TAG,
+                "onCreateOptionsMenu: obtained speech menu items toggle="
+                        + (toggleSpeechMenuItem != null)
+                        + ", stop=" + (stopSpeechMenuItem != null));
         setupLanguagePairActionView();
         setupWorkMenuItem();
         updateLanguagePairDisplay();
@@ -3581,6 +3585,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void updateSpeechButtons() {
         boolean voiceAvailable = ttsReady && talgatVoice != null;
         boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
+        Log.d(TAG,
+                "updateSpeechButtons: start voiceAvailable=" + voiceAvailable
+                        + ", sessionActive=" + sessionActive
+                        + ", isSpeaking=" + isSpeaking
+                        + ", toggleMenuItemPresent=" + (toggleSpeechMenuItem != null)
+                        + ", stopMenuItemPresent=" + (stopSpeechMenuItem != null));
         if (toggleSpeechMenuItem != null) {
             int iconRes;
             int descriptionRes;
@@ -3626,6 +3636,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                         "updateSpeechButtons: toggle resources missing for iconRes=" + iconRes
                                 + ", descriptionRes=" + descriptionRes, e);
             }
+        } else {
+            Log.d(TAG, "updateSpeechButtons: toggle menu item is null, skipping icon update");
         }
         if (stopSpeechMenuItem != null) {
             boolean stopVisible = sessionActive;
@@ -3648,6 +3660,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                             + ", visible=" + stopVisible
                             + ", enabled=" + stopEnabled
                             + ", sessionActive=" + sessionActive);
+        } else {
+            Log.d(TAG, "updateSpeechButtons: stop menu item is null, skipping icon update");
         }
         if (skipBackMenuItem != null) {
             boolean skipVisible = sessionActive;
