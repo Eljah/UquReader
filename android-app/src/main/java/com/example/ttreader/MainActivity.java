@@ -361,6 +361,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private boolean rhVoiceInstalled = false;
     private boolean shouldContinueSpeech = false;
     private boolean speechSessionActive = false;
+    private boolean speechStoppingInProgress = false;
     private boolean isSpeaking = false;
     private int currentSentenceIndex = 0;
     private int currentSentenceStart = -1;
@@ -2399,55 +2400,76 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void stopSpeech() {
+        Runnable stopAction = () -> {
+            beginSpeechStop();
+            stopSpeechInternal();
+        };
         if (Looper.myLooper() != Looper.getMainLooper()) {
-            runOnUiThread(this::stopSpeechInternal);
+            runOnUiThread(stopAction);
             return;
         }
-        stopSpeechInternal();
+        stopAction.run();
     }
 
-    private void stopSpeechInternal() {
-        int resumeChar = resolveFocusCharIndex();
+    private void beginSpeechStop() {
+        if (speechStoppingInProgress) {
+            return;
+        }
+        speechStoppingInProgress = true;
         shouldContinueSpeech = false;
         isSpeaking = false;
         speechSessionActive = false;
         awaitingResumeAfterDetail = false;
         stopProgressUpdates();
-        exitPromptMode();
-        clearSkipBackBehavior();
-        clearPendingDevicePauseEvent();
-        if (textToSpeech != null) {
-            textToSpeech.stop();
-        }
-        stopDetailPlayback();
-        cancelPendingDetailRequest();
-        activeDetailRequest = null;
-        detailAutoResume = false;
-        releaseSentencePlayer();
-        if (currentSentenceRequest != null) {
-            currentSentenceRequest.deleteFile();
-            currentSentenceRequest = null;
-        }
-        clearPreparedAudio();
-        estimatedUtteranceDurationMs = 0L;
-        if (readerView != null) {
-            readerView.clearSpeechHighlights();
-        }
-        updateSentenceRanges();
-        if (resumeChar >= 0) {
-            currentCharIndex = resumeChar;
-            updatePendingSpeechChar(resumeChar);
-            adjustSentenceIndexForChar(resumeChar);
-        } else {
-            currentSentenceIndex = -1;
-            currentSentenceStart = -1;
-            currentSentenceEnd = -1;
-            currentCharIndex = -1;
-            updatePendingSpeechChar(-1);
-        }
-        markLastModeVisual();
-        updatePlaybackState(PlaybackState.STATE_STOPPED);
         updateSpeechButtons();
+    }
+
+    private void stopSpeechInternal() {
+        try {
+            int resumeChar = resolveFocusCharIndex();
+            shouldContinueSpeech = false;
+            isSpeaking = false;
+            speechSessionActive = false;
+            awaitingResumeAfterDetail = false;
+            stopProgressUpdates();
+            exitPromptMode();
+            clearSkipBackBehavior();
+            clearPendingDevicePauseEvent();
+            if (textToSpeech != null) {
+                textToSpeech.stop();
+            }
+            stopDetailPlayback();
+            cancelPendingDetailRequest();
+            activeDetailRequest = null;
+            detailAutoResume = false;
+            releaseSentencePlayer();
+            if (currentSentenceRequest != null) {
+                currentSentenceRequest.deleteFile();
+                currentSentenceRequest = null;
+            }
+            clearPreparedAudio();
+            estimatedUtteranceDurationMs = 0L;
+            if (readerView != null) {
+                readerView.clearSpeechHighlights();
+            }
+            updateSentenceRanges();
+            if (resumeChar >= 0) {
+                currentCharIndex = resumeChar;
+                updatePendingSpeechChar(resumeChar);
+                adjustSentenceIndexForChar(resumeChar);
+            } else {
+                currentSentenceIndex = -1;
+                currentSentenceStart = -1;
+                currentSentenceEnd = -1;
+                currentCharIndex = -1;
+                updatePendingSpeechChar(-1);
+            }
+            markLastModeVisual();
+            updatePlaybackState(PlaybackState.STATE_STOPPED);
+        } finally {
+            speechStoppingInProgress = false;
+            updateSpeechButtons();
+        }
     }
 
     private void speakCurrentSentence() {
@@ -3565,6 +3587,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private boolean isSpeechModeActive() {
+        if (speechStoppingInProgress) {
+            return false;
+        }
         return speechSessionActive
                 || shouldContinueSpeech
                 || isSpeaking
@@ -3576,7 +3601,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     private void updateSpeechButtons() {
         boolean voiceAvailable = ttsReady && talgatVoice != null;
-        boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
+        boolean sessionActive = (speechSessionActive || isSpeaking || shouldContinueSpeech)
+                && !speechStoppingInProgress;
         if (toggleSpeechMenuItem != null) {
             int iconRes;
             int descriptionRes;
@@ -3593,6 +3619,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 iconRes = R.drawable.ic_play;
                 descriptionRes = R.string.speech_toggle_content_resume;
                 toggleEnabled = true;
+            }
+            if (speechStoppingInProgress) {
+                toggleEnabled = false;
             }
             toggleSpeechMenuItem.setEnabled(toggleEnabled);
             Drawable toggleIcon = getDrawable(iconRes);
