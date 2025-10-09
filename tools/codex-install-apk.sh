@@ -5,6 +5,11 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 MVNW_BIN="${MVNW_BIN:-$PROJECT_ROOT/mvnw}"
 ANDROID_MODULE="${CODEX_INSTALL_ANDROID_MODULE:-android-app}"
 APK_DIR="$PROJECT_ROOT/$ANDROID_MODULE/target"
+RHVOICE_PACKAGE_NAME="com.github.olga_yakovleva.rhvoice.android"
+INSTALL_RHVOICE="${CODEX_INSTALL_RHVOICE:-1}"
+RHVOICE_ASSET_NAME="${CODEX_RHVOICE_ASSET_NAME:-RHVoice-release.apk}"
+RHVOICE_CACHE_DIR="${CODEX_RHVOICE_CACHE_DIR:-$PROJECT_ROOT/.codex/cache}"
+RHVOICE_APK_PATH_OVERRIDE="${CODEX_RHVOICE_APK_PATH:-}"
 DEFAULT_LAUNCH_AVD=""
 LAUNCHED_EMULATOR=0
 LAUNCHED_EMULATOR_LOG=""
@@ -59,6 +64,32 @@ apk_to_install="$(ls -t "${apks[@]}" | head -n1)"
 
 echo "[codex-install] Selected APK: $apk_to_install"
 
+RHVOICE_APK_PATH=""
+if [[ "$INSTALL_RHVOICE" == "1" ]]; then
+  if [[ -n "$RHVOICE_APK_PATH_OVERRIDE" ]]; then
+    RHVOICE_APK_PATH="$RHVOICE_APK_PATH_OVERRIDE"
+  else
+    RHVOICE_APK_PATH="$RHVOICE_CACHE_DIR/$RHVOICE_ASSET_NAME"
+  fi
+  mkdir -p "$(dirname "$RHVOICE_APK_PATH")"
+  downloader_script="$PROJECT_ROOT/tools/download-rhvoice.sh"
+  if [[ ! -x "$downloader_script" ]]; then
+    echo "[codex-install] RHVoice download helper not found at $downloader_script" >&2
+    exit 1
+  fi
+  if [[ -f "$RHVOICE_APK_PATH" && "${CODEX_RHVOICE_FORCE_DOWNLOAD:-0}" != "1" ]]; then
+    echo "[codex-install] Reusing cached RHVoice APK at $RHVOICE_APK_PATH" >&2
+  else
+    echo "[codex-install] Fetching RHVoice engine APK for installation" >&2
+    if ! "$downloader_script" "$RHVOICE_APK_PATH"; then
+      echo "[codex-install] Failed to download RHVoice APK to $RHVOICE_APK_PATH" >&2
+      exit 1
+    fi
+  fi
+else
+  echo "[codex-install] Skipping RHVoice download and installation (CODEX_INSTALL_RHVOICE=$INSTALL_RHVOICE)" >&2
+fi
+
 ADB_BIN="adb"
 if ! command -v "$ADB_BIN" >/dev/null 2>&1; then
   # Fall back to the Codex SDK installation if it exists but PATH was not updated.
@@ -99,6 +130,36 @@ collect_devices() {
         ;;
     esac
   done
+}
+
+ensure_rhvoice_on_device() {
+  local serial="$1"
+  local apk_path="$2"
+  local package_name="$3"
+
+  if [[ -z "$apk_path" ]]; then
+    echo "[codex-install] RHVoice APK path is empty; cannot install $package_name" >&2
+    return 1
+  fi
+
+  if "$ADB_BIN" -s "$serial" shell pm path "$package_name" >/dev/null 2>&1; then
+    echo "[codex-install] RHVoice package $package_name already present on $serial; skipping install" >&2
+    return 0
+  fi
+
+  if [[ ! -f "$apk_path" ]]; then
+    echo "[codex-install] RHVoice APK not found at $apk_path" >&2
+    return 1
+  fi
+
+  echo "[codex-install] Installing RHVoice package $package_name from $apk_path" >&2
+  if "$ADB_BIN" -s "$serial" install -r "$apk_path"; then
+    echo "[codex-install] RHVoice installation completed" >&2
+    return 0
+  fi
+
+  echo "[codex-install] Failed to install RHVoice package $package_name" >&2
+  return 1
 }
 
 find_cmdline_tool() {
@@ -386,6 +447,13 @@ while true; do
   echo "[codex-install] Waiting for Android package manager to be ready..."
   sleep 3
 done
+
+if [[ "$INSTALL_RHVOICE" == "1" ]]; then
+  if ! ensure_rhvoice_on_device "$target_serial" "$RHVOICE_APK_PATH" "$RHVOICE_PACKAGE_NAME"; then
+    echo "[codex-install] Unable to prepare RHVoice on $target_serial" >&2
+    exit 1
+  fi
+fi
 
 temp_remote_apk="/data/local/tmp/$(basename "$apk_to_install")"
 ADB_INSTALL_TIMEOUT_SECONDS="${CODEX_INSTALL_TIMEOUT_SECONDS:-120}"
