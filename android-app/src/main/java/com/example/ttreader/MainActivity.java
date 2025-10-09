@@ -2333,6 +2333,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void toggleSpeech() {
+        if (speechStoppingInProgress) {
+            return;
+        }
         if (isSpeaking) {
             pauseSpeech();
         } else {
@@ -2420,13 +2423,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (speechStoppingInProgress) {
             return false;
         }
-        speechStoppingInProgress = true;
-        shouldContinueSpeech = false;
-        isSpeaking = false;
-        speechSessionActive = false;
+        pauseSpeech();
         awaitingResumeAfterDetail = false;
-        stopProgressUpdates();
-        updateSpeechButtons();
+        speechStoppingInProgress = true;
         return true;
     }
 
