@@ -8,6 +8,12 @@ APK_DIR="$PROJECT_ROOT/$ANDROID_MODULE/target"
 DEFAULT_LAUNCH_AVD=""
 LAUNCHED_EMULATOR=0
 LAUNCHED_EMULATOR_LOG=""
+RHVOICE_ENGINE_PACKAGE="com.github.olga_yakovleva.rhvoice.android"
+RHVOICE_ENGINE_URL="${CODEX_RHVOICE_ENGINE_URL:-https://f-droid.org/repo/com.github.olga_yakovleva.rhvoice.android_116050.apk}"
+RHVOICE_LANGUAGE_URL="${CODEX_RHVOICE_LANGUAGE_URL:-https://github.com/RHVoice/Tatar/releases/download/1.11/RHVoice-language-Tatar-v1.11.zip}"
+RHVOICE_VOICE_URL="${CODEX_RHVOICE_VOICE_URL:-https://rhvoice.org/download/Talgat/RHVoice-voice-Tatar-Talgat-v4.0.zip}"
+RHVOICE_LANGUAGE_VERSION_CODE=1110
+RHVOICE_VOICE_VERSION_CODE=4000
 
 if [[ -d "$PROJECT_ROOT/.codex/android-sdk" ]]; then
   export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$PROJECT_ROOT/.codex/android-sdk}"
@@ -151,6 +157,162 @@ find_emulator_binary() {
   fi
 
   return 1
+}
+
+download_resource() {
+  local url="$1"
+  local dest="$2"
+  local label="$3"
+
+  if [[ -f "$dest" ]]; then
+    return 0
+  fi
+
+  local dest_dir
+  dest_dir="$(dirname "$dest")"
+  mkdir -p "$dest_dir"
+
+  echo "[codex-install] Downloading $label from $url" >&2
+  if ! curl -L --fail --retry 3 --retry-connrefused --output "$dest.tmp" "$url"; then
+    echo "[codex-install] Failed to download $label" >&2
+    rm -f "$dest.tmp"
+    return 1
+  fi
+
+  mv "$dest.tmp" "$dest"
+  return 0
+}
+
+ensure_rhvoice_engine_installed() {
+  local serial="$1"
+  if "$ADB_BIN" -s "$serial" shell pm path "$RHVOICE_ENGINE_PACKAGE" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local cache_dir="$PROJECT_ROOT/.codex/cache"
+  local engine_apk_path="$cache_dir/$(basename "$RHVOICE_ENGINE_URL")"
+
+  if ! download_resource "$RHVOICE_ENGINE_URL" "$engine_apk_path" "RHVoice engine"; then
+    return 1
+  fi
+
+  echo "[codex-install] Installing RHVoice engine on $serial" >&2
+  if ! "$ADB_BIN" -s "$serial" install -r "$engine_apk_path" >/dev/null; then
+    echo "[codex-install] Failed to install RHVoice engine" >&2
+    return 1
+  fi
+  return 0
+}
+
+
+prepare_rhvoice_assets() {
+  local serial="$1"
+  local cache_dir="$PROJECT_ROOT/.codex/cache"
+  local language_zip="$cache_dir/$(basename "$RHVOICE_LANGUAGE_URL")"
+  local voice_zip="$cache_dir/$(basename "$RHVOICE_VOICE_URL")"
+  local base_pkg_dir="/data/data/$RHVOICE_ENGINE_PACKAGE"
+  local app_data_dir="$base_pkg_dir/app_data"
+  local shared_prefs_dir="$base_pkg_dir/shared_prefs"
+  local language_dir="$app_data_dir/${RHVOICE_ENGINE_PACKAGE}.language.tatar.${RHVOICE_LANGUAGE_VERSION_CODE}"
+  local voice_dir="$app_data_dir/${RHVOICE_ENGINE_PACKAGE}.voice.talgat.${RHVOICE_VOICE_VERSION_CODE}"
+  local prefs_file="$shared_prefs_dir/${RHVOICE_ENGINE_PACKAGE}_preferences.xml"
+  local tmp_language="/data/local/tmp/rhvoice-language.zip"
+  local tmp_voice="/data/local/tmp/rhvoice-voice.zip"
+  local tmp_prefs="/data/local/tmp/rhvoice-prefs.xml"
+
+  if ! download_resource "$RHVOICE_LANGUAGE_URL" "$language_zip" "RHVoice Tatar language pack"; then
+    return 1
+  fi
+  if ! download_resource "$RHVOICE_VOICE_URL" "$voice_zip" "RHVoice Talgat voice"; then
+    return 1
+  fi
+
+  echo "[codex-install] Preparing RHVoice data on $serial" >&2
+
+  if ! "$ADB_BIN" -s "$serial" root >/dev/null 2>&1; then
+    echo "[codex-install] adb root failed; cannot provision RHVoice data" >&2
+    return 1
+  fi
+  "$ADB_BIN" -s "$serial" wait-for-device >/dev/null 2>&1
+
+  local owner
+  owner="$("$ADB_BIN" -s "$serial" shell "ls -nd $base_pkg_dir" 2>/dev/null | tr -d $'\r' | awk '{print $3":"$4}')"
+  if [[ -z "$owner" ]]; then
+    echo "[codex-install] Unable to determine RHVoice package owner" >&2
+    return 1
+  fi
+
+  if ! "$ADB_BIN" -s "$serial" push "$language_zip" "$tmp_language" >/dev/null; then
+    echo "[codex-install] Failed to push language pack" >&2
+    return 1
+  fi
+  if ! "$ADB_BIN" -s "$serial" push "$voice_zip" "$tmp_voice" >/dev/null; then
+    echo "[codex-install] Failed to push voice pack" >&2
+    return 1
+  fi
+
+  "$ADB_BIN" -s "$serial" shell "rm -rf '$language_dir' '$voice_dir'" >/dev/null 2>&1 || true
+  if ! "$ADB_BIN" -s "$serial" shell "mkdir -p '$language_dir' '$voice_dir'" >/dev/null; then
+    echo "[codex-install] Failed to create RHVoice data directories" >&2
+    return 1
+  fi
+
+  if ! "$ADB_BIN" -s "$serial" shell "unzip -oq '$tmp_language' -d '$language_dir'" >/dev/null; then
+    echo "[codex-install] Failed to unpack language pack" >&2
+    return 1
+  fi
+  if ! "$ADB_BIN" -s "$serial" shell "unzip -oq '$tmp_voice' -d '$voice_dir'" >/dev/null; then
+    echo "[codex-install] Failed to unpack voice pack" >&2
+    return 1
+  fi
+
+  "$ADB_BIN" -s "$serial" shell "find '$language_dir' '$voice_dir' -type d -exec chmod 750 {} +" >/dev/null
+  "$ADB_BIN" -s "$serial" shell "find '$language_dir' '$voice_dir' -type f -exec chmod 640 {} +" >/dev/null
+  "$ADB_BIN" -s "$serial" shell "chown -R $owner '$language_dir' '$voice_dir'" >/dev/null
+
+  mkdir -p "$cache_dir"
+  local prefs_template="$cache_dir/rhvoice-preferences.xml"
+  cat >"$prefs_template" <<'EOF'
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <boolean name="voice.talgat.enabled" value="true" />
+</map>
+EOF
+
+  if ! "$ADB_BIN" -s "$serial" push "$prefs_template" "$tmp_prefs" >/dev/null; then
+    echo "[codex-install] Failed to push RHVoice preferences" >&2
+    return 1
+  fi
+  "$ADB_BIN" -s "$serial" shell "mkdir -p '$shared_prefs_dir'" >/dev/null
+  "$ADB_BIN" -s "$serial" shell "cp '$tmp_prefs' '$prefs_file'" >/dev/null
+  "$ADB_BIN" -s "$serial" shell "chown $owner '$shared_prefs_dir'" >/dev/null 2>&1 || true
+  "$ADB_BIN" -s "$serial" shell "chown $owner '$prefs_file'" >/dev/null
+  "$ADB_BIN" -s "$serial" shell "chmod 770 '$shared_prefs_dir'" >/dev/null
+  "$ADB_BIN" -s "$serial" shell "chmod 660 '$prefs_file'" >/dev/null
+
+  "$ADB_BIN" -s "$serial" shell "restorecon -R '$language_dir' '$voice_dir' '$shared_prefs_dir'" >/dev/null 2>&1 || true
+  "$ADB_BIN" -s "$serial" shell "rm -f '$tmp_language' '$tmp_voice' '$tmp_prefs'" >/dev/null 2>&1 || true
+
+  "$ADB_BIN" -s "$serial" unroot >/dev/null 2>&1 || true
+
+  "$ADB_BIN" -s "$serial" shell "am broadcast -a android.speech.tts.engine.TTS_DATA_INSTALLED" >/dev/null 2>&1 || true
+  echo "[codex-install] RHVoice language and voice installed" >&2
+  return 0
+}
+
+ensure_rhvoice_ready() {
+  local serial="$1"
+  if [[ "${CODEX_SKIP_RHVOICE:-0}" == "1" ]]; then
+    echo "[codex-install] Skipping RHVoice provisioning (CODEX_SKIP_RHVOICE=1)" >&2
+    return 0
+  fi
+  if ! ensure_rhvoice_engine_installed "$serial"; then
+    return 1
+  fi
+  if ! prepare_rhvoice_assets "$serial"; then
+    return 1
+  fi
+  return 0
 }
 
 create_default_avd() {
@@ -386,6 +548,11 @@ while true; do
   echo "[codex-install] Waiting for Android package manager to be ready..."
   sleep 3
 done
+
+if ! ensure_rhvoice_ready "$target_serial"; then
+  echo "[codex-install] Failed to provision RHVoice engine/data on $target_serial" >&2
+  exit 1
+fi
 
 temp_remote_apk="/data/local/tmp/$(basename "$apk_to_install")"
 ADB_INSTALL_TIMEOUT_SECONDS="${CODEX_INSTALL_TIMEOUT_SECONDS:-120}"
