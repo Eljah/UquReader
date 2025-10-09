@@ -503,6 +503,24 @@ wait_for_online_device() {
   return 1
 }
 
+wait_for_package_service() {
+  local serial="$1"
+  local timeout="${2:-180}"
+  local deadline=$((SECONDS + timeout))
+
+  while [[ $SECONDS -lt $deadline ]]; do
+    if "$ADB_BIN" -s "$serial" shell cmd package list packages >/dev/null 2>&1; then
+      return 0
+    fi
+    if "$ADB_BIN" -s "$serial" shell pm list packages >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 3
+  done
+
+  return 1
+}
+
 collect_devices
 
 if [[ ${#online_devices[@]} -eq 0 ]]; then
@@ -564,6 +582,12 @@ while true; do
   echo "[codex-install] Waiting for Android package manager to be ready..."
   sleep 3
 done
+
+echo "[codex-install] Verifying package manager service availability before installations..."
+if ! wait_for_package_service "$target_serial" 240; then
+  echo "[codex-install] Package manager service did not respond within 4 minutes." >&2
+  exit 1
+fi
 
 if [[ "$INSTALL_RHVOICE" == "1" ]]; then
   if ! ensure_rhvoice_on_device "$target_serial" "$RHVOICE_APK_PATH" "$RHVOICE_PACKAGE_NAME"; then
