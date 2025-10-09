@@ -162,6 +162,123 @@ ensure_rhvoice_on_device() {
   return 1
 }
 
+find_ui_element_center() {
+  local serial="$1"
+  local attribute="$2"
+  local expected_value="$3"
+  local timeout_seconds="${4:-30}"
+  python3 - "$serial" "$attribute" "$expected_value" "$timeout_seconds" <<'PY'
+import os
+import re
+import sys
+import time
+import xml.etree.ElementTree as ET
+import subprocess
+
+adb = os.environ.get("ADB_BIN", "adb")
+serial, attribute, expected_value, timeout_s = sys.argv[1:5]
+timeout = float(timeout_s)
+deadline = time.time() + timeout
+dump_path = "/sdcard/rhvoice-ui-dump.xml"
+
+def try_dump():
+    dump = subprocess.run(
+        [adb, "-s", serial, "shell", "uiautomator", "dump", "--compressed", dump_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if dump.returncode != 0:
+        return None
+    cat = subprocess.run(
+        [adb, "-s", serial, "exec-out", "cat", dump_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if cat.returncode != 0:
+        return None
+    xml = cat.stdout.strip()
+    if not xml.startswith("<?xml"):
+        return None
+    return xml
+
+def parse_bounds(bounds):
+    if not bounds:
+        return None
+    parts = re.findall(r"\d+", bounds)
+    if len(parts) != 4:
+        return None
+    left, top, right, bottom = map(int, parts)
+    return (left + right) // 2, (top + bottom) // 2
+
+while time.time() < deadline:
+    xml = try_dump()
+    if not xml:
+        time.sleep(1)
+        continue
+    try:
+        tree = ET.fromstring(xml)
+    except ET.ParseError:
+        time.sleep(1)
+        continue
+    for node in tree.iter():
+        value = node.attrib.get(attribute)
+        if value == expected_value:
+            coords = parse_bounds(node.attrib.get("bounds", ""))
+            if coords:
+                print(f"{coords[0]} {coords[1]}")
+                sys.exit(0)
+    time.sleep(1)
+
+sys.exit(1)
+PY
+}
+
+install_talgat_voice() {
+  local serial="$1"
+  local launch_intent="$RHVOICE_PACKAGE_NAME/.MainActivity"
+  echo "[codex-install] Ensuring RHVoice Talgat voice is installed on $serial" >&2
+  "$ADB_BIN" -s "$serial" shell am force-stop "$RHVOICE_PACKAGE_NAME" >/dev/null 2>&1 || true
+  if ! "$ADB_BIN" -s "$serial" shell am start -a android.intent.action.MAIN -n "$launch_intent" >/dev/null 2>&1; then
+    echo "[codex-install] Failed to launch RHVoice UI on $serial" >&2
+    return 1
+  fi
+
+  local coords
+  if ! coords="$(find_ui_element_center "$serial" text "Tatar" 60)"; then
+    echo "[codex-install] Unable to locate the Tatar language entry in RHVoice UI" >&2
+    return 1
+  fi
+  "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+
+  if ! find_ui_element_center "$serial" text "Talgat" 60 >/dev/null 2>&1; then
+    echo "[codex-install] Unable to locate the Talgat voice entry in RHVoice UI" >&2
+    return 1
+  fi
+
+  if find_ui_element_center "$serial" "content-desc" "Uninstall" 5 >/dev/null 2>&1; then
+    echo "[codex-install] Talgat voice already installed; skipping download" >&2
+  else
+    if ! coords="$(find_ui_element_center "$serial" "content-desc" "Install" 30)"; then
+      echo "[codex-install] Unable to locate the Install button for Talgat voice" >&2
+      return 1
+    fi
+    echo "[codex-install] Triggering Talgat voice download" >&2
+    "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+    if ! find_ui_element_center "$serial" "content-desc" "Uninstall" 240 >/dev/null 2>&1; then
+      echo "[codex-install] Talgat voice installation did not complete within expected time" >&2
+      return 1
+    fi
+    echo "[codex-install] Talgat voice download and installation finished" >&2
+  fi
+
+  "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
+  "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
+  "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
+  return 0
+}
+
 find_cmdline_tool() {
   local tool_name="$1"
   local candidate
@@ -451,6 +568,10 @@ done
 if [[ "$INSTALL_RHVOICE" == "1" ]]; then
   if ! ensure_rhvoice_on_device "$target_serial" "$RHVOICE_APK_PATH" "$RHVOICE_PACKAGE_NAME"; then
     echo "[codex-install] Unable to prepare RHVoice on $target_serial" >&2
+    exit 1
+  fi
+  if ! install_talgat_voice "$target_serial"; then
+    echo "[codex-install] Failed to automate Talgat voice installation on $target_serial" >&2
     exit 1
   fi
 fi
