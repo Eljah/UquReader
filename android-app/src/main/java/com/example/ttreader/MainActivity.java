@@ -60,6 +60,7 @@ import com.example.ttreader.reader.TokenSpan;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
 import com.example.ttreader.util.DetailSpeechFormatter;
 import com.example.ttreader.util.GrammarResources;
+import com.example.ttreader.util.LoggingDrawableWrapper;
 import com.example.ttreader.tts.RhvoiceAvailability;
 
 import java.io.File;
@@ -3572,6 +3573,19 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         mediaSession.setPlaybackState(builder.build());
     }
 
+    private String safeResourceName(int resId, String fallbackPrefix) {
+        if (fallbackPrefix == null) {
+            fallbackPrefix = "res";
+        }
+        try {
+            return getResources().getResourceEntryName(resId);
+        } catch (Resources.NotFoundException e) {
+            String fallback = fallbackPrefix + "_" + resId;
+            Log.d(TAG, "safeResourceName: missing entry for id=" + resId + ", fallback=" + fallback, e);
+            return fallback;
+        }
+    }
+
     private boolean isSpeechModeActive() {
         return speechSessionActive
                 || shouldContinueSpeech
@@ -3613,10 +3627,18 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (toggleIcon != null) {
                 toggleIcon = toggleIcon.mutate();
                 toggleIcon.setAlpha(toggleEnabled ? 255 : 100);
-                toggleSpeechMenuItem.setIcon(toggleIcon);
+                String toggleIconName = safeResourceName(iconRes, "toggle_icon");
+                Drawable loggingToggleIcon = LoggingDrawableWrapper.wrap(toggleIcon,
+                        "speech_toggle:" + toggleIconName);
+                if (loggingToggleIcon != null) {
+                    toggleSpeechMenuItem.setIcon(loggingToggleIcon);
+                } else {
+                    toggleSpeechMenuItem.setIcon(toggleIcon);
+                }
                 Log.d(TAG,
                         "updateSpeechButtons: applied toggle icon with alpha="
-                                + (toggleEnabled ? 255 : 100));
+                                + (toggleEnabled ? 255 : 100)
+                                + ", loggingWrapperName=" + toggleIconName);
             } else {
                 Log.w(TAG, "updateSpeechButtons: toggle icon drawable missing for resource=" + iconRes);
             }
@@ -3648,10 +3670,18 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (stopIcon != null) {
                 stopIcon = stopIcon.mutate();
                 stopIcon.setAlpha(stopEnabled ? 255 : 100);
-                stopSpeechMenuItem.setIcon(stopIcon);
+                String stopIconName = safeResourceName(R.drawable.ic_stop, "stop_icon");
+                Drawable loggingStopIcon = LoggingDrawableWrapper.wrap(stopIcon,
+                        "speech_stop:" + stopIconName);
+                if (loggingStopIcon != null) {
+                    stopSpeechMenuItem.setIcon(loggingStopIcon);
+                } else {
+                    stopSpeechMenuItem.setIcon(stopIcon);
+                }
                 Log.d(TAG,
                         "updateSpeechButtons: applied stop icon with alpha="
-                                + (stopEnabled ? 255 : 100));
+                                + (stopEnabled ? 255 : 100)
+                                + ", loggingWrapperName=" + stopIconName);
             } else {
                 Log.w(TAG, "updateSpeechButtons: stop icon drawable missing");
             }
