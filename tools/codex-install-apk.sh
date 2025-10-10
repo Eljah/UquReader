@@ -10,6 +10,14 @@ INSTALL_RHVOICE="${CODEX_INSTALL_RHVOICE:-1}"
 RHVOICE_ASSET_NAME="${CODEX_RHVOICE_ASSET_NAME:-RHVoice-release.apk}"
 RHVOICE_CACHE_DIR="${CODEX_RHVOICE_CACHE_DIR:-$PROJECT_ROOT/.codex/cache}"
 RHVOICE_APK_PATH_OVERRIDE="${CODEX_RHVOICE_APK_PATH:-}"
+TALGAT_LANGUAGE_ARCHIVE_NAME="${CODEX_RHVOICE_TALGAT_LANGUAGE_ARCHIVE:-RHVoice-language-Tatar-v1.10.zip}"
+TALGAT_LANGUAGE_URL="${CODEX_RHVOICE_TALGAT_LANGUAGE_URL:-https://rhvoice.org/download/RHVoice-language-Tatar-v1.10.zip}"
+TALGAT_LANGUAGE_MD5_HEX="${CODEX_RHVOICE_TALGAT_LANGUAGE_MD5:-b8ac903669753b86d27187e9b7f33309}"
+TALGAT_VOICE_ARCHIVE_NAME="${CODEX_RHVOICE_TALGAT_VOICE_ARCHIVE:-RHVoice-voice-Tatar-Talgat-v4.0.zip}"
+TALGAT_VOICE_URL="${CODEX_RHVOICE_TALGAT_VOICE_URL:-https://rhvoice.org/download/RHVoice-voice-Tatar-Talgat-v4.0.zip}"
+TALGAT_VOICE_MD5_HEX="${CODEX_RHVOICE_TALGAT_VOICE_MD5:-af0785aed7d918dfb547a689ce887b54}"
+TALGAT_TARGET_ROOT="${CODEX_RHVOICE_TALGAT_TARGET_ROOT:-/sdcard/RHVoice}"
+TALGAT_FORCE_DOWNLOAD="${CODEX_RHVOICE_TALGAT_FORCE_DOWNLOAD:-0}"
 DEFAULT_LAUNCH_AVD=""
 LAUNCHED_EMULATOR=0
 LAUNCHED_EMULATOR_LOG=""
@@ -19,6 +27,146 @@ if [[ -d "$PROJECT_ROOT/.codex/android-sdk" ]]; then
   export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
   export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 fi
+
+ensure_sdk_component_installed() {
+  local component="$1"
+  local sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$PROJECT_ROOT/.codex/android-sdk}}"
+  local check_path=""
+  local sdkmanager_bin=""
+
+  if [[ -z "$sdk_root" ]]; then
+    return 1
+  fi
+
+  case "$component" in
+    platform-tools)
+      check_path="$sdk_root/platform-tools/adb"
+      ;;
+    emulator)
+      check_path="$sdk_root/emulator/emulator"
+      ;;
+    "cmdline-tools;latest")
+      if [[ -x "$sdk_root/cmdline-tools/latest/bin/sdkmanager" ]]; then
+        return 0
+      fi
+      if [[ -x "$sdk_root/cmdline-tools/bin/sdkmanager" ]]; then
+        return 0
+      fi
+      if command -v sdkmanager >/dev/null 2>&1; then
+        return 0
+      fi
+      check_path=""
+      ;;
+    *)
+      check_path=""
+      ;;
+  esac
+
+  if [[ -n "$check_path" && -e "$check_path" ]]; then
+    return 0
+  fi
+
+  if ! sdkmanager_bin="$(find_cmdline_tool sdkmanager)"; then
+    if [[ "$component" == "cmdline-tools;latest" ]]; then
+      local cmdline_archive="$PROJECT_ROOT/android-commandlinetools.zip"
+      local temp_dir=""
+      if [[ -f "$cmdline_archive" ]]; then
+        echo "[codex-install] Bootstrapping Android cmdline-tools from $cmdline_archive" >&2
+        if ! command -v unzip >/dev/null 2>&1; then
+          echo "[codex-install] unzip command not available; cannot extract $cmdline_archive" >&2
+          return 1
+        fi
+        temp_dir="$(mktemp -d)"
+        if unzip -qo "$cmdline_archive" -d "$temp_dir" >/dev/null 2>&1; then
+          mkdir -p "$sdk_root/cmdline-tools"
+          rm -rf "$sdk_root/cmdline-tools/latest"
+          if mv "$temp_dir/cmdline-tools" "$sdk_root/cmdline-tools/latest"; then
+            rm -rf "$temp_dir"
+            if sdkmanager_bin="$(find_cmdline_tool sdkmanager)"; then
+              return 0
+            fi
+          else
+            echo "[codex-install] Failed to move extracted cmdline-tools into $sdk_root" >&2
+            rm -rf "$temp_dir"
+            return 1
+          fi
+        else
+          echo "[codex-install] Failed to extract $cmdline_archive" >&2
+          rm -rf "$temp_dir"
+          return 1
+        fi
+        rm -rf "$temp_dir"
+        if sdkmanager_bin="$(find_cmdline_tool sdkmanager)"; then
+          return 0
+        fi
+      else
+        echo "[codex-install] Command-line tools archive not found at $cmdline_archive" >&2
+      fi
+    fi
+    return 1
+  fi
+
+  echo "[codex-install] Installing missing Android SDK component: $component" >&2
+  if yes | "$sdkmanager_bin" --install "$component" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "[codex-install] Failed to install Android SDK component $component" >&2
+  return 1
+}
+
+ensure_android_sdk_prereqs() {
+  local -a required_components=("cmdline-tools;latest" "platform-tools" "emulator")
+  local component=""
+  local had_failure=0
+
+  for component in "${required_components[@]}"; do
+    if ! ensure_sdk_component_installed "$component"; then
+      had_failure=1
+    fi
+  done
+
+  if [[ $had_failure -eq 1 ]]; then
+    echo "[codex-install] Unable to provision required Android SDK components automatically." >&2
+    echo "[codex-install] Ensure sdkmanager is available and rerun the script." >&2
+    return 1
+  fi
+
+  return 0
+}
+
+find_cmdline_tool() {
+  local tool_name="$1"
+  local candidate
+  local -a sdk_roots=()
+
+  if [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
+    sdk_roots+=("$ANDROID_SDK_ROOT")
+  fi
+  if [[ -n "${ANDROID_HOME:-}" ]]; then
+    sdk_roots+=("$ANDROID_HOME")
+  fi
+  sdk_roots+=("$PROJECT_ROOT/.codex/android-sdk")
+
+  for candidate in "${sdk_roots[@]}"; do
+    if [[ -x "$candidate/cmdline-tools/latest/bin/$tool_name" ]]; then
+      echo "$candidate/cmdline-tools/latest/bin/$tool_name"
+      return 0
+    fi
+    if [[ -x "$candidate/cmdline-tools/bin/$tool_name" ]]; then
+      echo "$candidate/cmdline-tools/bin/$tool_name"
+      return 0
+    fi
+  done
+
+  if command -v "$tool_name" >/dev/null 2>&1; then
+    command -v "$tool_name"
+    return 0
+  fi
+
+  return 1
+}
+
 
 if [[ ! -x "$MVNW_BIN" ]]; then
   echo "[codex-install] Maven wrapper not found at $MVNW_BIN" >&2
@@ -65,6 +213,100 @@ apk_to_install="$(ls -t "${apks[@]}" | head -n1)"
 echo "[codex-install] Selected APK: $apk_to_install"
 
 RHVOICE_APK_PATH=""
+
+compute_file_md5() {
+  local file_path="$1"
+  python3 - "$file_path" <<'PY'
+import hashlib
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+if not path.exists():
+    sys.exit(1)
+print(hashlib.md5(path.read_bytes()).hexdigest())
+PY
+}
+
+download_rhvoice_archive() {
+  local dest_path="$1"
+  local url="$2"
+  local expected_md5="$3"
+  local force_download="${4:-0}"
+  local label="${5:-archive}"
+  local temp_path
+
+  if [[ -f "$dest_path" && "$force_download" != "1" ]]; then
+    if [[ -z "$expected_md5" ]]; then
+      echo "[codex-install] Reusing cached $label at $dest_path" >&2
+      return 0
+    fi
+    local current_md5
+    if current_md5="$(compute_file_md5 "$dest_path" 2>/dev/null)"; then
+      if [[ "${current_md5,,}" == "${expected_md5,,}" ]]; then
+        echo "[codex-install] Reusing cached $label at $dest_path (checksum verified)" >&2
+        return 0
+      fi
+      echo "[codex-install] Cached $label at $dest_path has unexpected checksum ($current_md5, expected $expected_md5); redownloading" >&2
+    else
+      echo "[codex-install] Cached $label at $dest_path is unreadable; redownloading" >&2
+    fi
+  fi
+
+  mkdir -p "$(dirname "$dest_path")"
+  temp_path="$(mktemp "$(dirname "$dest_path")/$(basename "$dest_path").XXXXXX")"
+  echo "[codex-install] Downloading $label from $url" >&2
+  if ! curl --fail --silent --show-error --location --retry 3 --retry-delay 2 "$url" -o "$temp_path"; then
+    echo "[codex-install] Failed to download $label from $url" >&2
+    rm -f "$temp_path"
+    return 1
+  fi
+
+  if [[ -n "$expected_md5" ]]; then
+    local downloaded_md5
+    if ! downloaded_md5="$(compute_file_md5 "$temp_path" 2>/dev/null)"; then
+      echo "[codex-install] Unable to compute checksum for downloaded $label" >&2
+      rm -f "$temp_path"
+      return 1
+    fi
+    if [[ "${downloaded_md5,,}" != "${expected_md5,,}" ]]; then
+      echo "[codex-install] Downloaded $label checksum mismatch (got $downloaded_md5, expected $expected_md5)" >&2
+      rm -f "$temp_path"
+      return 1
+    fi
+  fi
+
+  if mv "$temp_path" "$dest_path"; then
+    echo "[codex-install] Saved $label to $dest_path" >&2
+    return 0
+  fi
+
+  echo "[codex-install] Failed to move downloaded $label into place at $dest_path" >&2
+  rm -f "$temp_path"
+  return 1
+}
+
+wait_for_package_service() {
+  local serial="$1"
+  local timeout="${2:-180}"
+  local deadline=$((SECONDS + timeout))
+
+  while [[ $SECONDS -lt $deadline ]]; do
+    if "$ADB_BIN" -s "$serial" shell service check package >/dev/null 2>&1; then
+      return 0
+    fi
+    if "$ADB_BIN" -s "$serial" shell cmd package list packages >/dev/null 2>&1; then
+      return 0
+    fi
+    if "$ADB_BIN" -s "$serial" shell pm list packages >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 3
+  done
+
+  return 1
+}
+
 if [[ "$INSTALL_RHVOICE" == "1" ]]; then
   if [[ -n "$RHVOICE_APK_PATH_OVERRIDE" ]]; then
     RHVOICE_APK_PATH="$RHVOICE_APK_PATH_OVERRIDE"
@@ -86,8 +328,24 @@ if [[ "$INSTALL_RHVOICE" == "1" ]]; then
       exit 1
     fi
   fi
+  TALGAT_LANGUAGE_ARCHIVE_PATH="$RHVOICE_CACHE_DIR/$TALGAT_LANGUAGE_ARCHIVE_NAME"
+  TALGAT_VOICE_ARCHIVE_PATH="$RHVOICE_CACHE_DIR/$TALGAT_VOICE_ARCHIVE_NAME"
+  if ! download_rhvoice_archive "$TALGAT_LANGUAGE_ARCHIVE_PATH" "$TALGAT_LANGUAGE_URL" "$TALGAT_LANGUAGE_MD5_HEX" "$TALGAT_FORCE_DOWNLOAD" "Tatar language pack"; then
+    echo "[codex-install] Failed to prepare Tatar language assets for RHVoice" >&2
+    exit 1
+  fi
+  if ! download_rhvoice_archive "$TALGAT_VOICE_ARCHIVE_PATH" "$TALGAT_VOICE_URL" "$TALGAT_VOICE_MD5_HEX" "$TALGAT_FORCE_DOWNLOAD" "Talgat voice pack"; then
+    echo "[codex-install] Failed to prepare Talgat voice assets for RHVoice" >&2
+    exit 1
+  fi
 else
   echo "[codex-install] Skipping RHVoice download and installation (CODEX_INSTALL_RHVOICE=$INSTALL_RHVOICE)" >&2
+fi
+
+if [[ -d "$PROJECT_ROOT/.codex/android-sdk" ]]; then
+  if ! ensure_android_sdk_prereqs; then
+    exit 1
+  fi
 fi
 
 ADB_BIN="adb"
@@ -138,9 +396,16 @@ ensure_rhvoice_on_device() {
   local serial="$1"
   local apk_path="$2"
   local package_name="$3"
+  local max_attempts=3
+  local attempt=1
+  local install_output=""
 
   if [[ -z "$apk_path" ]]; then
     echo "[codex-install] RHVoice APK path is empty; cannot install $package_name" >&2
+    return 1
+  fi
+  if ! wait_for_package_service "$serial" 180; then
+    echo "[codex-install] Package manager unavailable on $serial; cannot verify RHVoice installation state" >&2
     return 1
   fi
 
@@ -154,13 +419,141 @@ ensure_rhvoice_on_device() {
     return 1
   fi
 
-  echo "[codex-install] Installing RHVoice package $package_name from $apk_path" >&2
-  if "$ADB_BIN" -s "$serial" install -r "$apk_path"; then
-    echo "[codex-install] RHVoice installation completed" >&2
+  while (( attempt <= max_attempts )); do
+    echo "[codex-install] Installing RHVoice package $package_name from $apk_path (attempt $attempt/$max_attempts)" >&2
+    if install_output="$("$ADB_BIN" -s "$serial" install -r "$apk_path" 2>&1)"; then
+      echo "[codex-install] RHVoice installation completed" >&2
+      return 0
+    fi
+    echo "$install_output" >&2
+    if (( attempt == max_attempts )); then
+      break
+    fi
+    echo "[codex-install] RHVoice install failed on $serial; waiting for package manager and retrying" >&2
+    sleep 3
+    wait_for_package_service "$serial" 120 || true
+    ((attempt+=1))
+  done
+ 
+  echo "[codex-install] Failed to install RHVoice package $package_name" >&2
+  return 1
+}
+
+prepare_talgat_staging_dir() {
+  local language_archive="$1"
+  local voice_archive="$2"
+  local staging_root=""
+  local language_target=""
+  local voice_target=""
+
+  if ! command -v unzip >/dev/null 2>&1; then
+    echo "[codex-install] unzip command is required to extract RHVoice language/voice archives." >&2
+    return 1
+  fi
+
+  staging_root="$(mktemp -d)"
+  language_target="$staging_root/RHVoice/languages/tatar"
+  voice_target="$staging_root/RHVoice/voices/tatar/Talgat"
+
+  if ! mkdir -p "$language_target" "$voice_target"; then
+    echo "[codex-install] Failed to prepare staging directories for RHVoice assets" >&2
+    rm -rf "$staging_root"
+    return 1
+  fi
+
+  if ! unzip -qo "$language_archive" -d "$language_target"; then
+    echo "[codex-install] Failed to extract RHVoice language archive $language_archive" >&2
+    rm -rf "$staging_root"
+    return 1
+  fi
+
+  if ! unzip -qo "$voice_archive" -d "$voice_target"; then
+    echo "[codex-install] Failed to extract RHVoice Talgat voice archive $voice_archive" >&2
+    rm -rf "$staging_root"
+    return 1
+  fi
+
+  printf '%s' "$staging_root/RHVoice"
+  return 0
+}
+
+push_directory_recursive() {
+  local serial="$1"
+  local src_dir="$2"
+  local remote_parent="$3"
+  local dest_name
+
+  dest_name="$(basename "$src_dir")"
+  "$ADB_BIN" -s "$serial" shell rm -rf "$remote_parent/$dest_name" >/dev/null 2>&1 || true
+  if ! "$ADB_BIN" -s "$serial" shell mkdir -p "$remote_parent" >/dev/null 2>&1; then
+    echo "[codex-install] Failed to create directory $remote_parent on $serial" >&2
+    return 1
+  fi
+
+  if ! "$ADB_BIN" -s "$serial" push "$src_dir" "$remote_parent" >/dev/null; then
+    echo "[codex-install] Failed to push $src_dir into $remote_parent on $serial" >&2
+    return 1
+  fi
+
+  return 0
+}
+
+ensure_talgat_voice_assets() {
+  local serial="$1"
+  local language_archive_path="$2"
+  local voice_archive_path="$3"
+  local staging_root=""
+  local language_dir=""
+  local voice_dir=""
+  local cleanup_dir=""
+  local remote_language_parent="$TALGAT_TARGET_ROOT/languages"
+  local remote_voice_parent="$TALGAT_TARGET_ROOT/voices/tatar"
+
+  if is_talgat_voice_installed "$serial"; then
+    local existing_path
+    existing_path="$(detect_talgat_voice_path "$serial" || true)"
+    if [[ -n "$existing_path" ]]; then
+      echo "[codex-install] Talgat voice assets already detected at $existing_path" >&2
+    else
+      echo "[codex-install] Talgat voice already present on $serial" >&2
+    fi
     return 0
   fi
 
-  echo "[codex-install] Failed to install RHVoice package $package_name" >&2
+  if ! staging_root="$(prepare_talgat_staging_dir "$language_archive_path" "$voice_archive_path")"; then
+    return 1
+  fi
+
+  cleanup_dir="$(dirname "$staging_root")"
+  language_dir="$staging_root/languages/tatar"
+  voice_dir="$staging_root/voices/tatar/Talgat"
+
+  if [[ ! -d "$language_dir" || ! -d "$voice_dir" ]]; then
+    echo "[codex-install] Prepared staging directory missing expected subdirectories" >&2
+    rm -rf "$cleanup_dir"
+    return 1
+  fi
+
+  echo "[codex-install] Pushing Tatar language resources to $remote_language_parent" >&2
+  if ! push_directory_recursive "$serial" "$language_dir" "$remote_language_parent"; then
+    rm -rf "$cleanup_dir"
+    return 1
+  fi
+
+  echo "[codex-install] Pushing Talgat voice resources to $remote_voice_parent" >&2
+  if ! push_directory_recursive "$serial" "$voice_dir" "$remote_voice_parent"; then
+    rm -rf "$cleanup_dir"
+    return 1
+  fi
+
+  if wait_for_talgat_voice "$serial" 120; then
+    echo "[codex-install] Confirmed Talgat voice assets after direct deployment" >&2
+    rm -rf "$cleanup_dir"
+    return 0
+  fi
+
+  echo "[codex-install] Talgat assets not detected after pushing files" >&2
+  rm -rf "$cleanup_dir"
   return 1
 }
 
@@ -500,38 +893,6 @@ install_talgat_voice() {
   return 1
 }
 
-find_cmdline_tool() {
-  local tool_name="$1"
-  local candidate
-  local -a sdk_roots=()
-
-  if [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
-    sdk_roots+=("$ANDROID_SDK_ROOT")
-  fi
-  if [[ -n "${ANDROID_HOME:-}" ]]; then
-    sdk_roots+=("$ANDROID_HOME")
-  fi
-  sdk_roots+=("$PROJECT_ROOT/.codex/android-sdk")
-
-  for candidate in "${sdk_roots[@]}"; do
-    if [[ -x "$candidate/cmdline-tools/latest/bin/$tool_name" ]]; then
-      echo "$candidate/cmdline-tools/latest/bin/$tool_name"
-      return 0
-    fi
-    if [[ -x "$candidate/cmdline-tools/bin/$tool_name" ]]; then
-      echo "$candidate/cmdline-tools/bin/$tool_name"
-      return 0
-    fi
-  done
-
-  if command -v "$tool_name" >/dev/null 2>&1; then
-    command -v "$tool_name"
-    return 0
-  fi
-
-  return 1
-}
-
 find_emulator_binary() {
   local candidate
   for candidate in \
@@ -787,18 +1148,30 @@ wait_for_online_device() {
   return 1
 }
 
-wait_for_package_service() {
+wait_for_device_boot() {
   local serial="$1"
-  local timeout="${2:-180}"
-  local deadline=$((SECONDS + timeout))
+  local timeout="${2:-240}"
 
+  if ! "$ADB_BIN" -s "$serial" wait-for-device >/dev/null 2>&1; then
+    return 1
+  fi
+
+  local deadline=$((SECONDS + timeout))
   while [[ $SECONDS -lt $deadline ]]; do
-    if "$ADB_BIN" -s "$serial" shell cmd package list packages >/dev/null 2>&1; then
-      return 0
+    local sys_boot
+    local dev_boot
+    local bootanim_state
+
+    sys_boot="$($ADB_BIN -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+    dev_boot="$($ADB_BIN -s "$serial" shell getprop dev.bootcomplete 2>/dev/null | tr -d '\r')"
+    bootanim_state="$($ADB_BIN -s "$serial" shell getprop init.svc.bootanim 2>/dev/null | tr -d '\r')"
+
+    if [[ "$sys_boot" == "1" || "$dev_boot" == "1" || "$bootanim_state" == "stopped" ]]; then
+      if wait_for_package_service "$serial" 15; then
+        return 0
+      fi
     fi
-    if "$ADB_BIN" -s "$serial" shell pm list packages >/dev/null 2>&1; then
-      return 0
-    fi
+
     sleep 3
   done
 
@@ -849,43 +1222,25 @@ if ! ensure_device_responsive; then
 fi
 
 echo "[codex-install] Installing $apk_to_install to $target_serial"
-# Wait for Android to finish booting and the package manager to be ready. When the
-# emulator is launched without hardware acceleration it may take a while.
-boot_deadline=$((SECONDS + 240))
-while true; do
-  sys_boot="$($ADB_BIN -s "$target_serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-  dev_boot="$($ADB_BIN -s "$target_serial" shell getprop dev.bootcomplete 2>/dev/null | tr -d '\r')"
-  bootanim_state="$($ADB_BIN -s "$target_serial" shell getprop init.svc.bootanim 2>/dev/null | tr -d '\r')"
-
-  if [[ "$sys_boot" == "1" || "$dev_boot" == "1" || "$bootanim_state" == "stopped" ]]; then
-    if "$ADB_BIN" -s "$target_serial" shell pm path android >/dev/null 2>&1; then
-      break
-    fi
-  fi
-
-  if [[ $SECONDS -ge $boot_deadline ]]; then
-    echo "[codex-install] Emulator failed to expose the package manager service within 4 minutes." >&2
-    exit 1
-  fi
-
-  echo "[codex-install] Waiting for Android package manager to be ready..."
-  sleep 3
-done
-
-echo "[codex-install] Verifying package manager service availability before installations..."
-if ! wait_for_package_service "$target_serial" 240; then
-  echo "[codex-install] Package manager service did not respond within 4 minutes." >&2
+echo "[codex-install] Waiting for Android to finish booting and expose the package manager..."
+if ! wait_for_device_boot "$target_serial" 300; then
+  echo "[codex-install] Device did not finish booting or package manager unavailable." >&2
   exit 1
 fi
+
+echo "[codex-install] Package manager is available; proceeding with prerequisite installations."
 
 if [[ "$INSTALL_RHVOICE" == "1" ]]; then
   if ! ensure_rhvoice_on_device "$target_serial" "$RHVOICE_APK_PATH" "$RHVOICE_PACKAGE_NAME"; then
     echo "[codex-install] Unable to prepare RHVoice on $target_serial" >&2
     exit 1
   fi
-  if ! install_talgat_voice "$target_serial"; then
-    echo "[codex-install] Failed to automate Talgat voice installation on $target_serial" >&2
-    exit 1
+  if ! ensure_talgat_voice_assets "$target_serial" "$TALGAT_LANGUAGE_ARCHIVE_PATH" "$TALGAT_VOICE_ARCHIVE_PATH"; then
+    echo "[codex-install] Direct deployment of Talgat assets failed; attempting UI automation fallback" >&2
+    if ! install_talgat_voice "$target_serial"; then
+      echo "[codex-install] Failed to automate Talgat voice installation on $target_serial" >&2
+      exit 1
+    fi
   fi
 fi
 
