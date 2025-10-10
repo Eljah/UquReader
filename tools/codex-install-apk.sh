@@ -260,10 +260,85 @@ sys.exit(1)
 PY
 }
 
-install_talgat_voice() {
+detect_talgat_voice_path() {
+  local serial="$1"
+  local -a candidate_roots=(
+    "/sdcard/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice"
+    "/sdcard/RHVoice"
+    "/storage/emulated/0/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice"
+    "/storage/emulated/0/RHVoice"
+  )
+  local root script output
+
+  script="for dir in"
+  for root in "${candidate_roots[@]}"; do
+    script+=" '$root'"
+  done
+  script+="; do if [ -d \"\$dir\" ]; then match=\"\$(find \"\$dir\" -maxdepth 4 -iname '*talgat*' -print 2>/dev/null | head -n1)\"; if [ -n \"\$match\" ]; then echo \"\$match\"; exit 0; fi; fi; done; exit 1"
+
+  if output="$($ADB_BIN -s "$serial" shell "$script" 2>/dev/null)"; then
+    # Trim potential carriage returns/newlines emitted by adb shell
+    output="${output%%$'\r'*}"
+    output="${output%%$'\n'*}"
+    if [[ -n "$output" ]]; then
+      printf '%s' "$output"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+is_talgat_voice_installed() {
+  local serial="$1"
+  if detect_talgat_voice_path "$serial" >/dev/null; then
+    return 0
+  fi
+  return 1
+}
+
+wait_for_talgat_voice() {
+  local serial="$1"
+  local timeout="${2:-240}"
+  local start_seconds=$SECONDS
+  local detected_path=""
+
+  while (( SECONDS - start_seconds < timeout )); do
+    dismiss_system_alerts "$serial" || true
+    if detected_path="$(detect_talgat_voice_path "$serial")"; then
+      if [[ -n "$detected_path" ]]; then
+        echo "[codex-install] Confirmed Talgat voice assets under $detected_path" >&2
+      fi
+      return 0
+    fi
+    sleep 3
+  done
+
+  return 1
+}
+
+dismiss_system_alerts() {
+  local serial="$1"
+  local coords=""
+  local -a wait_variants=("Wait" "Подождать")
+
+  for label in "${wait_variants[@]}"; do
+    if coords="$(find_ui_element_center "$serial" text "$label" 1 contains)"; then
+      echo "[codex-install] Dismissing system alert using option '$label'" >&2
+      "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+      sleep 1
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+perform_talgat_install_flow() {
   local serial="$1"
   local launch_intent="$RHVOICE_PACKAGE_NAME/.MainActivity"
   echo "[codex-install] Ensuring RHVoice Talgat voice is installed on $serial" >&2
+  dismiss_system_alerts "$serial" || true
   "$ADB_BIN" -s "$serial" shell am force-stop "$RHVOICE_PACKAGE_NAME" >/dev/null 2>&1 || true
   if ! "$ADB_BIN" -s "$serial" shell am start -a android.intent.action.MAIN -n "$launch_intent" >/dev/null 2>&1; then
     echo "[codex-install] Failed to launch RHVoice UI on $serial" >&2
@@ -281,8 +356,10 @@ install_talgat_voice() {
 
   # Try to locate the Tatar language entry, scrolling through the list if necessary.
   while [[ $attempt -lt $max_scroll_attempts ]]; do
+    dismiss_system_alerts "$serial" || true
     for entry in "${language_variants[@]}"; do
       if coords="$(find_ui_element_center "$serial" text "$entry" 5 contains)"; then
+        echo "[codex-install] Located language entry '$entry' while searching for Tatar" >&2
         attempt=$max_scroll_attempts
         break
       fi
@@ -310,8 +387,10 @@ install_talgat_voice() {
   coords=""
   attempt=0
   while [[ $attempt -lt $max_scroll_attempts ]]; do
+    dismiss_system_alerts "$serial" || true
     for entry in "${voice_variants[@]}"; do
       if coords="$(find_ui_element_center "$serial" text "$entry" 5 contains)"; then
+        echo "[codex-install] Located voice entry '$entry' in RHVoice UI" >&2
         attempt=$max_scroll_attempts
         break
       fi
@@ -365,6 +444,7 @@ install_talgat_voice() {
         echo "[codex-install] Located install action but could not determine tap coordinates" >&2
         return 1
       fi
+      dismiss_system_alerts "$serial" || true
     else
       echo "[codex-install] Unable to locate the Install button for Talgat voice" >&2
       return 1
@@ -384,6 +464,40 @@ install_talgat_voice() {
   "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_BACK >/dev/null 2>&1 || true
   "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
   return 0
+}
+
+install_talgat_voice() {
+  local serial="$1"
+  local max_attempts="${CODEX_RHVOICE_TALGAT_ATTEMPTS:-3}"
+  local attempt=1
+
+  if is_talgat_voice_installed "$serial"; then
+    local existing_path
+    existing_path="$(detect_talgat_voice_path "$serial" || true)"
+    if [[ -n "$existing_path" ]]; then
+      echo "[codex-install] Talgat voice assets already present at $existing_path" >&2
+    else
+      echo "[codex-install] Talgat voice already present on device" >&2
+    fi
+    return 0
+  fi
+
+  while (( attempt <= max_attempts )); do
+    echo "[codex-install] Starting Talgat voice installation attempt $attempt/$max_attempts" >&2
+    if perform_talgat_install_flow "$serial"; then
+      if wait_for_talgat_voice "$serial" 300; then
+        return 0
+      fi
+      echo "[codex-install] Talgat voice assets not detected after attempt $attempt" >&2
+    else
+      echo "[codex-install] Attempt $attempt to drive the RHVoice UI for Talgat install failed" >&2
+    fi
+    ((attempt+=1))
+    sleep 5
+  done
+
+  echo "[codex-install] Exhausted attempts to install Talgat voice" >&2
+  return 1
 }
 
 find_cmdline_tool() {
