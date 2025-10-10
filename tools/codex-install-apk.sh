@@ -101,6 +101,8 @@ if ! command -v "$ADB_BIN" >/dev/null 2>&1; then
   fi
 fi
 
+export ADB_BIN
+
 if ! "$ADB_BIN" start-server >/dev/null 2>&1; then
   echo "[codex-install] Failed to start the adb server." >&2
   exit 1
@@ -167,7 +169,8 @@ find_ui_element_center() {
   local attribute="$2"
   local expected_value="$3"
   local timeout_seconds="${4:-30}"
-  python3 - "$serial" "$attribute" "$expected_value" "$timeout_seconds" <<'PY'
+  local match_mode="${5:-exact}"
+  python3 - "$serial" "$attribute" "$expected_value" "$timeout_seconds" "$match_mode" <<'PY'
 import os
 import re
 import sys
@@ -176,10 +179,11 @@ import xml.etree.ElementTree as ET
 import subprocess
 
 adb = os.environ.get("ADB_BIN", "adb")
-serial, attribute, expected_value, timeout_s = sys.argv[1:5]
+serial, attribute, expected_value, timeout_s, match_mode = sys.argv[1:6]
 timeout = float(timeout_s)
 deadline = time.time() + timeout
 dump_path = "/sdcard/rhvoice-ui-dump.xml"
+match_mode = match_mode.lower()
 
 def try_dump():
     dump = subprocess.run(
@@ -212,6 +216,27 @@ def parse_bounds(bounds):
     left, top, right, bottom = map(int, parts)
     return (left + right) // 2, (top + bottom) // 2
 
+def matches(value: str) -> bool:
+    if value is None:
+        return False
+    if match_mode == "exact":
+        return value == expected_value
+    lowered_value = value.lower()
+    lowered_expected = expected_value.lower()
+    if match_mode == "contains":
+        return lowered_expected in lowered_value
+    if match_mode == "prefix":
+        return lowered_value.startswith(lowered_expected)
+    if match_mode == "suffix":
+        return lowered_value.endswith(lowered_expected)
+    if match_mode == "regex":
+        try:
+            return re.search(expected_value, value) is not None
+        except re.error:
+            return False
+    # Fallback to exact comparison for unknown modes.
+    return value == expected_value
+
 while time.time() < deadline:
     xml = try_dump()
     if not xml:
@@ -224,7 +249,7 @@ while time.time() < deadline:
         continue
     for node in tree.iter():
         value = node.attrib.get(attribute)
-        if value == expected_value:
+        if matches(value):
             coords = parse_bounds(node.attrib.get("bounds", ""))
             if coords:
                 print(f"{coords[0]} {coords[1]}")
@@ -245,28 +270,110 @@ install_talgat_voice() {
     return 1
   fi
 
-  local coords
-  if ! coords="$(find_ui_element_center "$serial" text "Tatar" 60)"; then
+  "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+  "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_MENU >/dev/null 2>&1 || true
+
+  local -a language_variants=("Tatar" "Татар" "Татарский" "Татар теле")
+  local -a voice_variants=("Talgat" "Талгат")
+  local coords=""
+  local attempt=0
+  local max_scroll_attempts=12
+
+  # Try to locate the Tatar language entry, scrolling through the list if necessary.
+  while [[ $attempt -lt $max_scroll_attempts ]]; do
+    for entry in "${language_variants[@]}"; do
+      if coords="$(find_ui_element_center "$serial" text "$entry" 5 contains)"; then
+        attempt=$max_scroll_attempts
+        break
+      fi
+    done
+    ((attempt+=1))
+    if [[ -n "$coords" ]]; then
+      break
+    fi
+    if [[ $attempt -le $((max_scroll_attempts / 2)) ]]; then
+      "$ADB_BIN" -s "$serial" shell input swipe 540 1600 540 600 300 >/dev/null 2>&1 || true
+    else
+      "$ADB_BIN" -s "$serial" shell input swipe 540 600 540 1600 300 >/dev/null 2>&1 || true
+    fi
+    sleep 1
+  done
+
+  if [[ -z "$coords" ]]; then
     echo "[codex-install] Unable to locate the Tatar language entry in RHVoice UI" >&2
     return 1
   fi
-  "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
 
-  if ! find_ui_element_center "$serial" text "Talgat" 60 >/dev/null 2>&1; then
+  "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+  sleep 1
+
+  coords=""
+  attempt=0
+  while [[ $attempt -lt $max_scroll_attempts ]]; do
+    for entry in "${voice_variants[@]}"; do
+      if coords="$(find_ui_element_center "$serial" text "$entry" 5 contains)"; then
+        attempt=$max_scroll_attempts
+        break
+      fi
+    done
+    ((attempt+=1))
+    if [[ -n "$coords" ]]; then
+      break
+    fi
+    if [[ $attempt -le $((max_scroll_attempts / 2)) ]]; then
+      "$ADB_BIN" -s "$serial" shell input swipe 540 1600 540 600 300 >/dev/null 2>&1 || true
+    else
+      "$ADB_BIN" -s "$serial" shell input swipe 540 600 540 1600 300 >/dev/null 2>&1 || true
+    fi
+    sleep 1
+  done
+
+  if [[ -z "$coords" ]]; then
     echo "[codex-install] Unable to locate the Talgat voice entry in RHVoice UI" >&2
     return 1
   fi
 
-  if find_ui_element_center "$serial" "content-desc" "Uninstall" 5 >/dev/null 2>&1; then
+  "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+  sleep 2
+
+  # Determine if the voice is already installed by looking for an "Uninstall" button.
+  if find_ui_element_center "$serial" "content-desc" "Uninstall" 5 contains >/dev/null 2>&1 ||
+     find_ui_element_center "$serial" text "Uninstall" 5 contains >/dev/null 2>&1 ||
+     find_ui_element_center "$serial" "content-desc" "Удалить" 5 contains >/dev/null 2>&1 ||
+     find_ui_element_center "$serial" text "Удалить" 5 contains >/dev/null 2>&1; then
     echo "[codex-install] Talgat voice already installed; skipping download" >&2
   else
-    if ! coords="$(find_ui_element_center "$serial" "content-desc" "Install" 30)"; then
+    coords=""
+    if find_ui_element_center "$serial" "content-desc" "Install" 30 contains >/dev/null 2>&1 ||
+       find_ui_element_center "$serial" text "Install" 30 contains >/dev/null 2>&1 ||
+       find_ui_element_center "$serial" "content-desc" "Установить" 30 contains >/dev/null 2>&1 ||
+       find_ui_element_center "$serial" text "Установить" 30 contains >/dev/null 2>&1; then
+      if coords="$(find_ui_element_center "$serial" "content-desc" "Install" 30 contains)"; then
+        echo "[codex-install] Triggering Talgat voice download" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+      elif coords="$(find_ui_element_center "$serial" text "Install" 30 contains)"; then
+        echo "[codex-install] Triggering Talgat voice download" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+      elif coords="$(find_ui_element_center "$serial" "content-desc" "Установить" 30 contains)"; then
+        echo "[codex-install] Triggering Talgat voice download" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+      elif coords="$(find_ui_element_center "$serial" text "Установить" 30 contains)"; then
+        echo "[codex-install] Triggering Talgat voice download" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+      fi
+      if [[ -z "$coords" ]]; then
+        echo "[codex-install] Located install action but could not determine tap coordinates" >&2
+        return 1
+      fi
+    else
       echo "[codex-install] Unable to locate the Install button for Talgat voice" >&2
       return 1
     fi
-    echo "[codex-install] Triggering Talgat voice download" >&2
-    "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
-    if ! find_ui_element_center "$serial" "content-desc" "Uninstall" 240 >/dev/null 2>&1; then
+
+    if ! find_ui_element_center "$serial" "content-desc" "Uninstall" 240 contains >/dev/null 2>&1 &&
+       ! find_ui_element_center "$serial" text "Uninstall" 240 contains >/dev/null 2>&1 &&
+       ! find_ui_element_center "$serial" "content-desc" "Удалить" 240 contains >/dev/null 2>&1 &&
+       ! find_ui_element_center "$serial" text "Удалить" 240 contains >/dev/null 2>&1; then
       echo "[codex-install] Talgat voice installation did not complete within expected time" >&2
       return 1
     fi
@@ -487,6 +594,69 @@ attempt_recovery() {
   return 0
 }
 
+ensure_device_responsive() {
+  local attempt=0
+  local max_attempts=2
+
+  while [[ $attempt -lt $max_attempts ]]; do
+    local serial="$target_serial"
+    local exit_code=0
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 15s "$ADB_BIN" -s "$serial" shell echo responsiveness-check >/dev/null 2>&1 || exit_code=$?
+    else
+      "$ADB_BIN" -s "$serial" shell echo responsiveness-check >/dev/null 2>&1 || exit_code=$?
+    fi
+
+    if [[ $exit_code -eq 0 ]]; then
+      return 0
+    fi
+
+    ((attempt+=1))
+    echo "[codex-install] Device $serial did not respond to shell commands (exit=$exit_code); attempt $attempt" >&2
+
+    if [[ "$serial" =~ ^emulator-[0-9]+$ ]]; then
+      echo "[codex-install] Restarting unresponsive emulator $serial" >&2
+      "$ADB_BIN" -s "$serial" emu kill >/dev/null 2>&1 || true
+      LAUNCHED_EMULATOR=0
+      LAUNCHED_EMULATOR_LOG=""
+      sleep 5
+      if ! launch_default_emulator; then
+        echo "[codex-install] Unable to relaunch emulator automatically." >&2
+        break
+      fi
+      if ! wait_for_online_device 240; then
+        echo "[codex-install] Emulator did not come online after restart." >&2
+        break
+      fi
+      collect_devices
+      if [[ ${#online_devices[@]} -eq 0 ]]; then
+        echo "[codex-install] No emulator detected after restart." >&2
+        break
+      fi
+      target_serial="${online_devices[0]}"
+      echo "[codex-install] Continuing with emulator ${target_serial} after restart" >&2
+      continue
+    fi
+
+    echo "[codex-install] Rebooting device $serial to recover from unresponsive state" >&2
+    "$ADB_BIN" -s "$serial" reboot >/dev/null 2>&1 || true
+    if ! wait_for_online_device 240; then
+      echo "[codex-install] Device did not reconnect after reboot attempt." >&2
+      break
+    fi
+    collect_devices
+    if [[ ${#online_devices[@]} -eq 0 ]]; then
+      echo "[codex-install] No devices detected after reboot attempt." >&2
+      break
+    fi
+    target_serial="${online_devices[0]}"
+    echo "[codex-install] Device reconnected as $target_serial" >&2
+  done
+
+  echo "[codex-install] Device $target_serial remains unresponsive after recovery attempts." >&2
+  return 1
+}
+
 wait_for_online_device() {
   local timeout="${1:-120}"
   local deadline=$((SECONDS + timeout))
@@ -557,6 +727,11 @@ target_serial="${online_devices[0]}"
 
 if [[ ${#online_devices[@]} -gt 1 ]]; then
   echo "[codex-install] Multiple online devices detected. Using $target_serial." >&2
+fi
+
+if ! ensure_device_responsive; then
+  echo "[codex-install] Unable to obtain a responsive device for installation." >&2
+  exit 1
 fi
 
 echo "[codex-install] Installing $apk_to_install to $target_serial"
