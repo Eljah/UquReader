@@ -44,6 +44,13 @@ public class LoggingDrawableWrapper extends Drawable implements Drawable.Callbac
         return new LoggingDrawableWrapper(drawable, name);
     }
 
+    /**
+     * Exposes the identifier used for logging so tests can assert the expected drawable is active.
+     */
+    public String getDebugName() {
+        return name;
+    }
+
     private void log(String message) {
         Log.d(TAG, name + ": " + message);
     }

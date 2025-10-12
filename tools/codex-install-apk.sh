@@ -10,6 +10,7 @@ INSTALL_RHVOICE="${CODEX_INSTALL_RHVOICE:-1}"
 RHVOICE_ASSET_NAME="${CODEX_RHVOICE_ASSET_NAME:-RHVoice-release.apk}"
 RHVOICE_CACHE_DIR="${CODEX_RHVOICE_CACHE_DIR:-$PROJECT_ROOT/.codex/cache}"
 RHVOICE_APK_PATH_OVERRIDE="${CODEX_RHVOICE_APK_PATH:-}"
+FORCE_RHVOICE_REINSTALL="${CODEX_RHVOICE_FORCE_INSTALL:-1}"
 TALGAT_LANGUAGE_ARCHIVE_NAME="${CODEX_RHVOICE_TALGAT_LANGUAGE_ARCHIVE:-RHVoice-language-Tatar-v1.10.zip}"
 TALGAT_LANGUAGE_URL="${CODEX_RHVOICE_TALGAT_LANGUAGE_URL:-https://rhvoice.org/download/RHVoice-language-Tatar-v1.10.zip}"
 TALGAT_LANGUAGE_MD5_HEX="${CODEX_RHVOICE_TALGAT_LANGUAGE_MD5:-b8ac903669753b86d27187e9b7f33309}"
@@ -18,9 +19,65 @@ TALGAT_VOICE_URL="${CODEX_RHVOICE_TALGAT_VOICE_URL:-https://rhvoice.org/download
 TALGAT_VOICE_MD5_HEX="${CODEX_RHVOICE_TALGAT_VOICE_MD5:-af0785aed7d918dfb547a689ce887b54}"
 TALGAT_TARGET_ROOT="${CODEX_RHVOICE_TALGAT_TARGET_ROOT:-/sdcard/RHVoice}"
 TALGAT_FORCE_DOWNLOAD="${CODEX_RHVOICE_TALGAT_FORCE_DOWNLOAD:-0}"
+CODEX_TALGAT_TARGET_ROOTS_RAW="${CODEX_RHVOICE_TALGAT_TARGET_ROOTS:-}"
+FORCE_TALGAT_UI_AFTER_PUSH="${CODEX_RHVOICE_FORCE_TALGAT_UI:-1}"
 DEFAULT_LAUNCH_AVD=""
 LAUNCHED_EMULATOR=0
 LAUNCHED_EMULATOR_LOG=""
+
+declare -a TALGAT_INSTALL_ROOTS=()
+declare -a TALGAT_DETECTION_ROOTS=()
+declare -A ALERT_DISMISS_COUNTS=()
+LAST_DISMISSED_ALERT_ACTION=""
+
+init_talgat_roots() {
+  local -a parsed_install_roots=()
+  local -a defaults_install_roots=("$TALGAT_TARGET_ROOT" "/sdcard/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice")
+  local -a detection_candidates=()
+  local root
+
+  if [[ -n "$CODEX_TALGAT_TARGET_ROOTS_RAW" ]]; then
+    IFS=':' read -r -a parsed_install_roots <<<"$CODEX_TALGAT_TARGET_ROOTS_RAW"
+  else
+    parsed_install_roots=("${defaults_install_roots[@]}")
+  fi
+
+  declare -A seen_install_roots=()
+  TALGAT_INSTALL_ROOTS=()
+  for root in "${parsed_install_roots[@]}"; do
+    if [[ -z "$root" ]]; then
+      continue
+    fi
+    if [[ -z "${seen_install_roots[$root]:-}" ]]; then
+      TALGAT_INSTALL_ROOTS+=("$root")
+      seen_install_roots["$root"]=1
+    fi
+  done
+
+  detection_candidates=(
+    "${TALGAT_INSTALL_ROOTS[@]}"
+    "/sdcard/RHVoice"
+    "/storage/emulated/0/RHVoice"
+    "/sdcard/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice"
+    "/storage/emulated/0/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice"
+    "/sdcard/Android/media/$RHVOICE_PACKAGE_NAME/RHVoice"
+    "/storage/emulated/0/Android/media/$RHVOICE_PACKAGE_NAME/RHVoice"
+  )
+
+  declare -A seen_detection_roots=()
+  TALGAT_DETECTION_ROOTS=()
+  for root in "${detection_candidates[@]}"; do
+    if [[ -z "$root" ]]; then
+      continue
+    fi
+    if [[ -z "${seen_detection_roots[$root]:-}" ]]; then
+      TALGAT_DETECTION_ROOTS+=("$root")
+      seen_detection_roots["$root"]=1
+    fi
+  done
+}
+
+init_talgat_roots
 
 if [[ -d "$PROJECT_ROOT/.codex/android-sdk" ]]; then
   export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$PROJECT_ROOT/.codex/android-sdk}"
@@ -396,9 +453,10 @@ ensure_rhvoice_on_device() {
   local serial="$1"
   local apk_path="$2"
   local package_name="$3"
-  local max_attempts=3
+  local max_attempts=6
   local attempt=1
   local install_output=""
+  local package_present=0
 
   if [[ -z "$apk_path" ]]; then
     echo "[codex-install] RHVoice APK path is empty; cannot install $package_name" >&2
@@ -410,7 +468,11 @@ ensure_rhvoice_on_device() {
   fi
 
   if "$ADB_BIN" -s "$serial" shell pm path "$package_name" >/dev/null 2>&1; then
-    echo "[codex-install] RHVoice package $package_name already present on $serial; skipping install" >&2
+    package_present=1
+  fi
+
+  if (( package_present == 1 )) && [[ "$FORCE_RHVOICE_REINSTALL" != "1" ]]; then
+    echo "[codex-install] RHVoice package $package_name already present on $serial; skipping reinstall (FORCE_RHVOICE_REINSTALL=$FORCE_RHVOICE_REINSTALL)" >&2
     return 0
   fi
 
@@ -419,13 +481,28 @@ ensure_rhvoice_on_device() {
     return 1
   fi
 
+  ensure_device_unlocked "$serial" 120 || true
+
   while (( attempt <= max_attempts )); do
-    echo "[codex-install] Installing RHVoice package $package_name from $apk_path (attempt $attempt/$max_attempts)" >&2
-    if install_output="$("$ADB_BIN" -s "$serial" install -r "$apk_path" 2>&1)"; then
+    if ! wait_for_package_service "$serial" 120; then
+      echo "[codex-install] Package manager unavailable before RHVoice install attempt $attempt/$max_attempts on $serial; waiting" >&2
+      sleep 3
+      ((attempt+=1))
+      continue
+    fi
+    if (( package_present == 1 )); then
+      echo "[codex-install] Re-installing RHVoice package $package_name from $apk_path (attempt $attempt/$max_attempts)" >&2
+    else
+      echo "[codex-install] Installing RHVoice package $package_name from $apk_path (attempt $attempt/$max_attempts)" >&2
+    fi
+    if install_output="$("$ADB_BIN" -s "$serial" install -r -d -g "$apk_path" 2>&1)"; then
       echo "[codex-install] RHVoice installation completed" >&2
       return 0
     fi
     echo "$install_output" >&2
+    if [[ "$install_output" == *"Can't find service: package"* ]]; then
+      echo "[codex-install] Android package service still unavailable during install attempt $attempt; will retry" >&2
+    fi
     if (( attempt == max_attempts )); then
       break
     fi
@@ -506,8 +583,10 @@ ensure_talgat_voice_assets() {
   local language_dir=""
   local voice_dir=""
   local cleanup_dir=""
-  local remote_language_parent="$TALGAT_TARGET_ROOT/languages"
-  local remote_voice_parent="$TALGAT_TARGET_ROOT/voices/tatar"
+  local target_root=""
+  local deploy_success=0
+  local root_success=0
+  local -a target_roots=()
 
   if is_talgat_voice_installed "$serial"; then
     local existing_path
@@ -534,14 +613,36 @@ ensure_talgat_voice_assets() {
     return 1
   fi
 
-  echo "[codex-install] Pushing Tatar language resources to $remote_language_parent" >&2
-  if ! push_directory_recursive "$serial" "$language_dir" "$remote_language_parent"; then
-    rm -rf "$cleanup_dir"
-    return 1
+  if [[ ${#TALGAT_INSTALL_ROOTS[@]} -gt 0 ]]; then
+    target_roots=("${TALGAT_INSTALL_ROOTS[@]}")
+  else
+    target_roots=("$TALGAT_TARGET_ROOT")
   fi
 
-  echo "[codex-install] Pushing Talgat voice resources to $remote_voice_parent" >&2
-  if ! push_directory_recursive "$serial" "$voice_dir" "$remote_voice_parent"; then
+  for target_root in "${target_roots[@]}"; do
+    if [[ -z "$target_root" ]]; then
+      continue
+    fi
+    root_success=1
+    echo "[codex-install] Pushing Tatar language resources to $target_root/languages" >&2
+    if ! push_directory_recursive "$serial" "$language_dir" "$target_root/languages"; then
+      echo "[codex-install] Failed to deploy language resources under $target_root" >&2
+      root_success=0
+    fi
+
+    echo "[codex-install] Pushing Talgat voice resources to $target_root/voices/tatar" >&2
+    if ! push_directory_recursive "$serial" "$voice_dir" "$target_root/voices/tatar"; then
+      echo "[codex-install] Failed to deploy voice resources under $target_root" >&2
+      root_success=0
+    fi
+
+    if (( root_success == 1 )); then
+      deploy_success=1
+    fi
+  done
+
+  if (( deploy_success == 0 )); then
+    echo "[codex-install] Unable to deploy Talgat assets to any target directory" >&2
     rm -rf "$cleanup_dir"
     return 1
   fi
@@ -655,29 +756,62 @@ PY
 
 detect_talgat_voice_path() {
   local serial="$1"
-  local -a candidate_roots=(
-    "/sdcard/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice"
-    "/sdcard/RHVoice"
-    "/storage/emulated/0/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice"
-    "/storage/emulated/0/RHVoice"
-  )
-  local root script output
+  local root
+  local voice_dir
+  local output=""
+  local -a candidate_roots=()
+  local -a candidate_voice_dirs=()
 
-  script="for dir in"
-  for root in "${candidate_roots[@]}"; do
-    script+=" '$root'"
-  done
-  script+="; do if [ -d \"\$dir\" ]; then match=\"\$(find \"\$dir\" -maxdepth 4 -iname '*talgat*' -print 2>/dev/null | head -n1)\"; if [ -n \"\$match\" ]; then echo \"\$match\"; exit 0; fi; fi; done; exit 1"
-
-  if output="$($ADB_BIN -s "$serial" shell "$script" 2>/dev/null)"; then
-    # Trim potential carriage returns/newlines emitted by adb shell
-    output="${output%%$'\r'*}"
-    output="${output%%$'\n'*}"
-    if [[ -n "$output" ]]; then
-      printf '%s' "$output"
-      return 0
-    fi
+  if [[ ${#TALGAT_DETECTION_ROOTS[@]} -gt 0 ]]; then
+    candidate_roots=("${TALGAT_DETECTION_ROOTS[@]}")
+  else
+    candidate_roots=(
+      "/sdcard/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice"
+      "/sdcard/RHVoice"
+      "/storage/emulated/0/Android/data/$RHVOICE_PACKAGE_NAME/files/RHVoice"
+      "/storage/emulated/0/RHVoice"
+    )
   fi
+
+  candidate_voice_dirs=(
+    "voices/tatar/Talgat"
+    "voices/Tatar/Talgat"
+    "voices/tatar/talgat"
+    "voices/tat/Talgat"
+    "voices/tat/talgat"
+  )
+
+  for root in "${candidate_roots[@]}"; do
+    if [[ -z "$root" ]]; then
+      continue
+    fi
+    for voice_dir in "${candidate_voice_dirs[@]}"; do
+      output=""
+      if output="$($ADB_BIN -s "$serial" shell "if [ -d '$root/$voice_dir' ]; then echo '$root/$voice_dir'; fi" 2>/dev/null)"; then
+        output="${output%%$'\r'*}"
+        output="${output%%$'\n'*}"
+        if [[ -n "$output" ]]; then
+          printf '%s' "$output"
+          return 0
+        fi
+      fi
+    done
+    # Fall back to searching for the first file/dir containing 'talgat'
+    if output="$($ADB_BIN -s "$serial" shell "if [ -d '$root' ]; then \
+        if command -v toybox >/dev/null 2>&1; then \
+          toybox find '$root' -maxdepth 4 -iname '*talgat*' -print 2>/dev/null | head -n1; \
+        else \
+          find '$root' -maxdepth 4 -iname '*talgat*' -print 2>/dev/null | head -n1; \
+        fi; \
+      fi" 2>/dev/null)"; then
+      output="${output%%$'\r'*}"
+      output="${output%%$'\n'*}"
+      if [[ -n "$output" ]]; then
+        printf '%s' "$output"
+        return 0
+      fi
+    fi
+  done
 
   return 1
 }
@@ -710,28 +844,138 @@ wait_for_talgat_voice() {
   return 1
 }
 
+ensure_device_unlocked() {
+  local serial="$1"
+  local timeout="${2:-180}"
+  local deadline=$((SECONDS + timeout))
+
+  while [[ $SECONDS -lt $deadline ]]; do
+    "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+    "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_MENU >/dev/null 2>&1 || true
+    "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
+    "$ADB_BIN" -s "$serial" shell input keyevent 82 >/dev/null 2>&1 || true
+    if "$ADB_BIN" -s "$serial" shell ls /storage/emulated/0 >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 3
+  done
+
+  return 1
+}
+
 dismiss_system_alerts() {
   local serial="$1"
   local coords=""
   local -a wait_variants=("Wait" "Подождать")
+  local -a ok_variants=("OK" "Ok" "ОК" "Хорошо")
+  local -a close_variants=("Close app" "Закрыть приложение" "Закрыть" "Close")
+  local wait_key="wait::$serial"
+  local wait_count="${ALERT_DISMISS_COUNTS[$wait_key]:-0}"
+  local max_wait_dismissals="${CODEX_RHVOICE_MAX_WAIT_ALERTS:-3}"
+  local tapped=0
 
-  for label in "${wait_variants[@]}"; do
-    if coords="$(find_ui_element_center "$serial" text "$label" 1 contains)"; then
-      echo "[codex-install] Dismissing system alert using option '$label'" >&2
-      "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
-      sleep 1
-      return 0
-    fi
-  done
+  LAST_DISMISSED_ALERT_ACTION=""
+
+  if (( wait_count < max_wait_dismissals )); then
+    for label in "${wait_variants[@]}"; do
+      if coords="$(find_ui_element_center "$serial" text "$label" 1 contains)"; then
+        echo "[codex-install] Dismissing system alert using option '$label'" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+        ALERT_DISMISS_COUNTS[$wait_key]=$((wait_count + 1))
+        LAST_DISMISSED_ALERT_ACTION="wait"
+        tapped=1
+        break
+      fi
+      if coords="$(find_ui_element_center "$serial" "content-desc" "$label" 1 contains)"; then
+        echo "[codex-install] Dismissing system alert using option '$label' (content-desc)" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+        ALERT_DISMISS_COUNTS[$wait_key]=$((wait_count + 1))
+        LAST_DISMISSED_ALERT_ACTION="wait"
+        tapped=1
+        break
+      fi
+    done
+  fi
+
+  if (( tapped == 0 )); then
+    for label in "${ok_variants[@]}"; do
+      if coords="$(find_ui_element_center "$serial" text "$label" 1 contains)"; then
+        echo "[codex-install] Confirming system alert using option '$label'" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+        ALERT_DISMISS_COUNTS[$wait_key]=0
+        LAST_DISMISSED_ALERT_ACTION="terminate"
+        tapped=1
+        break
+      fi
+      if coords="$(find_ui_element_center "$serial" "content-desc" "$label" 1 contains)"; then
+        echo "[codex-install] Confirming system alert using option '$label' (content-desc)" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+        ALERT_DISMISS_COUNTS[$wait_key]=0
+        LAST_DISMISSED_ALERT_ACTION="terminate"
+        tapped=1
+        break
+      fi
+    done
+  fi
+
+  if (( tapped == 0 )); then
+    for label in "${close_variants[@]}"; do
+      if coords="$(find_ui_element_center "$serial" text "$label" 1 contains)"; then
+        echo "[codex-install] Closing app via system alert option '$label'" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+        ALERT_DISMISS_COUNTS[$wait_key]=0
+        LAST_DISMISSED_ALERT_ACTION="terminate"
+        tapped=1
+        break
+      fi
+      if coords="$(find_ui_element_center "$serial" "content-desc" "$label" 1 contains)"; then
+        echo "[codex-install] Closing app via system alert option '$label' (content-desc)" >&2
+        "$ADB_BIN" -s "$serial" shell input tap $coords >/dev/null 2>&1 || true
+        ALERT_DISMISS_COUNTS[$wait_key]=0
+        LAST_DISMISSED_ALERT_ACTION="terminate"
+        tapped=1
+        break
+      fi
+    done
+  fi
+
+  if (( tapped == 1 )); then
+    sleep 1
+    return 0
+  fi
 
   return 1
+}
+
+handle_post_alert_after_dismiss() {
+  local serial="$1"
+  local launch_intent="$2"
+
+  if [[ "${LAST_DISMISSED_ALERT_ACTION:-}" == "terminate" ]]; then
+    echo "[codex-install] Relaunching RHVoice after a terminating system alert" >&2
+    "$ADB_BIN" -s "$serial" shell am force-stop "$RHVOICE_PACKAGE_NAME" >/dev/null 2>&1 || true
+    if ! "$ADB_BIN" -s "$serial" shell \
+      am start -a android.intent.action.MAIN -n "$launch_intent" >/dev/null 2>&1; then
+      echo "[codex-install] Failed to relaunch RHVoice following system alert" >&2
+      LAST_DISMISSED_ALERT_ACTION=""
+      return 1
+    fi
+    sleep 3
+    LAST_DISMISSED_ALERT_ACTION=""
+  fi
+
+  return 0
 }
 
 perform_talgat_install_flow() {
   local serial="$1"
   local launch_intent="$RHVOICE_PACKAGE_NAME/.MainActivity"
   echo "[codex-install] Ensuring RHVoice Talgat voice is installed on $serial" >&2
-  dismiss_system_alerts "$serial" || true
+  if dismiss_system_alerts "$serial"; then
+    if ! handle_post_alert_after_dismiss "$serial" "$launch_intent"; then
+      return 1
+    fi
+  fi
   "$ADB_BIN" -s "$serial" shell am force-stop "$RHVOICE_PACKAGE_NAME" >/dev/null 2>&1 || true
   if ! "$ADB_BIN" -s "$serial" shell am start -a android.intent.action.MAIN -n "$launch_intent" >/dev/null 2>&1; then
     echo "[codex-install] Failed to launch RHVoice UI on $serial" >&2
@@ -749,7 +993,11 @@ perform_talgat_install_flow() {
 
   # Try to locate the Tatar language entry, scrolling through the list if necessary.
   while [[ $attempt -lt $max_scroll_attempts ]]; do
-    dismiss_system_alerts "$serial" || true
+    if dismiss_system_alerts "$serial"; then
+      if ! handle_post_alert_after_dismiss "$serial" "$launch_intent"; then
+        return 1
+      fi
+    fi
     for entry in "${language_variants[@]}"; do
       if coords="$(find_ui_element_center "$serial" text "$entry" 5 contains)"; then
         echo "[codex-install] Located language entry '$entry' while searching for Tatar" >&2
@@ -780,7 +1028,11 @@ perform_talgat_install_flow() {
   coords=""
   attempt=0
   while [[ $attempt -lt $max_scroll_attempts ]]; do
-    dismiss_system_alerts "$serial" || true
+    if dismiss_system_alerts "$serial"; then
+      if ! handle_post_alert_after_dismiss "$serial" "$launch_intent"; then
+        return 1
+      fi
+    fi
     for entry in "${voice_variants[@]}"; do
       if coords="$(find_ui_element_center "$serial" text "$entry" 5 contains)"; then
         echo "[codex-install] Located voice entry '$entry' in RHVoice UI" >&2
@@ -837,7 +1089,11 @@ perform_talgat_install_flow() {
         echo "[codex-install] Located install action but could not determine tap coordinates" >&2
         return 1
       fi
-      dismiss_system_alerts "$serial" || true
+      if dismiss_system_alerts "$serial"; then
+        if ! handle_post_alert_after_dismiss "$serial" "$launch_intent"; then
+          return 1
+        fi
+      fi
     else
       echo "[codex-install] Unable to locate the Install button for Talgat voice" >&2
       return 1
@@ -861,10 +1117,11 @@ perform_talgat_install_flow() {
 
 install_talgat_voice() {
   local serial="$1"
+  local force_install_ui="${2:-0}"
   local max_attempts="${CODEX_RHVOICE_TALGAT_ATTEMPTS:-3}"
   local attempt=1
 
-  if is_talgat_voice_installed "$serial"; then
+  if [[ "$force_install_ui" != "1" ]] && is_talgat_voice_installed "$serial"; then
     local existing_path
     existing_path="$(detect_talgat_voice_path "$serial" || true)"
     if [[ -n "$existing_path" ]]; then
@@ -1228,6 +1485,12 @@ if ! wait_for_device_boot "$target_serial" 300; then
   exit 1
 fi
 
+if ensure_device_unlocked "$target_serial" 180; then
+  echo "[codex-install] Device storage is accessible after unlock checks." >&2
+else
+  echo "[codex-install] Unable to confirm device unlock state within timeout; continuing regardless." >&2
+fi
+
 echo "[codex-install] Package manager is available; proceeding with prerequisite installations."
 
 if [[ "$INSTALL_RHVOICE" == "1" ]]; then
@@ -1237,8 +1500,14 @@ if [[ "$INSTALL_RHVOICE" == "1" ]]; then
   fi
   if ! ensure_talgat_voice_assets "$target_serial" "$TALGAT_LANGUAGE_ARCHIVE_PATH" "$TALGAT_VOICE_ARCHIVE_PATH"; then
     echo "[codex-install] Direct deployment of Talgat assets failed; attempting UI automation fallback" >&2
-    if ! install_talgat_voice "$target_serial"; then
+    if ! install_talgat_voice "$target_serial" 1; then
       echo "[codex-install] Failed to automate Talgat voice installation on $target_serial" >&2
+      exit 1
+    fi
+  elif [[ "$FORCE_TALGAT_UI_AFTER_PUSH" == "1" ]]; then
+    echo "[codex-install] Verifying Talgat voice registration through RHVoice UI" >&2
+    if ! install_talgat_voice "$target_serial" 1; then
+      echo "[codex-install] RHVoice UI automation failed while verifying Talgat voice" >&2
       exit 1
     fi
   fi
@@ -1275,7 +1544,7 @@ attempt_push_install() {
     echo "[codex-install] Failed to push APK to device." >&2
     return 1
   fi
-  local -a pm_cmd=("$ADB_BIN" -s "$target_serial" shell pm install -r "$temp_remote_apk")
+  local -a pm_cmd=("$ADB_BIN" -s "$target_serial" shell pm install -r -d -g "$temp_remote_apk")
   if command -v timeout >/dev/null 2>&1; then
     timeout "${ADB_INSTALL_TIMEOUT_SECONDS}s" "${pm_cmd[@]}"
     local exit_code=$?
