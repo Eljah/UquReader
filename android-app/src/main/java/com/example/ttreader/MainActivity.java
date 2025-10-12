@@ -44,6 +44,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
+import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
 import com.example.ttreader.data.DbHelper;
@@ -3596,9 +3597,51 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 || pendingDetailRequest != null;
     }
 
+    @VisibleForTesting
+    static final class SpeechButtonState {
+        final int toggleIconRes;
+        final int toggleDescriptionRes;
+        final boolean toggleEnabled;
+        final boolean stopVisible;
+        final boolean stopEnabled;
+
+        SpeechButtonState(int toggleIconRes, int toggleDescriptionRes, boolean toggleEnabled,
+                boolean stopVisible) {
+            this.toggleIconRes = toggleIconRes;
+            this.toggleDescriptionRes = toggleDescriptionRes;
+            this.toggleEnabled = toggleEnabled;
+            this.stopVisible = stopVisible;
+            this.stopEnabled = stopVisible;
+        }
+    }
+
+    @VisibleForTesting
+    static SpeechButtonState calculateSpeechButtonState(boolean voiceAvailable,
+            boolean sessionActive, boolean isSpeaking) {
+        int toggleIconRes;
+        int descriptionRes;
+        boolean toggleEnabled;
+        if (!sessionActive) {
+            toggleIconRes = R.drawable.ic_radio_point;
+            descriptionRes = R.string.speech_toggle_content_start;
+            toggleEnabled = voiceAvailable;
+        } else if (isSpeaking) {
+            toggleIconRes = R.drawable.ic_pause;
+            descriptionRes = R.string.speech_toggle_content_pause;
+            toggleEnabled = true;
+        } else {
+            toggleIconRes = R.drawable.ic_play;
+            descriptionRes = R.string.speech_toggle_content_resume;
+            toggleEnabled = true;
+        }
+        boolean stopVisible = sessionActive;
+        return new SpeechButtonState(toggleIconRes, descriptionRes, toggleEnabled, stopVisible);
+    }
+
     private void updateSpeechButtons() {
         boolean voiceAvailable = ttsReady && talgatVoice != null;
         boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
+        SpeechButtonState state = calculateSpeechButtonState(voiceAvailable, sessionActive, isSpeaking);
         Log.d(TAG,
                 "updateSpeechButtons: start voiceAvailable=" + voiceAvailable
                         + ", sessionActive=" + sessionActive
@@ -3606,28 +3649,12 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                         + ", toggleMenuItemPresent=" + (toggleSpeechMenuItem != null)
                         + ", stopMenuItemPresent=" + (stopSpeechMenuItem != null));
         if (toggleSpeechMenuItem != null) {
-            int iconRes;
-            int descriptionRes;
-            boolean toggleEnabled;
-            if (!sessionActive) {
-                iconRes = R.drawable.ic_radio_point;
-                descriptionRes = R.string.speech_toggle_content_start;
-                toggleEnabled = voiceAvailable;
-            } else if (isSpeaking) {
-                iconRes = R.drawable.ic_pause;
-                descriptionRes = R.string.speech_toggle_content_pause;
-                toggleEnabled = true;
-            } else {
-                iconRes = R.drawable.ic_play;
-                descriptionRes = R.string.speech_toggle_content_resume;
-                toggleEnabled = true;
-            }
-            toggleSpeechMenuItem.setEnabled(toggleEnabled);
-            Drawable toggleIcon = getDrawable(iconRes);
+            toggleSpeechMenuItem.setEnabled(state.toggleEnabled);
+            Drawable toggleIcon = getDrawable(state.toggleIconRes);
             if (toggleIcon != null) {
                 toggleIcon = toggleIcon.mutate();
-                toggleIcon.setAlpha(toggleEnabled ? 255 : 100);
-                String toggleIconName = safeResourceName(iconRes, "toggle_icon");
+                toggleIcon.setAlpha(state.toggleEnabled ? 255 : 100);
+                String toggleIconName = safeResourceName(state.toggleIconRes, "toggle_icon");
                 Drawable loggingToggleIcon = LoggingDrawableWrapper.wrap(toggleIcon,
                         "speech_toggle:" + toggleIconName);
                 if (loggingToggleIcon != null) {
@@ -3637,39 +3664,37 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 }
                 Log.d(TAG,
                         "updateSpeechButtons: applied toggle icon with alpha="
-                                + (toggleEnabled ? 255 : 100)
+                                + (state.toggleEnabled ? 255 : 100)
                                 + ", loggingWrapperName=" + toggleIconName);
             } else {
-                Log.w(TAG, "updateSpeechButtons: toggle icon drawable missing for resource=" + iconRes);
+                Log.w(TAG, "updateSpeechButtons: toggle icon drawable missing for resource=" + state.toggleIconRes);
             }
-            toggleSpeechMenuItem.setTitle(getString(descriptionRes));
+            toggleSpeechMenuItem.setTitle(getString(state.toggleDescriptionRes));
             try {
-                String iconName = getResources().getResourceEntryName(iconRes);
-                String descriptionName = getResources().getResourceEntryName(descriptionRes);
+                String iconName = getResources().getResourceEntryName(state.toggleIconRes);
+                String descriptionName = getResources().getResourceEntryName(state.toggleDescriptionRes);
                 Log.d(TAG,
                         "updateSpeechButtons: toggle icon=" + iconName
                                 + ", description=" + descriptionName
-                                + ", enabled=" + toggleEnabled
+                                + ", enabled=" + state.toggleEnabled
                                 + ", sessionActive=" + sessionActive
                                 + ", isSpeaking=" + isSpeaking
                                 + ", voiceAvailable=" + voiceAvailable);
             } catch (Resources.NotFoundException e) {
                 Log.d(TAG,
-                        "updateSpeechButtons: toggle resources missing for iconRes=" + iconRes
-                                + ", descriptionRes=" + descriptionRes, e);
+                        "updateSpeechButtons: toggle resources missing for iconRes=" + state.toggleIconRes
+                                + ", descriptionRes=" + state.toggleDescriptionRes, e);
             }
         } else {
             Log.d(TAG, "updateSpeechButtons: toggle menu item is null, skipping icon update");
         }
         if (stopSpeechMenuItem != null) {
-            boolean stopVisible = sessionActive;
-            stopSpeechMenuItem.setVisible(stopVisible);
-            boolean stopEnabled = sessionActive;
-            stopSpeechMenuItem.setEnabled(stopEnabled);
+            stopSpeechMenuItem.setVisible(state.stopVisible);
+            stopSpeechMenuItem.setEnabled(state.stopEnabled);
             Drawable stopIcon = getDrawable(R.drawable.ic_stop);
             if (stopIcon != null) {
                 stopIcon = stopIcon.mutate();
-                stopIcon.setAlpha(stopEnabled ? 255 : 100);
+                stopIcon.setAlpha(state.stopEnabled ? 255 : 100);
                 String stopIconName = safeResourceName(R.drawable.ic_stop, "stop_icon");
                 Drawable loggingStopIcon = LoggingDrawableWrapper.wrap(stopIcon,
                         "speech_stop:" + stopIconName);
@@ -3680,15 +3705,15 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 }
                 Log.d(TAG,
                         "updateSpeechButtons: applied stop icon with alpha="
-                                + (stopEnabled ? 255 : 100)
+                                + (state.stopEnabled ? 255 : 100)
                                 + ", loggingWrapperName=" + stopIconName);
             } else {
                 Log.w(TAG, "updateSpeechButtons: stop icon drawable missing");
             }
             Log.d(TAG,
                     "updateSpeechButtons: stop icon=ic_stop"
-                            + ", visible=" + stopVisible
-                            + ", enabled=" + stopEnabled
+                            + ", visible=" + state.stopVisible
+                            + ", enabled=" + state.stopEnabled
                             + ", sessionActive=" + sessionActive);
         } else {
             Log.d(TAG, "updateSpeechButtons: stop menu item is null, skipping icon update");
