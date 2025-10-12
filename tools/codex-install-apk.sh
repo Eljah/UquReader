@@ -1516,25 +1516,72 @@ fi
 temp_remote_apk="/data/local/tmp/$(basename "$apk_to_install")"
 ADB_INSTALL_TIMEOUT_SECONDS="${CODEX_INSTALL_TIMEOUT_SECONDS:-120}"
 
+ensure_package_service_ready() {
+  local context="$1"
+  local wait_seconds="${2:-60}"
+
+  if wait_for_package_service "$target_serial" "$wait_seconds"; then
+    return 0
+  fi
+
+  echo "[codex-install] Package manager unavailable before $context." >&2
+  return 1
+}
+
 attempt_streaming_install() {
   echo "[codex-install] Attempting streaming adb install..." >&2
   local -a install_cmd=("$ADB_BIN" -s "$target_serial" install -r "$apk_to_install")
-  if command -v timeout >/dev/null 2>&1; then
-    timeout "${ADB_INSTALL_TIMEOUT_SECONDS}s" "${install_cmd[@]}"
-    local exit_code=$?
+  local max_attempts=3
+  local attempt=1
+
+  while (( attempt <= max_attempts )); do
+    if ! ensure_package_service_ready "streaming install attempt $attempt/$max_attempts" 60; then
+      ((attempt+=1))
+      sleep 3
+      continue
+    fi
+
+    local install_output=""
+    local exit_code=0
+
+    if command -v timeout >/dev/null 2>&1; then
+      if ! install_output="$(timeout "${ADB_INSTALL_TIMEOUT_SECONDS}s" "${install_cmd[@]}" 2>&1)"; then
+        exit_code=$?
+      fi
+    else
+      if ! install_output="$("${install_cmd[@]}" 2>&1)"; then
+        exit_code=$?
+      fi
+    fi
+
     if [[ $exit_code -eq 0 ]]; then
       return 0
     fi
-    if [[ $exit_code -eq 124 ]]; then
-      echo "[codex-install] Streaming install timed out after ${ADB_INSTALL_TIMEOUT_SECONDS}s; will try fallback." >&2
+
+    if [[ -n "$install_output" ]]; then
+      echo "$install_output" >&2
+    fi
+
+    if [[ "$install_output" == *"Can't find service: package"* ]]; then
+      echo "[codex-install] Package manager unavailable during streaming install attempt $attempt/$max_attempts; retrying." >&2
+      ((attempt+=1))
+      sleep 3
+      continue
+    fi
+
+    if command -v timeout >/dev/null 2>&1; then
+      if [[ $exit_code -eq 124 ]]; then
+        echo "[codex-install] Streaming install timed out after ${ADB_INSTALL_TIMEOUT_SECONDS}s (attempt $attempt/$max_attempts)." >&2
+      else
+        echo "[codex-install] Streaming install exited with status $exit_code (attempt $attempt/$max_attempts)." >&2
+      fi
     else
-      echo "[codex-install] Streaming install exited with status $exit_code; will try fallback." >&2
+      echo "[codex-install] Streaming install attempt $attempt/$max_attempts failed." >&2
     fi
-  else
-    if "${install_cmd[@]}"; then
-      return 0
-    fi
-  fi
+
+    break
+  done
+
   return 1
 }
 
@@ -1545,22 +1592,57 @@ attempt_push_install() {
     return 1
   fi
   local -a pm_cmd=("$ADB_BIN" -s "$target_serial" shell pm install -r -d -g "$temp_remote_apk")
-  if command -v timeout >/dev/null 2>&1; then
-    timeout "${ADB_INSTALL_TIMEOUT_SECONDS}s" "${pm_cmd[@]}"
-    local exit_code=$?
+  local max_attempts=3
+  local attempt=1
+
+  while (( attempt <= max_attempts )); do
+    if ! ensure_package_service_ready "pm install attempt $attempt/$max_attempts" 60; then
+      ((attempt+=1))
+      sleep 3
+      continue
+    fi
+
+    local install_output=""
+    local exit_code=0
+
+    if command -v timeout >/dev/null 2>&1; then
+      if ! install_output="$(timeout "${ADB_INSTALL_TIMEOUT_SECONDS}s" "${pm_cmd[@]}" 2>&1)"; then
+        exit_code=$?
+      fi
+    else
+      if ! install_output="$("${pm_cmd[@]}" 2>&1)"; then
+        exit_code=$?
+      fi
+    fi
+
     if [[ $exit_code -eq 0 ]]; then
       return 0
     fi
-    if [[ $exit_code -eq 124 ]]; then
-      echo "[codex-install] pm install timed out after ${ADB_INSTALL_TIMEOUT_SECONDS}s." >&2
+
+    if [[ -n "$install_output" ]]; then
+      echo "$install_output" >&2
+    fi
+
+    if [[ "$install_output" == *"Can't find service: package"* ]]; then
+      echo "[codex-install] Package manager unavailable during pm install attempt $attempt/$max_attempts; retrying." >&2
+      ((attempt+=1))
+      sleep 3
+      continue
+    fi
+
+    if command -v timeout >/dev/null 2>&1; then
+      if [[ $exit_code -eq 124 ]]; then
+        echo "[codex-install] pm install timed out after ${ADB_INSTALL_TIMEOUT_SECONDS}s (attempt $attempt/$max_attempts)." >&2
+      else
+        echo "[codex-install] pm install exited with status $exit_code (attempt $attempt/$max_attempts)." >&2
+      fi
     else
-      echo "[codex-install] pm install exited with status $exit_code." >&2
+      echo "[codex-install] pm install attempt $attempt/$max_attempts failed." >&2
     fi
-  else
-    if "${pm_cmd[@]}"; then
-      return 0
-    fi
-  fi
+
+    break
+  done
+
   echo "[codex-install] pm install fallback failed." >&2
   return 1
 }
