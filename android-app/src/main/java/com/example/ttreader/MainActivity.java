@@ -1255,6 +1255,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updatePageControls() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread(this::updatePageControlsInternal);
+            return;
+        }
+        updatePageControlsInternal();
+    }
+
+    private void updatePageControlsInternal() {
         boolean navigationReady = readerView != null && readerView.isNavigationReady();
         boolean speechModeActive = isSpeechModeActive();
         boolean loadingVisible = readerLoadingIndicator != null
@@ -3639,6 +3647,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updateSpeechButtons() {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread(this::updateSpeechButtonsInternal);
+            return;
+        }
+        updateSpeechButtonsInternal();
+    }
+
+    private void updateSpeechButtonsInternal() {
         boolean voiceAvailable = ttsReady && talgatVoice != null;
         boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
         SpeechButtonState state = calculateSpeechButtonState(voiceAvailable, sessionActive, isSpeaking);
@@ -3742,7 +3758,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 skipForwardMenuItem.setIcon(forwardIcon);
             }
         }
-        updatePageControls();
+        updatePageControlsInternal();
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
