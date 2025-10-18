@@ -16,8 +16,8 @@
         android:elevation="4dp"
         android:gravity="center_vertical"
         android:logo="@mipmap/ic_launcher"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
         style="@style/Widget.UquReader.Toolbar"
         android:title="@null"
         android:subtitle="@null" />

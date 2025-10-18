@@ -6,9 +6,9 @@
     android:background="?android:selectableItemBackgroundBorderless"
     android:clickable="true"
     android:focusable="true"
-    android:minWidth="48dp"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp">
+    android:minWidth="40dp"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp">
 
     <ImageView
         android:id="@+id/languagePairIcon"

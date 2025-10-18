@@ -13,6 +13,7 @@
         <item name="android:textColorSecondary">@color/app_text_secondary</item>
         <item name="android:navigationBarColor">@color/app_primary_dark</item>
         <item name="android:statusBarColor">@color/app_primary_dark</item>
+        <item name="android:actionButtonStyle">@style/Widget.UquReader.ActionButton</item>
     </style>
 
     <style name="TextAppearance.UquReader.Title" parent="@android:style/TextAppearance.Material.Headline">
@@ -49,6 +50,19 @@
     <style name="Widget.UquReader.Toolbar" parent="@android:style/Widget.Material.Toolbar">
         <item name="android:background">@color/app_primary</item>
         <item name="android:logo">@mipmap/ic_launcher</item>
-        <item name="android:contentInsetStartWithNavigation">16dp</item>
+        <item name="android:contentInsetStartWithNavigation">0dp</item>
+        <item name="android:contentInsetEndWithActions">0dp</item>
+        <item name="android:contentInsetLeft">0dp</item>
+        <item name="android:contentInsetRight">0dp</item>
+        <item name="android:contentInsetStart">0dp</item>
+        <item name="android:contentInsetEnd">0dp</item>
+    </style>
+
+    <style name="Widget.UquReader.ActionButton" parent="@android:style/Widget.Material.ActionButton">
+        <item name="android:minWidth">40dp</item>
+        <item name="android:paddingLeft">4dp</item>
+        <item name="android:paddingRight">4dp</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
     </style>
 </resources>
