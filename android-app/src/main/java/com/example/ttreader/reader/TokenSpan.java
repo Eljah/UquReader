@@ -12,6 +12,7 @@ public class TokenSpan extends ReplacementSpan {
     public final Token token;
     public final String featureKey;
 
+    public float baseAlpha = 0f;
     public float lastAlpha = 0f;
     private int startIndex = -1;
     private int endIndex = -1;

@@ -48,16 +48,6 @@ public final class SpeechButtonsController {
         if (stopItem != null && iconStop != null) {
             stopItem.setIcon(iconStop);
         }
-        // Всегда видимы → никакого relayout при смене состояния
-        if (stopItem != null) {
-            stopItem.setVisible(true);
-        }
-        if (skipBackItem != null) {
-            skipBackItem.setVisible(true);
-        }
-        if (skipFwdItem != null) {
-            skipFwdItem.setVisible(true);
-        }
         render();
     }
 
@@ -119,27 +109,28 @@ public final class SpeechButtonsController {
         switch (mode) {
             case IDLE: {
                 setToggle(R.drawable.ic_speaker_pole, R.string.speech_toggle_content_start, true);
-                setStopEnabled(false);
-                setSkipsEnabled(false);
+                setStopState(false, false);
+                setSkipsState(false, false);
                 break;
             }
             case PLAYING: {
                 setToggle(R.drawable.ic_pause, R.string.speech_toggle_content_pause, true);
-                setStopEnabled(true);
-                setSkipsEnabled(true);
+                setStopState(true, true);
+                setSkipsState(true, true);
                 break;
             }
             case PAUSED: {
                 setToggle(R.drawable.ic_play, R.string.speech_toggle_content_resume, true);
-                setStopEnabled(true);
-                setSkipsEnabled(true);
+                setStopState(true, true);
+                setSkipsState(true, true);
                 break;
             }
         }
     }
 
-    private void setStopEnabled(boolean enabled) {
+    private void setStopState(boolean visible, boolean enabled) {
         if (stopItem == null) return;
+        stopItem.setVisible(visible);
         stopItem.setEnabled(enabled);
         final Drawable d = stopItem.getIcon();
         if (d != null) {
@@ -147,12 +138,14 @@ public final class SpeechButtonsController {
         }
     }
 
-    private void setSkipsEnabled(boolean enabled) {
+    private void setSkipsState(boolean visible, boolean enabled) {
         if (skipBackItem != null) {
+            skipBackItem.setVisible(visible);
             skipBackItem.setEnabled(enabled);
             skipBackItem.setIcon(enabled ? iconSkipBackEnabled : iconSkipBackDisabled);
         }
         if (skipFwdItem  != null) {
+            skipFwdItem.setVisible(visible);
             skipFwdItem.setEnabled(enabled);
             skipFwdItem.setIcon(enabled ? iconSkipFwdEnabled : iconSkipFwdDisabled);
         }

@@ -122,6 +122,7 @@ public class ReaderView extends TextView {
     private boolean deferredPageScheduled;
     private boolean renderPassPending;
     private boolean renderUnlockListenerRegistered;
+    private volatile boolean lemmaHighlightEnabled = true;
     private final ViewTreeObserver.OnPreDrawListener renderUnlockListener =
             new ViewTreeObserver.OnPreDrawListener() {
                 @Override public boolean onPreDraw() {
@@ -310,6 +311,19 @@ public class ReaderView extends TextView {
         dispatchNavigationStateChanged();
     }
 
+    public boolean isLemmaHighlightEnabled() {
+        return lemmaHighlightEnabled;
+    }
+
+    public void setLemmaHighlightEnabled(boolean enabled) {
+        if (lemmaHighlightEnabled == enabled) {
+            return;
+        }
+        lemmaHighlightEnabled = enabled;
+        applyHighlightStateToTokens();
+        invalidate();
+    }
+
     public void setInitialCharIndex(int charIndex) {
         if (charIndex < 0) {
             charIndex = 0;
@@ -493,6 +507,7 @@ public class ReaderView extends TextView {
         currentDocument = result;
         tokenSpans.clear();
         tokenSpans.addAll(result.tokenSpans);
+        applyHighlightStateToTokens();
         loggedExposures.clear();
         sentenceRanges.clear();
         sentenceRanges.addAll(result.sentenceRanges);
@@ -512,6 +527,15 @@ public class ReaderView extends TextView {
         int target = hasPendingInitialChar ? pendingInitialCharIndex : 0;
         hasPendingInitialChar = false;
         requestDisplayForChar(target, true);
+    }
+
+    private void applyHighlightStateToTokens() {
+        for (TokenSpan span : tokenSpans) {
+            if (span == null) {
+                continue;
+            }
+            span.lastAlpha = lemmaHighlightEnabled ? span.baseAlpha : 0f;
+        }
     }
 
     public void displayWindowAround(int targetCharIndex) {
@@ -1665,19 +1689,22 @@ public class ReaderView extends TextView {
             int end = plain.length();
 
             if (end > start) {
-                if (t.hasMorphology()) {
-                    Morphology morph = t.morphology;
-                    TokenSpan span = new TokenSpan(t);
-                    span.setCharacterRange(start, end);
-                    double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
-                    double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
-                    span.lastAlpha = (float) alpha;
-                    spans.add(span);
-                } else {
-                    TokenSpan span = new TokenSpan(t);
-                    span.setCharacterRange(start, end);
-                    spans.add(span);
-                }
+                    if (t.hasMorphology()) {
+                        Morphology morph = t.morphology;
+                        TokenSpan span = new TokenSpan(t);
+                        span.setCharacterRange(start, end);
+                        double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
+                        double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
+                        span.baseAlpha = (float) alpha;
+                        span.lastAlpha = lemmaHighlightEnabled ? span.baseAlpha : 0f;
+                        spans.add(span);
+                    } else {
+                        TokenSpan span = new TokenSpan(t);
+                        span.setCharacterRange(start, end);
+                        span.baseAlpha = 0f;
+                        span.lastAlpha = 0f;
+                        spans.add(span);
+                    }
             }
         }
 

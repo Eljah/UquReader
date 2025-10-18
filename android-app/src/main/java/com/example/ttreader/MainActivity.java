@@ -96,6 +96,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             "reader.page.height.adjustment.applied.v2";
     private static final String PREF_KEY_PAGE_HEIGHT_ADJUSTMENT_APPLIED_LEGACY =
             "reader.page.height.reduction.applied";
+    private static final String PREF_KEY_LEMMA_HIGHLIGHT_ENABLED =
+            "reader.lemma.highlight.enabled";
     private static final class WorkInfo {
         final String id;
         final String asset;
@@ -401,6 +403,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private MenuItem languagePairMenuItem;
     private MenuItem workMenuItem;
     private MenuItem installTalgatMenuItem;
+    private MenuItem bluetoothSettingsMenuItem;
+    private MenuItem appSettingsMenuItem;
+    private MenuItem highlightToggleMenuItem;
     // Последний показанный режим воспроизведения для пунктов меню озвучки
     private UiPlaybackMode uiMode = UiPlaybackMode.IDLE;
     private SpeechButtonsController speechButtons;
@@ -411,6 +416,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private WorkInfo currentWork;
     private int readingProgressColor;
     private int listeningProgressColor;
+    private boolean lemmaHighlightEnabled = true;
 
     private final Handler speechProgressHandler = new Handler(Looper.getMainLooper());
     private final List<ReaderView.SentenceRange> sentenceRanges = new ArrayList<>();
@@ -566,6 +572,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             if (saved != null) {
                 currentWork = saved;
             }
+            lemmaHighlightEnabled = readerPrefs.getBoolean(
+                    PREF_KEY_LEMMA_HIGHLIGHT_ENABLED, true);
         }
         if (readerPrefs != null) {
             readerPageHeightAdjustmentApplied = readerPrefs.getBoolean(
@@ -663,6 +671,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 logViewEvent("ReaderView", readerView, "navigationState -> " + ready);
                 updatePageControls();
             });
+            readerView.setLemmaHighlightEnabled(lemmaHighlightEnabled);
         }
 
         if (readerScrollView != null) {
@@ -743,6 +752,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         languagePairMenuItem = menu.findItem(R.id.action_language_pair);
         workMenuItem         = menu.findItem(R.id.action_select_work);
         installTalgatMenuItem= menu.findItem(R.id.action_install_talgat);
+        bluetoothSettingsMenuItem = menu.findItem(R.id.action_bluetooth_settings);
+        appSettingsMenuItem = menu.findItem(R.id.action_app_settings);
+        highlightToggleMenuItem = menu.findItem(R.id.action_toggle_word_highlight);
+        if (highlightToggleMenuItem != null) {
+            highlightToggleMenuItem.setCheckable(true);
+        }
+        updateHighlightToggleMenuItemAppearance();
 
         // привяжем контроллер кнопок к пунктам меню
         if (speechButtons == null) speechButtons = new SpeechButtonsController(this);
@@ -822,6 +838,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 openDeviceStats();
                 return true;
 
+            case R.id.action_app_settings:
+                openAppSettings();
+                return true;
+
+            case R.id.action_toggle_word_highlight:
+                toggleLemmaHighlight();
+                return true;
+
             case R.id.action_bluetooth_settings:
                 openBluetoothSettings();
                 return true;
@@ -853,16 +877,14 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             runOnUiThread(() -> updateUiPlaybackMode(newMode));
             return;
         }
-        if (uiMode == newMode) {
-            if (speechButtons != null) {
-                speechButtons.setMode(newMode);
-            }
-            return;
-        }
-        uiMode = newMode;
         if (speechButtons != null) {
             speechButtons.setMode(newMode);
         }
+        updateMenuVisibilityForMode(newMode);
+        if (uiMode == newMode) {
+            return;
+        }
+        uiMode = newMode;
     }
 
     @Override protected void onNewIntent(Intent intent) {
@@ -1044,6 +1066,57 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             startActivity(intent);
         } else {
             Toast.makeText(this, R.string.bluetooth_settings_unavailable, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openAppSettings() {
+        Intent intent = new Intent(this, AppSettingsActivity.class);
+        startActivity(intent);
+    }
+
+    private void toggleLemmaHighlight() {
+        lemmaHighlightEnabled = !lemmaHighlightEnabled;
+        if (readerPrefs != null) {
+            readerPrefs.edit()
+                    .putBoolean(PREF_KEY_LEMMA_HIGHLIGHT_ENABLED, lemmaHighlightEnabled)
+                    .apply();
+        }
+        if (readerView != null) {
+            readerView.setLemmaHighlightEnabled(lemmaHighlightEnabled);
+        }
+        updateHighlightToggleMenuItemAppearance();
+    }
+
+    private void updateHighlightToggleMenuItemAppearance() {
+        if (highlightToggleMenuItem == null) {
+            return;
+        }
+        int iconRes = lemmaHighlightEnabled ? R.drawable.ic_highlight_on : R.drawable.ic_highlight_off;
+        highlightToggleMenuItem.setIcon(iconRes);
+        int titleRes = lemmaHighlightEnabled
+                ? R.string.highlight_toggle_disable
+                : R.string.highlight_toggle_enable;
+        highlightToggleMenuItem.setTitle(titleRes);
+        highlightToggleMenuItem.setContentDescription(getString(titleRes));
+        highlightToggleMenuItem.setChecked(lemmaHighlightEnabled);
+    }
+
+    private void updateMenuVisibilityForMode(UiPlaybackMode mode) {
+        if (mode == null) {
+            return;
+        }
+        boolean readingMode = (mode == UiPlaybackMode.IDLE);
+        if (bluetoothSettingsMenuItem != null) {
+            bluetoothSettingsMenuItem.setVisible(readingMode);
+        }
+        if (appSettingsMenuItem != null) {
+            appSettingsMenuItem.setVisible(readingMode);
+        }
+        if (highlightToggleMenuItem != null) {
+            highlightToggleMenuItem.setVisible(readingMode);
+            if (readingMode) {
+                updateHighlightToggleMenuItemAppearance();
+            }
         }
     }
 

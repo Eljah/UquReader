@@ -25,6 +25,25 @@
         android:title="@string/speech_skip_forward_content"
         android:showAsAction="always" />
     <item
+        android:id="@+id/action_bluetooth_settings"
+        android:icon="@drawable/ic_settings_bluetooth"
+        android:iconTint="@color/toolbar_icon_tint"
+        android:title="@string/bluetooth_settings_button"
+        android:showAsAction="always" />
+    <item
+        android:id="@+id/action_app_settings"
+        android:icon="@drawable/ic_settings_app"
+        android:iconTint="@color/toolbar_icon_tint"
+        android:title="@string/app_settings_button"
+        android:showAsAction="always" />
+    <item
+        android:id="@+id/action_toggle_word_highlight"
+        android:checkable="true"
+        android:icon="@drawable/ic_highlight_on"
+        android:iconTint="@color/toolbar_icon_tint"
+        android:title="@string/highlight_toggle_disable"
+        android:showAsAction="always" />
+    <item
         android:id="@+id/action_language_pair"
         android:actionLayout="@layout/menu_action_language_pair"
         android:icon="@drawable/ic_language_menu"
@@ -54,12 +73,6 @@
         android:icon="@drawable/ic_stats_bluetooth"
         android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/stats_button_device"
-        android:showAsAction="always" />
-    <item
-        android:id="@+id/action_bluetooth_settings"
-        android:icon="@drawable/ic_settings_bluetooth"
-        android:iconTint="@color/toolbar_icon_tint"
-        android:title="@string/bluetooth_settings_button"
         android:showAsAction="always" />
     <item
         android:id="@+id/action_install_talgat"

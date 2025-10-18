@@ -20,6 +20,7 @@
         </activity>
         <activity android:name=".StatsActivity" />
         <activity android:name=".DeviceStatsActivity" />
+        <activity android:name=".AppSettingsActivity" />
 
     </application>
 </manifest>
