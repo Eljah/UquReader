@@ -455,9 +455,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         pagePreviousButton = findViewById(R.id.pagePreviousButton);
         pageNextButton = findViewById(R.id.pageNextButton);
         if (pagingController == null) {
-            pagingController = new PagingController();
+            pagingController = new PagingController(this);
         }
         pagingController.bindViews(pagePreviousButton, pageNextButton);
+        pagingController.bindFirstViewPagerInContent();
         pageControls = findViewById(R.id.pageControls);
         pageNumberText = findViewById(R.id.pageNumberText);
 
@@ -588,7 +589,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 R.id.action_skip_forward
         );
         if (pagingController == null) {
-            pagingController = new PagingController();
+            pagingController = new PagingController(this);
+            pagingController.bindFirstViewPagerInContent();
         }
         pagingController.bindMenu(menu, View.NO_ID, View.NO_ID);
         // синхронизировать кнопки с текущим состоянием воспроизведения
@@ -603,6 +605,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     @Override public boolean onPrepareOptionsMenu(Menu menu) {
+        if (pagingController != null) {
+            pagingController.bindMenu(menu, View.NO_ID, View.NO_ID);
+        }
         setOverflowMenuIconsVisible(menu);
         return super.onPrepareOptionsMenu(menu);
     }
@@ -2421,6 +2426,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         speechSessionActive = true;
         awaitingResumeAfterDetail = false;
         shouldContinueSpeech = true;
+        updatePageControls();
         if (mediaSession != null) {
             mediaSession.setActive(true);
         }
@@ -2459,6 +2465,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
         updatePlaybackState(PlaybackState.STATE_PAUSED);
+        updatePageControls();
     }
 
     private void stopSpeech() {
@@ -2510,6 +2517,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         markLastModeVisual();
         updatePlaybackState(PlaybackState.STATE_STOPPED);
+        updatePageControls();
     }
 
     private void speakCurrentSentence() {
@@ -3631,8 +3639,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private boolean isSpeechModeActive() {
-        return speechSessionActive
-                || shouldContinueSpeech
+        return shouldContinueSpeech
                 || isSpeaking
                 || awaitingResumeAfterDetail
                 || detailPlaybackActive()
