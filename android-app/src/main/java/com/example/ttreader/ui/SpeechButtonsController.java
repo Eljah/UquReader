@@ -11,9 +11,9 @@ import androidx.annotation.StringRes;
 import com.example.ttreader.R;
 
 /**
- * UI-only контроллер кнопок озвучки.
- * Меняет иконки/видимость ТОЛЬКО по пользовательским нажатиям.
- * Любые фоновые события TTS/MediaPlayer сюда не прокидываются.
+ * Контроллер отображения кнопок озвучки.
+ * Содержит только UI-логику (иконки, доступность, альфа-канал) для элементов меню.
+ * Внешний код обязан вызывать {@link #setMode(UiPlaybackMode)} при изменении состояния.
  */
 public final class SpeechButtonsController {
 
@@ -57,28 +57,6 @@ public final class SpeechButtonsController {
         }
         render();
     }
-
-    /** Пользователь нажал toggle. */
-    public void onUserPressedToggle() {
-        switch (mode) {
-            case IDLE:
-            case PAUSED:
-                mode = UiPlaybackMode.PLAYING;
-                break;
-            case PLAYING:
-                mode = UiPlaybackMode.PAUSED;
-                break;
-        }
-        render();
-    }
-
-    /** Пользователь нажал stop. */
-    public void onUserPressedStop() {
-        mode = UiPlaybackMode.IDLE;
-        render();
-    }
-
-    public UiPlaybackMode getMode() { return mode; }
 
     public void setMode(UiPlaybackMode newMode) {
         if (newMode != null) {
