@@ -71,7 +71,7 @@ public final class SpeechButtonsController {
     // ====== private ======
 
     private void ensureIcons() {
-        if (iconStart == null) { iconStart = get(R.drawable.ic_radio_point); }
+        if (iconStart == null) { iconStart = get(R.drawable.ic_speaker_pole); }
         if (iconPause == null) { iconPause = get(R.drawable.ic_pause); }
         if (iconPlay  == null) { iconPlay  = get(R.drawable.ic_play); }
         if (iconStop  == null) { iconStop  = get(R.drawable.ic_stop); }
@@ -103,7 +103,7 @@ public final class SpeechButtonsController {
 
     private void setToggle(@DrawableRes int resIcon, @StringRes int contentDesc, boolean enabled) {
         Drawable d =
-                (resIcon == R.drawable.ic_radio_point) ? iconStart :
+                (resIcon == R.drawable.ic_speaker_pole) ? iconStart :
                 (resIcon == R.drawable.ic_pause)       ? iconPause :
                                                          iconPlay;
         if (d != null) {
@@ -118,7 +118,7 @@ public final class SpeechButtonsController {
         if (toggleItem == null) return;
         switch (mode) {
             case IDLE: {
-                setToggle(R.drawable.ic_radio_point, R.string.speech_toggle_content_start, true);
+                setToggle(R.drawable.ic_speaker_pole, R.string.speech_toggle_content_start, true);
                 setStopEnabled(false);
                 setSkipsEnabled(false);
                 break;
