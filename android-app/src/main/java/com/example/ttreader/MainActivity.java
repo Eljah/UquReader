@@ -237,7 +237,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private MenuItem languagePairMenuItem;
     private MenuItem workMenuItem;
     private MenuItem installTalgatMenuItem;
-    private SpeechButtonsController speechButtons;   // новый контроллер только для UI
+    // === UI-only состояние кнопок; меняется ТОЛЬКО по кликам пользователя ===
+    private UiPlaybackMode uiMode = UiPlaybackMode.IDLE;
+    private SpeechButtonsController speechButtons;
     private AlertDialog rhvoiceDialog;
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
     private boolean languagePairInitialized = false;
@@ -570,11 +572,18 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         workMenuItem         = menu.findItem(R.id.action_select_work);
         installTalgatMenuItem= menu.findItem(R.id.action_install_talgat);
 
-        // привязка контроллера кнопок
+        // привяжем контроллер кнопок к пунктам меню
         if (speechButtons == null) speechButtons = new SpeechButtonsController(this);
-        speechButtons.bind(menu);
-        // начальный UI-режим — без озвучки
-        speechButtons.setMode(UiPlaybackMode.IDLE);
+        speechButtons.bind(
+                menu,
+                R.id.action_toggle_speech,
+                R.id.action_stop_speech,
+                R.id.action_skip_back,
+                R.id.action_skip_forward
+        );
+        // начальный вид — нет воспроизведения
+        uiMode = UiPlaybackMode.IDLE;
+        speechButtons.setMode(uiMode);
 
         setupLanguagePairActionView();
         setupWorkMenuItem();
@@ -593,8 +602,13 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (item == null) return super.onOptionsItemSelected(item);
         switch (item.getItemId()) {
             case R.id.action_toggle_speech:
-                if (isSpeaking) { pauseSpeech(); }
-                else { startSpeech(); }
+                if (uiMode == UiPlaybackMode.PLAYING) {
+                    pauseSpeech();
+                    uiMode = UiPlaybackMode.PAUSED;
+                } else {
+                    startSpeech();
+                    uiMode = UiPlaybackMode.PLAYING;
+                }
                 if (speechButtons != null) {
                     speechButtons.onUserPressedToggle();
                 }
@@ -602,6 +616,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
             case R.id.action_stop_speech:
                 stopSpeech();
+                uiMode = UiPlaybackMode.IDLE;
                 if (speechButtons != null) {
                     speechButtons.onUserPressedStop();
                 }
@@ -3616,20 +3631,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         return new SpeechButtonState(toggleIconRes, descriptionRes, toggleEnabled, stopVisible);
     }
 
-    private void updateSpeechButtons() {
-        if (speechButtons == null) {
-            return;
-        }
-        UiPlaybackMode targetMode;
-        if (isSpeaking) {
-            targetMode = UiPlaybackMode.PLAYING;
-        } else if (speechSessionActive || shouldContinueSpeech) {
-            targetMode = UiPlaybackMode.PAUSED;
-        } else {
-            targetMode = UiPlaybackMode.IDLE;
-        }
-        speechButtons.setMode(targetMode);
-    }
+    @Deprecated
+    private void updateSpeechButtons() { /* no-op */ }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         if (handleExternalKeyEvent(event)) {

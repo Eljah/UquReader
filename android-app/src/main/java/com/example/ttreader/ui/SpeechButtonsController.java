@@ -11,9 +11,9 @@ import androidx.annotation.StringRes;
 import com.example.ttreader.R;
 
 /**
- * Управляет отображением кнопок озвучки строго по "UI-событиям".
- * Внешний мир сообщает только: пользователь нажал Toggle/Stop.
- * Никаких обновлений из TTS/MediaPlayer здесь нет.
+ * UI-only контроллер кнопок озвучки.
+ * Меняет иконки/видимость ТОЛЬКО по пользовательским нажатиям.
+ * Любые фоновые события TTS/MediaPlayer сюда не прокидываются.
  */
 public final class SpeechButtonsController {
 
@@ -21,29 +21,34 @@ public final class SpeechButtonsController {
 
     private final Activity activity;
 
-    // menu items
     private MenuItem toggleItem;
     private MenuItem stopItem;
     private MenuItem skipBackItem;
     private MenuItem skipFwdItem;
 
-    // кэш текущего режима — единственный источник правды для иконок
     private UiPlaybackMode mode = UiPlaybackMode.IDLE;
+
+    // Кэш иконок, чтобы избежать лишних инвалидаций и "мигания"
+    private Drawable iconStart, iconPause, iconPlay, iconStop;
 
     public SpeechButtonsController(Activity activity) {
         this.activity = activity;
     }
 
     /** Привязать пункты меню (вызывать из onCreateOptionsMenu). */
-    public void bind(Menu menu) {
-        toggleItem   = menu.findItem(R.id.action_toggle_speech);
-        stopItem     = menu.findItem(R.id.action_stop_speech);
-        skipBackItem = menu.findItem(R.id.action_skip_back);
-        skipFwdItem  = menu.findItem(R.id.action_skip_forward);
-        render(); // первичная отрисовка
+    public void bind(Menu menu, int idToggle, int idStop, int idSkipBack, int idSkipFwd) {
+        toggleItem   = menu.findItem(idToggle);
+        stopItem     = menu.findItem(idStop);
+        skipBackItem = menu.findItem(idSkipBack);
+        skipFwdItem  = menu.findItem(idSkipFwd);
+        ensureIcons();
+        if (stopItem != null && iconStop != null) {
+            stopItem.setIcon(iconStop);
+        }
+        render();
     }
 
-    /** Зафиксировать, что пользователь НАЖАЛ toggle. */
+    /** Пользователь нажал toggle. */
     public void onUserPressedToggle() {
         switch (mode) {
             case IDLE:
@@ -57,73 +62,74 @@ public final class SpeechButtonsController {
         render();
     }
 
-    /** Зафиксировать, что пользователь НАЖАЛ stop. */
+    /** Пользователь нажал stop. */
     public void onUserPressedStop() {
         mode = UiPlaybackMode.IDLE;
         render();
     }
 
-    /** Дать текущий "UI-режим" внешнему миру (если нужно для логов/статистики). */
-    public UiPlaybackMode getMode() {
-        return mode;
-    }
+    public UiPlaybackMode getMode() { return mode; }
 
-    /** Принудительно показать нужный режим (например, при создании меню). */
     public void setMode(UiPlaybackMode newMode) {
-        if (newMode != null && newMode != mode) {
+        if (newMode != null) {
             mode = newMode;
             render();
         }
     }
 
-    // ====== отрисовка ======
+    // ====== private ======
 
-    private void render() {
-        if (toggleItem == null || stopItem == null) return;
-
-        switch (mode) {
-            case IDLE:
-                applyToggle(R.drawable.ic_radio_point, R.string.speech_toggle_content_start, true);
-                applyStopVisible(false);
-                applySkipVisible(false);
-                break;
-            case PLAYING:
-                applyToggle(R.drawable.ic_pause, R.string.speech_toggle_content_pause, true);
-                applyStopVisible(true);
-                applySkipVisible(true);
-                break;
-            case PAUSED:
-                applyToggle(R.drawable.ic_play, R.string.speech_toggle_content_resume, true);
-                applyStopVisible(true);
-                applySkipVisible(true);
-                break;
-        }
+    private void ensureIcons() {
+        if (iconStart == null) { iconStart = get(R.drawable.ic_radio_point); }
+        if (iconPause == null) { iconPause = get(R.drawable.ic_pause); }
+        if (iconPlay  == null) { iconPlay  = get(R.drawable.ic_play); }
+        if (iconStop  == null) { iconStop  = get(R.drawable.ic_stop); }
     }
 
-    private void applyToggle(@DrawableRes int iconRes, @StringRes int desc, boolean enabled) {
-        Drawable d = activity.getDrawable(iconRes);
+    private Drawable get(@DrawableRes int res) {
+        Drawable d = activity.getDrawable(res);
+        return d == null ? null : d.mutate();
+    }
+
+    private void setToggle(@DrawableRes int resIcon, @StringRes int contentDesc, boolean enabled) {
+        Drawable d =
+                (resIcon == R.drawable.ic_radio_point) ? iconStart :
+                (resIcon == R.drawable.ic_pause)       ? iconPause :
+                                                         iconPlay;
         if (d != null) {
-            d = d.mutate();
             d.setAlpha(enabled ? 255 : 100);
             toggleItem.setIcon(d);
         }
-        toggleItem.setTitle(activity.getString(desc));
+        toggleItem.setTitle(activity.getString(contentDesc));
         toggleItem.setEnabled(enabled);
     }
 
-    private void applyStopVisible(boolean visible) {
-        stopItem.setVisible(visible);
-        stopItem.setEnabled(visible);
+    private void render() {
+        if (toggleItem == null || stopItem == null) return;
+        switch (mode) {
+            case IDLE:
+                setToggle(R.drawable.ic_radio_point, R.string.speech_toggle_content_start, true);
+                stopItem.setVisible(false);
+                stopItem.setEnabled(false);
+                setSkipsVisible(false);
+                break;
+            case PLAYING:
+                setToggle(R.drawable.ic_pause, R.string.speech_toggle_content_pause, true);
+                stopItem.setVisible(true);
+                stopItem.setEnabled(true);
+                setSkipsVisible(true);
+                break;
+            case PAUSED:
+                setToggle(R.drawable.ic_play, R.string.speech_toggle_content_resume, true);
+                stopItem.setVisible(true);
+                stopItem.setEnabled(true);
+                setSkipsVisible(true);
+                break;
+        }
     }
 
-    private void applySkipVisible(boolean visible) {
-        if (skipBackItem != null) {
-            skipBackItem.setVisible(visible);
-            skipBackItem.setEnabled(visible);
-        }
-        if (skipFwdItem != null) {
-            skipFwdItem.setVisible(visible);
-            skipFwdItem.setEnabled(visible);
-        }
+    private void setSkipsVisible(boolean visible) {
+        if (skipBackItem != null) { skipBackItem.setVisible(visible); skipBackItem.setEnabled(visible); }
+        if (skipFwdItem  != null) { skipFwdItem.setVisible(visible);  skipFwdItem.setEnabled(visible); }
     }
 }
