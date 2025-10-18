@@ -45,7 +45,7 @@ public class SpeechButtonStateTest {
     public void reportsResumeStateWhenSessionActiveButNotSpeaking() {
         MainActivity.SpeechButtonState state =
                 MainActivity.calculateSpeechButtonState(true, true, false);
-        assertEquals(R.drawable.ic_play, state.toggleIconRes);
+        assertEquals(R.drawable.ic_radio_point, state.toggleIconRes);
         assertEquals(R.string.speech_toggle_content_resume, state.toggleDescriptionRes);
         assertTrue(state.toggleEnabled);
         assertTrue(state.stopVisible);
