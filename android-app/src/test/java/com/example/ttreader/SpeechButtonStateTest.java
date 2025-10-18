@@ -34,7 +34,7 @@ public class SpeechButtonStateTest {
     public void reportsPauseStateWhileSpeaking() {
         MainActivity.SpeechButtonState state =
                 MainActivity.calculateSpeechButtonState(true, true, true);
-        assertEquals(R.drawable.ic_radio_point, state.toggleIconRes);
+        assertEquals(R.drawable.ic_pause, state.toggleIconRes);
         assertEquals(R.string.speech_toggle_content_pause, state.toggleDescriptionRes);
         assertTrue(state.toggleEnabled);
         assertTrue(state.stopVisible);

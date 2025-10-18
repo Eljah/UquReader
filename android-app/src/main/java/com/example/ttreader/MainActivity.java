@@ -3676,7 +3676,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             descriptionRes = R.string.speech_toggle_content_start;
             toggleEnabled = voiceAvailable;
         } else if (isSpeaking) {
-            toggleIconRes = R.drawable.ic_radio_point;
+            toggleIconRes = R.drawable.ic_pause;
             descriptionRes = R.string.speech_toggle_content_pause;
             toggleEnabled = true;
         } else {
