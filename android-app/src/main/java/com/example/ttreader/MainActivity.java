@@ -237,7 +237,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private MenuItem languagePairMenuItem;
     private MenuItem workMenuItem;
     private MenuItem installTalgatMenuItem;
-    private SpeechButtonsController speechButtons;   // новый контроллер только для UI
+    // Последний показанный режим воспроизведения для пунктов меню озвучки
+    private UiPlaybackMode uiMode = UiPlaybackMode.IDLE;
+    private SpeechButtonsController speechButtons;
     private AlertDialog rhvoiceDialog;
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
     private boolean languagePairInitialized = false;
@@ -570,11 +572,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         workMenuItem         = menu.findItem(R.id.action_select_work);
         installTalgatMenuItem= menu.findItem(R.id.action_install_talgat);
 
-        // привязка контроллера кнопок
+        // привяжем контроллер кнопок к пунктам меню
         if (speechButtons == null) speechButtons = new SpeechButtonsController(this);
-        speechButtons.bind(menu);
-        // начальный UI-режим — без озвучки
-        speechButtons.setMode(UiPlaybackMode.IDLE);
+        speechButtons.bind(
+                menu,
+                R.id.action_toggle_speech,
+                R.id.action_stop_speech,
+                R.id.action_skip_back,
+                R.id.action_skip_forward
+        );
+        // синхронизировать кнопки с текущим состоянием воспроизведения
+        updateUiPlaybackMode(resolveUiPlaybackMode());
 
         setupLanguagePairActionView();
         setupWorkMenuItem();
@@ -593,18 +601,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         if (item == null) return super.onOptionsItemSelected(item);
         switch (item.getItemId()) {
             case R.id.action_toggle_speech:
-                if (isSpeaking) { pauseSpeech(); }
-                else { startSpeech(); }
-                if (speechButtons != null) {
-                    speechButtons.onUserPressedToggle();
+                if (isSpeaking) {
+                    pauseSpeech();
+                } else {
+                    startSpeech();
                 }
+                updateUiPlaybackMode(resolveUiPlaybackMode());
                 return true;
 
             case R.id.action_stop_speech:
                 stopSpeech();
-                if (speechButtons != null) {
-                    speechButtons.onUserPressedStop();
-                }
+                updateUiPlaybackMode(resolveUiPlaybackMode());
                 return true;
 
             case R.id.action_skip_forward:
@@ -641,6 +648,36 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private UiPlaybackMode resolveUiPlaybackMode() {
+        if (isSpeaking) {
+            return UiPlaybackMode.PLAYING;
+        }
+        if (speechSessionActive || shouldContinueSpeech) {
+            return UiPlaybackMode.PAUSED;
+        }
+        return UiPlaybackMode.IDLE;
+    }
+
+    private void updateUiPlaybackMode(UiPlaybackMode newMode) {
+        if (newMode == null) {
+            return;
+        }
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            runOnUiThread(() -> updateUiPlaybackMode(newMode));
+            return;
+        }
+        if (uiMode == newMode) {
+            if (speechButtons != null) {
+                speechButtons.setMode(newMode);
+            }
+            return;
+        }
+        uiMode = newMode;
+        if (speechButtons != null) {
+            speechButtons.setMode(newMode);
         }
     }
 
@@ -3547,6 +3584,17 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updatePlaybackState(int state) {
+        UiPlaybackMode targetMode;
+        if (state == PlaybackState.STATE_PLAYING) {
+            targetMode = UiPlaybackMode.PLAYING;
+        } else if (state == PlaybackState.STATE_PAUSED) {
+            targetMode = UiPlaybackMode.PAUSED;
+        } else if (state == PlaybackState.STATE_STOPPED) {
+            targetMode = UiPlaybackMode.IDLE;
+        } else {
+            targetMode = resolveUiPlaybackMode();
+        }
+        updateUiPlaybackMode(targetMode);
         if (mediaSession == null) return;
         PlaybackState.Builder builder = new PlaybackState.Builder()
                 .setActions(PlaybackState.ACTION_PLAY
@@ -3614,21 +3662,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         boolean stopVisible = sessionActive;
         return new SpeechButtonState(toggleIconRes, descriptionRes, toggleEnabled, stopVisible);
-    }
-
-    private void updateSpeechButtons() {
-        if (speechButtons == null) {
-            return;
-        }
-        UiPlaybackMode targetMode;
-        if (isSpeaking) {
-            targetMode = UiPlaybackMode.PLAYING;
-        } else if (speechSessionActive || shouldContinueSpeech) {
-            targetMode = UiPlaybackMode.PAUSED;
-        } else {
-            targetMode = UiPlaybackMode.IDLE;
-        }
-        speechButtons.setMode(targetMode);
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
