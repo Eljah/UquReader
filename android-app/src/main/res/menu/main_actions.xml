@@ -54,7 +54,13 @@
         android:icon="@drawable/ic_stats_bluetooth"
         android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/stats_button_device"
-        android:showAsAction="ifRoom" />
+        android:showAsAction="always" />
+    <item
+        android:id="@+id/action_bluetooth_settings"
+        android:icon="@drawable/ic_settings_bluetooth"
+        android:iconTint="@color/toolbar_icon_tint"
+        android:title="@string/bluetooth_settings_button"
+        android:showAsAction="always" />
     <item
         android:id="@+id/action_install_talgat"
         android:title="@string/speech_install_talgat"

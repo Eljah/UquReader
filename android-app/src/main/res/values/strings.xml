@@ -3,6 +3,8 @@
     <string name="stats_button_language">Статистика языка</string>
     <string name="stats_button_work">Статистика произведения</string>
     <string name="stats_button_device">Статистика Bluetooth</string>
+    <string name="bluetooth_settings_button">Настройки Bluetooth</string>
+    <string name="bluetooth_settings_unavailable">Не удалось открыть настройки Bluetooth</string>
     <string name="language_pair_button_format">Языки: %1$s</string>
     <string name="language_pair_button_unset">Выбрать пару языков</string>
     <string name="language_pair_tt_ru">🇷🇺 Русский · Татарский</string>
