@@ -28,6 +28,7 @@ import com.example.ttreader.data.PaginationDao;
 import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.Morphology;
 import com.example.ttreader.model.Token;
+import com.example.ttreader.ui.TextHighlightUpdater;
 import com.example.ttreader.util.MorphDocumentParser;
 
 import java.io.File;
@@ -107,8 +108,8 @@ public class ReaderView extends TextView {
     private Runnable pendingInitialCompletion;
     private boolean initialContentDelivered = false;
     private int currentDocumentSignature = 0;
-    private SentenceOutlineSpan activeSentenceSpan;
-    private ForegroundColorSpan activeLetterSpan;
+    private TextHighlightUpdater sentenceHighlighter;
+    private TextHighlightUpdater letterHighlighter;
     private int activeSentenceStart = -1;
     private int activeSentenceEnd = -1;
     private int activeLetterIndex = -1;
@@ -395,11 +396,10 @@ public class ReaderView extends TextView {
         currentDocumentSignature = 0;
         logTextEvent("clearContent");
         setText("");
-        activeSentenceSpan = null;
-        activeLetterSpan = null;
         activeSentenceStart = -1;
         activeSentenceEnd = -1;
         activeLetterIndex = -1;
+        clearHighlightUpdaters();
     }
 
     public void loadFromDocumentAsset(String assetName) {
@@ -1222,6 +1222,7 @@ public class ReaderView extends TextView {
                 + " length=" + content.length());
         beginRenderPass();
         setText(content);
+        setupHighlightUpdaters(getSpannableText());
         deliverInitialContentIfNeeded();
         if (getMovementMethod() != movementMethod) {
             setMovementMethod(movementMethod);
@@ -1452,40 +1453,42 @@ public class ReaderView extends TextView {
         activeSentenceStart = start;
         activeSentenceEnd = end;
         Spannable text = getSpannableText();
-        if (text == null) return;
-        if (activeSentenceSpan != null) {
-            text.removeSpan(activeSentenceSpan);
-            activeSentenceSpan = null;
+        if (text == null) {
+            return;
+        }
+        ensureSentenceHighlighter(text);
+        if (sentenceHighlighter == null) {
+            return;
         }
         if (start < 0 || end <= start) {
-            invalidate();
+            sentenceHighlighter.request(-1, -1);
             return;
         }
         if (end <= visibleStart || start >= visibleEnd) {
-            invalidate();
+            sentenceHighlighter.request(-1, -1);
             return;
         }
         int localStart = clamp(start - visibleStart, 0, text.length());
         int localEnd = clamp(end - visibleStart, 0, text.length());
         if (localEnd <= localStart) {
-            invalidate();
+            sentenceHighlighter.request(-1, -1);
             return;
         }
-        activeSentenceSpan = new SentenceOutlineSpan(sentenceOutlineColor, sentenceOutlineStrokeWidth, sentenceOutlineCornerRadius);
-        text.setSpan(activeSentenceSpan, localStart, localEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        invalidate();
+        sentenceHighlighter.request(localStart, localEnd);
     }
 
     public void highlightLetter(int charIndex) {
         activeLetterIndex = charIndex;
         Spannable text = getSpannableText();
-        if (text == null) return;
-        if (activeLetterSpan != null) {
-            text.removeSpan(activeLetterSpan);
-            activeLetterSpan = null;
+        if (text == null) {
+            return;
+        }
+        ensureLetterHighlighter(text);
+        if (letterHighlighter == null) {
+            return;
         }
         if (charIndex < visibleStart || charIndex >= visibleEnd || text.length() == 0) {
-            invalidate();
+            letterHighlighter.request(-1, -1);
             return;
         }
         int clampedIndex = clamp(charIndex - visibleStart, 0, text.length());
@@ -1495,13 +1498,10 @@ public class ReaderView extends TextView {
         int start = Math.max(0, Math.min(clampedIndex, localSentenceStart));
         int end = Math.min(text.length(), clampedIndex + 1);
         if (end <= start) {
-            invalidate();
+            letterHighlighter.request(-1, -1);
             return;
         }
-        activeLetterSpan = new ForegroundColorSpan(letterHighlightColor);
-        int flags = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE | (1 << Spanned.SPAN_PRIORITY_SHIFT);
-        text.setSpan(activeLetterSpan, start, end, flags);
-        invalidate();
+        letterHighlighter.request(start, end);
     }
 
     public void clearSpeechHighlights() {
@@ -1510,6 +1510,60 @@ public class ReaderView extends TextView {
         activeSentenceStart = -1;
         activeSentenceEnd = -1;
         activeLetterIndex = -1;
+    }
+
+    private void setupHighlightUpdaters(Spannable text) {
+        clearHighlightUpdaters();
+        if (text == null) {
+            return;
+        }
+        sentenceHighlighter = new TextHighlightUpdater(this, text,
+                new SentenceOutlineSpan(sentenceOutlineColor, sentenceOutlineStrokeWidth, sentenceOutlineCornerRadius),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        letterHighlighter = new TextHighlightUpdater(this, text,
+                new ForegroundColorSpan(letterHighlightColor),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE | (1 << Spanned.SPAN_PRIORITY_SHIFT));
+    }
+
+    private void ensureSentenceHighlighter(Spannable text) {
+        if (text == null) {
+            sentenceHighlighter = null;
+            return;
+        }
+        if (sentenceHighlighter == null || sentenceHighlighter.getText() != text) {
+            if (sentenceHighlighter != null) {
+                sentenceHighlighter.clear();
+            }
+            sentenceHighlighter = new TextHighlightUpdater(this, text,
+                    new SentenceOutlineSpan(sentenceOutlineColor, sentenceOutlineStrokeWidth, sentenceOutlineCornerRadius),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    private void ensureLetterHighlighter(Spannable text) {
+        if (text == null) {
+            letterHighlighter = null;
+            return;
+        }
+        if (letterHighlighter == null || letterHighlighter.getText() != text) {
+            if (letterHighlighter != null) {
+                letterHighlighter.clear();
+            }
+            letterHighlighter = new TextHighlightUpdater(this, text,
+                    new ForegroundColorSpan(letterHighlightColor),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE | (1 << Spanned.SPAN_PRIORITY_SHIFT));
+        }
+    }
+
+    private void clearHighlightUpdaters() {
+        if (sentenceHighlighter != null) {
+            sentenceHighlighter.clear();
+            sentenceHighlighter = null;
+        }
+        if (letterHighlighter != null) {
+            letterHighlighter.clear();
+            letterHighlighter = null;
+        }
     }
 
     public List<String> getTranslations(TokenSpan span) {

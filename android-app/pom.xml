@@ -574,6 +574,12 @@ fi' />
       <type>aar</type>
     </dependency>
     <dependency>
+      <groupId>androidx.viewpager2</groupId>
+      <artifactId>viewpager2</artifactId>
+      <version>1.0.0</version>
+      <type>aar</type>
+    </dependency>
+    <dependency>
       <groupId>androidx.customview</groupId>
       <artifactId>customview-poolingcontainer</artifactId>
       <version>1.0.0</version>
