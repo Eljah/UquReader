@@ -42,13 +42,13 @@
         android:icon="@drawable/ic_stats_language"
         android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/stats_button_language"
-        android:showAsAction="ifRoom" />
+        android:showAsAction="always" />
     <item
         android:id="@+id/action_work_stats"
         android:icon="@drawable/ic_stats_work"
         android:iconTint="@color/toolbar_icon_tint"
         android:title="@string/stats_button_work"
-        android:showAsAction="ifRoom" />
+        android:showAsAction="always" />
     <item
         android:id="@+id/action_device_stats"
         android:icon="@drawable/ic_stats_bluetooth"

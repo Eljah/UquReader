@@ -6,8 +6,9 @@ import android.content.ActivityNotFoundException;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Resources;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
+import android.content.res.Resources;
 import android.database.sqlite.SQLiteDatabase;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -97,23 +98,187 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private static final class WorkInfo {
         final String id;
         final String asset;
-        final int fullNameRes;
-        final int shortNameRes;
+        final Integer fullNameRes;
+        final Integer shortNameRes;
+        final String fallbackFullName;
+        final String fallbackShortName;
 
-        WorkInfo(String id, String asset, int fullNameRes, int shortNameRes) {
+        WorkInfo(String id, String asset, Integer fullNameRes, Integer shortNameRes,
+                String fallbackFullName, String fallbackShortName) {
             this.id = id;
             this.asset = asset;
             this.fullNameRes = fullNameRes;
             this.shortNameRes = shortNameRes;
+            this.fallbackFullName = fallbackFullName;
+            this.fallbackShortName = fallbackShortName;
         }
 
         String getFullName(Activity activity) {
-            return activity.getString(fullNameRes);
+            if (activity != null && fullNameRes != null && fullNameRes != 0) {
+                return activity.getString(fullNameRes);
+            }
+            return fallbackFullName != null ? fallbackFullName : asset;
         }
 
         String getShortName(Activity activity) {
-            return activity.getString(shortNameRes);
+            if (activity != null && shortNameRes != null && shortNameRes != 0) {
+                return activity.getString(shortNameRes);
+            }
+            if (!TextUtils.isEmpty(fallbackShortName)) {
+                return fallbackShortName;
+            }
+            return getFullName(activity);
         }
+
+        String getSortKey(Activity activity) {
+            String candidate = getFullName(activity);
+            return candidate == null ? "" : candidate;
+        }
+    }
+
+    private static final class PredefinedWorkMetadata {
+        final String id;
+        final int fullNameRes;
+        final int shortNameRes;
+
+        PredefinedWorkMetadata(String id, int fullNameRes, int shortNameRes) {
+            this.id = id;
+            this.fullNameRes = fullNameRes;
+            this.shortNameRes = shortNameRes;
+        }
+    }
+
+    private static final Map<String, PredefinedWorkMetadata> BUILTIN_WORKS = buildBuiltinWorkIndex();
+
+    private static Map<String, PredefinedWorkMetadata> buildBuiltinWorkIndex() {
+        Map<String, PredefinedWorkMetadata> map = new HashMap<>();
+        map.put("qabiz_qubiz", new PredefinedWorkMetadata(
+                "qubiz_qabiz",
+                R.string.work_name_kubyzkabyz_full,
+                R.string.work_name_kubyzkabyz_short));
+        map.put("berenche_teatr", new PredefinedWorkMetadata(
+                "berenche_teatr",
+                R.string.work_name_berenche_teatr_full,
+                R.string.work_name_berenche_teatr_short));
+        map.put("harri_potter_ham_lagnetle_bala", new PredefinedWorkMetadata(
+                "harri_potter_ham_lagnetle_bala",
+                R.string.work_name_harri_potter_ham_lagnetle_bala_full,
+                R.string.work_name_harri_potter_ham_lagnetle_bala_short));
+        map.put("yazgi_cillar", new PredefinedWorkMetadata(
+                "yazgy_jillar",
+                R.string.work_name_yazgy_jillar_full,
+                R.string.work_name_yazgy_jillar_short));
+        return Collections.unmodifiableMap(map);
+    }
+
+    private static String normalizeAssetKey(String assetName) {
+        if (TextUtils.isEmpty(assetName)) {
+            return "";
+        }
+        String base = assetName;
+        int slash = base.lastIndexOf('/') + 1;
+        if (slash > 0 && slash < base.length()) {
+            base = base.substring(slash);
+        }
+        int dot = base.lastIndexOf('.');
+        if (dot > 0) {
+            base = base.substring(0, dot);
+        }
+        base = base.trim().toLowerCase(Locale.ROOT);
+        if (base.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder(base.length());
+        for (int i = 0; i < base.length(); i++) {
+            char c = base.charAt(i);
+            if (Character.isLetterOrDigit(c)) {
+                builder.append(c);
+            } else {
+                builder.append('_');
+            }
+        }
+        String normalized = builder.toString();
+        normalized = normalized.replaceAll("_+", "_");
+        if (normalized.startsWith("_")) {
+            normalized = normalized.substring(1);
+        }
+        if (normalized.endsWith("_")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
+    }
+
+    private static String prettifyAssetName(String assetName) {
+        if (TextUtils.isEmpty(assetName)) {
+            return "";
+        }
+        String base = assetName;
+        int dot = base.lastIndexOf('.');
+        if (dot > 0) {
+            base = base.substring(0, dot);
+        }
+        base = base.replace('_', ' ').trim();
+        if (base.isEmpty()) {
+            return assetName;
+        }
+        String[] parts = base.split("\\s+");
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (TextUtils.isEmpty(part)) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            int firstCodePoint = part.codePointAt(0);
+            int titleCodePoint = Character.toTitleCase(firstCodePoint);
+            builder.appendCodePoint(titleCodePoint);
+            builder.append(part.substring(Character.charCount(firstCodePoint)));
+        }
+        return builder.length() > 0 ? builder.toString() : base;
+    }
+
+    private WorkInfo createWorkInfoForAsset(String assetName) {
+        String normalizedKey = normalizeAssetKey(assetName);
+        if (TextUtils.isEmpty(normalizedKey)) {
+            return null;
+        }
+        PredefinedWorkMetadata metadata = BUILTIN_WORKS.get(normalizedKey);
+        String id = metadata != null && !TextUtils.isEmpty(metadata.id)
+                ? metadata.id
+                : normalizedKey;
+        Integer fullRes = metadata != null ? metadata.fullNameRes : 0;
+        Integer shortRes = metadata != null ? metadata.shortNameRes : 0;
+        String fallback = prettifyAssetName(assetName);
+        return new WorkInfo(id, assetName, fullRes, shortRes, fallback, fallback);
+    }
+
+    private void initializeAvailableWorks() {
+        AssetManager assets = getAssets();
+        List<WorkInfo> detected = new ArrayList<>();
+        try {
+            String[] names = assets.list("");
+            if (names != null) {
+                for (String name : names) {
+                    if (TextUtils.isEmpty(name)) {
+                        continue;
+                    }
+                    String lower = name.toLowerCase(Locale.ROOT);
+                    if (!lower.endsWith(".fb2")) {
+                        continue;
+                    }
+                    WorkInfo info = createWorkInfoForAsset(name);
+                    if (info != null) {
+                        detected.add(info);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to enumerate bundled works", e);
+        }
+        Collections.sort(detected, (a, b) -> a.getSortKey(this).compareToIgnoreCase(b.getSortKey(this)));
+        availableWorks.clear();
+        availableWorks.addAll(detected);
     }
 
     private static final class ViewBoundsSnapshot {
@@ -163,10 +328,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
     }
 
-    private final List<WorkInfo> availableWorks = Collections.singletonList(
-            new WorkInfo("qubiz_qabiz", "qabiz_qubiz.fb2",
-                    R.string.work_name_kubyzkabyz_full, R.string.work_name_kubyzkabyz_short)
-    );
+    private final List<WorkInfo> availableWorks = new ArrayList<>();
     private static final String RHVOICE_PACKAGE = "com.github.olga_yakovleva.rhvoice.android";
     private static final String TALGAT_NAME_KEYWORD = "talgat";
     private static final float BASE_CHARS_PER_SECOND = 14f;
@@ -381,6 +543,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
         readingProgressColor = ContextCompat.getColor(this, R.color.work_menu_progress_reading);
         listeningProgressColor = ContextCompat.getColor(this, R.color.work_menu_progress_listening);
+
+        initializeAvailableWorks();
 
         dbHelper = new DbHelper(this);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
