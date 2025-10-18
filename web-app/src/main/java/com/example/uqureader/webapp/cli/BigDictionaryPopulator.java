@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -83,18 +84,38 @@ public final class BigDictionaryPopulator {
         }
 
         MorphologyAnalyzer analyzer = MorphologyAnalyzer.loadDefault();
-        Map<String, String> lemmas = new LinkedHashMap<>();
+        Map<String, LemmaData> lemmas = new LinkedHashMap<>();
         Set<String> conflicts = new LinkedHashSet<>();
-        int tokensAnalysed = 0;
+        int entriesParsed = 0;
+        int entriesWithLemma = 0;
 
         for (Path document : documents) {
-            String text = extractText(document);
-            if (text.isBlank()) {
-                continue;
+            List<DictionaryEntry> rows = extractEntries(document);
+            entriesParsed += rows.size();
+            for (DictionaryEntry row : rows) {
+                String token = row.tatar();
+                String translation = row.translation();
+                if (token.isEmpty() || translation.isEmpty()) {
+                    continue;
+                }
+                String analysis = analyzer.analyseToken(token);
+                Optional<LemmaSelection> selection = selectLemma(analysis);
+                String lemma;
+                String pos;
+                if (selection.isPresent()) {
+                    LemmaSelection candidate = selection.get();
+                    lemma = candidate.lemma();
+                    pos = candidate.pos();
+                    entriesWithLemma++;
+                } else {
+                    lemma = normaliseLemma(token);
+                    pos = "UNKNOWN";
+                }
+                if (lemma.isEmpty()) {
+                    continue;
+                }
+                mergeLemma(lemmas, conflicts, lemma, pos, translation);
             }
-            MorphologyAnalyzer.TextAnalysis analysis = analyzer.analyze(text);
-            tokensAnalysed += analysis.tokensCount();
-            collectLemmas(analysis.markup(), lemmas, conflicts);
         }
 
         Path absoluteDatabase = databasePath.toAbsolutePath();
@@ -105,36 +126,51 @@ public final class BigDictionaryPopulator {
 
         int inserted;
         int updated;
+        int translationsInserted;
         try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + absoluteDatabase)) {
             connection.setAutoCommit(false);
             ensureLemmasTable(connection);
+            ensureTranslationsTable(connection);
             try (PreparedStatement insert = connection.prepareStatement(
                     "INSERT OR IGNORE INTO lemmas_tt (lemma, pos) VALUES (?, ?)"
             );
                  PreparedStatement update = connection.prepareStatement(
                          "UPDATE lemmas_tt SET pos = ? WHERE lemma = ? AND (pos IS NULL OR TRIM(pos) = '')"
+                 );
+                 PreparedStatement insertTranslation = connection.prepareStatement(
+                         "INSERT OR IGNORE INTO tt_ru (lemma_tt, lemma_ru, score) VALUES (?, ?, ?)"
                  )) {
                 inserted = 0;
                 updated = 0;
-                for (Map.Entry<String, String> entry : lemmas.entrySet()) {
-                    insert.setString(1, entry.getKey());
-                    insert.setString(2, entry.getValue());
+                translationsInserted = 0;
+                for (Map.Entry<String, LemmaData> entry : lemmas.entrySet()) {
+                    String lemma = entry.getKey();
+                    LemmaData data = entry.getValue();
+                    insert.setString(1, lemma);
+                    insert.setString(2, data.pos);
                     inserted += insert.executeUpdate();
 
-                    update.setString(1, entry.getValue());
-                    update.setString(2, entry.getKey());
+                    update.setString(1, data.pos);
+                    update.setString(2, lemma);
                     updated += update.executeUpdate();
+
+                    for (String translation : data.translations) {
+                        insertTranslation.setString(1, lemma);
+                        insertTranslation.setString(2, translation);
+                        insertTranslation.setDouble(3, 1.0d);
+                        translationsInserted += insertTranslation.executeUpdate();
+                    }
                 }
             }
             connection.commit();
         }
 
         System.out.printf(Locale.ROOT,
-                "Processed %d documents, analysed %d tokens, collected %d lemmas.%n",
-                documents.size(), tokensAnalysed, lemmas.size());
+                "Processed %d documents, parsed %d entries, resolved lemmas for %d rows, collected %d unique lemmas.%n",
+                documents.size(), entriesParsed, entriesWithLemma, lemmas.size());
         System.out.printf(Locale.ROOT,
-                "Inserted %d new lemmas, updated %d existing entries in %s.%n",
-                inserted, updated, absoluteDatabase);
+                "Inserted %d new lemmas, updated %d existing entries, added %d translations in %s.%n",
+                inserted, updated, translationsInserted, absoluteDatabase);
         if (!conflicts.isEmpty()) {
             System.err.println("Encountered lemmas with conflicting parts of speech:");
             int shown = 0;
@@ -234,14 +270,14 @@ public final class BigDictionaryPopulator {
         return fileName.endsWith(".doc") && !fileName.startsWith("~$");
     }
 
-    private static String extractText(Path document) throws IOException {
+    private static List<DictionaryEntry> extractEntries(Path document) throws IOException {
+        List<DictionaryEntry> entries = new ArrayList<>();
         try (InputStream stream = Files.newInputStream(document);
              WordExtractor extractor = new WordExtractor(stream)) {
             String[] paragraphs = extractor.getParagraphText();
             if (paragraphs == null || paragraphs.length == 0) {
-                return "";
+                return entries;
             }
-            StringBuilder builder = new StringBuilder();
             for (String paragraph : paragraphs) {
                 if (paragraph == null) {
                     continue;
@@ -252,39 +288,35 @@ public final class BigDictionaryPopulator {
                 if (cleaned.isEmpty()) {
                     continue;
                 }
-                if (builder.length() > 0) {
-                    builder.append('\n');
+                String[] lines = cleaned.split("\\R");
+                for (String line : lines) {
+                    String fixed = fixDocumentEncoding(line).strip();
+                    if (fixed.isEmpty()) {
+                        continue;
+                    }
+                    DictionaryEntry entry = parseDictionaryEntry(fixed);
+                    if (entry != null) {
+                        entries.add(entry);
+                    }
                 }
-                builder.append(cleaned);
             }
-            return builder.toString();
+            return entries;
         }
     }
 
-    private static void collectLemmas(String markup,
-                                      Map<String, String> lemmas,
-                                      Set<String> conflicts) {
-        if (markup == null || markup.isBlank()) {
-            return;
-        }
-        String[] lines = markup.split("\\R");
-        for (String line : lines) {
-            int tab = line.indexOf('\t');
-            if (tab < 0) {
-                continue;
-            }
-            String analysis = line.substring(tab + 1).trim();
-            if (analysis.isEmpty()) {
-                continue;
-            }
-            processAnalysis(analysis, lemmas, conflicts);
-        }
+    private static String normaliseLemma(String lemma) {
+        String normalised = Normalizer.normalize(lemma == null ? "" : lemma, Normalizer.Form.NFC)
+                .toLowerCase(Locale.ROOT)
+                .strip();
+        return normalised.replace('\u00a0', ' ');
     }
 
-    private static void processAnalysis(String analysis,
-                                        Map<String, String> lemmas,
-                                        Set<String> conflicts) {
+    private static Optional<LemmaSelection> selectLemma(String analysis) {
+        if (analysis == null || analysis.isBlank()) {
+            return Optional.empty();
+        }
         String[] entries = analysis.split(";");
+        LemmaSelection best = null;
         for (String entry : entries) {
             String trimmed = entry.trim();
             if (trimmed.isEmpty() || !trimmed.contains("+")) {
@@ -315,15 +347,12 @@ public final class BigDictionaryPopulator {
             if (pos == null) {
                 continue;
             }
-            mergeLemma(lemmas, conflicts, lemma, pos);
+            int candidatePriority = priority(pos);
+            if (best == null || candidatePriority > best.priority()) {
+                best = new LemmaSelection(lemma, pos, candidatePriority);
+            }
         }
-    }
-
-    private static String normaliseLemma(String lemma) {
-        String normalised = Normalizer.normalize(lemma == null ? "" : lemma, Normalizer.Form.NFC)
-                .toLowerCase(Locale.ROOT)
-                .strip();
-        return normalised.replace('\u00a0', ' ');
+        return Optional.ofNullable(best);
     }
 
     private static String mapPartOfSpeech(String tag) {
@@ -369,24 +398,36 @@ public final class BigDictionaryPopulator {
         return builder.toString();
     }
 
-    private static void mergeLemma(Map<String, String> lemmas,
+    private static void mergeLemma(Map<String, LemmaData> lemmas,
                                    Set<String> conflicts,
                                    String lemma,
-                                   String pos) {
-        String existing = lemmas.get(lemma);
+                                   String pos,
+                                   String translation) {
+        LemmaData existing = lemmas.get(lemma);
         if (existing == null) {
-            lemmas.put(lemma, pos);
+            LemmaData created = new LemmaData();
+            created.pos = pos;
+            if (translation != null && !translation.isBlank()) {
+                created.translations.add(translation);
+            }
+            lemmas.put(lemma, created);
             return;
         }
-        if (existing.equals(pos)) {
-            return;
+        if (pos != null) {
+            if (existing.pos == null) {
+                existing.pos = pos;
+            } else if (!existing.pos.equals(pos)) {
+                int currentPriority = priority(existing.pos);
+                int candidatePriority = priority(pos);
+                if (candidatePriority > currentPriority) {
+                    existing.pos = pos;
+                } else if (candidatePriority == currentPriority) {
+                    conflicts.add(lemma + " (" + existing.pos + " vs " + pos + ")");
+                }
+            }
         }
-        int currentPriority = priority(existing);
-        int candidatePriority = priority(pos);
-        if (candidatePriority > currentPriority) {
-            lemmas.put(lemma, pos);
-        } else if (candidatePriority == currentPriority) {
-            conflicts.add(lemma + " (" + existing + " vs " + pos + ")");
+        if (translation != null && !translation.isBlank()) {
+            existing.translations.add(translation);
         }
     }
 
@@ -402,6 +443,114 @@ public final class BigDictionaryPopulator {
                             + "pos TEXT"
                             + ")");
         }
+    }
+
+    private static void ensureTranslationsTable(Connection connection) throws SQLException {
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate(
+                    "CREATE TABLE IF NOT EXISTS tt_ru("
+                            + "lemma_tt TEXT NOT NULL,"
+                            + "lemma_ru TEXT NOT NULL,"
+                            + "score REAL,"
+                            + "PRIMARY KEY(lemma_tt, lemma_ru)"
+                            + ")");
+            statement.executeUpdate(
+                    "CREATE INDEX IF NOT EXISTS tt_ru_tt_idx ON tt_ru(lemma_tt)");
+        }
+    }
+
+    private static DictionaryEntry parseDictionaryEntry(String line) {
+        int splitIndex = findFirstWhitespace(line);
+        if (splitIndex <= 0 || splitIndex >= line.length() - 1) {
+            return null;
+        }
+        String tatar = line.substring(0, splitIndex).strip();
+        String translation = line.substring(splitIndex + 1).strip();
+        if (tatar.isEmpty() || translation.isEmpty()) {
+            return null;
+        }
+        String normalisedToken = normaliseToken(tatar);
+        String normalisedTranslation = normaliseTranslation(translation);
+        if (normalisedToken.isEmpty() || normalisedTranslation.isEmpty()) {
+            return null;
+        }
+        return new DictionaryEntry(normalisedToken, normalisedTranslation);
+    }
+
+    private static int findFirstWhitespace(String value) {
+        for (int i = 0; i < value.length(); i++) {
+            if (Character.isWhitespace(value.charAt(i))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static String normaliseToken(String token) {
+        if (token == null) {
+            return "";
+        }
+        String replaced = token.replace('\u00a0', ' ');
+        String normalised = Normalizer.normalize(replaced, Normalizer.Form.NFC).strip();
+        return collapseWhitespace(normalised);
+    }
+
+    private static String normaliseTranslation(String translation) {
+        if (translation == null) {
+            return "";
+        }
+        String fixed = fixDocumentEncoding(translation).replace('\r', ' ').replace('\n', ' ');
+        String normalised = Normalizer.normalize(fixed.replace('\u00a0', ' '), Normalizer.Form.NFC).strip();
+        return collapseWhitespace(normalised);
+    }
+
+    private static String collapseWhitespace(String value) {
+        StringBuilder builder = new StringBuilder(value.length());
+        boolean previousWhitespace = false;
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (Character.isWhitespace(ch)) {
+                if (!previousWhitespace) {
+                    builder.append(' ');
+                }
+                previousWhitespace = true;
+            } else {
+                builder.append(ch);
+                previousWhitespace = false;
+            }
+        }
+        return builder.toString().strip();
+    }
+
+    private static String fixDocumentEncoding(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            builder.append(switch (ch) {
+                case '\u00B4' -> 'ә';
+                case '\u00BA' -> 'ү';
+                case '\u00BF' -> 'ө';
+                case '\u00BC' -> 'ң';
+                case '\u00B3' -> 'һ';
+                case '\u00A2' -> 'җ';
+                default -> ch;
+            });
+        }
+        return builder.toString();
+    }
+
+    private static final class LemmaData {
+        private String pos;
+        private final LinkedHashSet<String> translations = new LinkedHashSet<>();
+    }
+
+    private record DictionaryEntry(String tatar, String translation) {
+    }
+
+    private record LemmaSelection(String lemma, String pos, int priority) {
     }
 
     private static Map<String, String> createPosMapping() {
