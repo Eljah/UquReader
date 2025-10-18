@@ -45,6 +45,16 @@ public final class SpeechButtonsController {
         if (stopItem != null && iconStop != null) {
             stopItem.setIcon(iconStop);
         }
+        // Всегда видимы → никакого relayout при смене состояния
+        if (stopItem != null) {
+            stopItem.setVisible(true);
+        }
+        if (skipBackItem != null) {
+            skipBackItem.setVisible(true);
+        }
+        if (skipFwdItem != null) {
+            skipFwdItem.setVisible(true);
+        }
         render();
     }
 
@@ -105,31 +115,48 @@ public final class SpeechButtonsController {
     }
 
     private void render() {
-        if (toggleItem == null || stopItem == null) return;
+        if (toggleItem == null) return;
         switch (mode) {
-            case IDLE:
+            case IDLE: {
                 setToggle(R.drawable.ic_radio_point, R.string.speech_toggle_content_start, true);
-                stopItem.setVisible(false);
-                stopItem.setEnabled(false);
-                setSkipsVisible(false);
+                setStopEnabled(false);
+                setSkipsEnabled(false);
                 break;
-            case PLAYING:
+            }
+            case PLAYING: {
                 setToggle(R.drawable.ic_pause, R.string.speech_toggle_content_pause, true);
-                stopItem.setVisible(true);
-                stopItem.setEnabled(true);
-                setSkipsVisible(true);
+                setStopEnabled(true);
+                setSkipsEnabled(true);
                 break;
-            case PAUSED:
+            }
+            case PAUSED: {
                 setToggle(R.drawable.ic_play, R.string.speech_toggle_content_resume, true);
-                stopItem.setVisible(true);
-                stopItem.setEnabled(true);
-                setSkipsVisible(true);
+                setStopEnabled(true);
+                setSkipsEnabled(true);
                 break;
+            }
         }
     }
 
-    private void setSkipsVisible(boolean visible) {
-        if (skipBackItem != null) { skipBackItem.setVisible(visible); skipBackItem.setEnabled(visible); }
-        if (skipFwdItem  != null) { skipFwdItem.setVisible(visible);  skipFwdItem.setEnabled(visible); }
+    private void setStopEnabled(boolean enabled) {
+        if (stopItem == null) return;
+        stopItem.setEnabled(enabled);
+        final Drawable d = stopItem.getIcon();
+        if (d != null) {
+            d.setAlpha(enabled ? 255 : 100);
+        }
+    }
+
+    private void setSkipsEnabled(boolean enabled) {
+        if (skipBackItem != null) {
+            skipBackItem.setEnabled(enabled);
+            final Drawable d = skipBackItem.getIcon();
+            if (d != null) d.setAlpha(enabled ? 255 : 100);
+        }
+        if (skipFwdItem  != null) {
+            skipFwdItem.setEnabled(enabled);
+            final Drawable d = skipFwdItem.getIcon();
+            if (d != null) d.setAlpha(enabled ? 255 : 100);
+        }
     }
 }
