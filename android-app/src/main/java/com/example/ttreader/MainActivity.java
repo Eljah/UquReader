@@ -19,7 +19,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
@@ -847,7 +846,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 return true;
 
             case R.id.action_bluetooth_settings:
-                openBluetoothSettings();
+                openDeviceStats();
                 return true;
 
             case R.id.action_install_talgat:
@@ -1058,15 +1057,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private void openDeviceStats() {
         Intent intent = new Intent(this, DeviceStatsActivity.class);
         startActivity(intent);
-    }
-
-    private void openBluetoothSettings() {
-        Intent intent = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
-        if (intent.resolveActivity(getPackageManager()) != null) {
-            startActivity(intent);
-        } else {
-            Toast.makeText(this, R.string.bluetooth_settings_unavailable, Toast.LENGTH_SHORT).show();
-        }
     }
 
     private void openAppSettings() {
