@@ -124,13 +124,13 @@ public final class SpeechButtonsController {
                 break;
             }
             case PLAYING: {
-                setToggle(R.drawable.ic_pause, R.string.speech_toggle_content_pause, true);
+                setToggle(R.drawable.ic_radio_point, R.string.speech_toggle_content_pause, true);
                 setStopEnabled(true);
                 setSkipsEnabled(true);
                 break;
             }
             case PAUSED: {
-                setToggle(R.drawable.ic_play, R.string.speech_toggle_content_resume, true);
+                setToggle(R.drawable.ic_radio_point, R.string.speech_toggle_content_resume, true);
                 setStopEnabled(true);
                 setSkipsEnabled(true);
                 break;
