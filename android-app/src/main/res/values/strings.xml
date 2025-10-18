@@ -82,4 +82,8 @@
     <string name="rhvoice_no_handler">Не удалось открыть ссылку для установки RHVoice.</string>
     <string name="reader_page_previous">Предыдущая страница</string>
     <string name="reader_page_next">Следующая страница</string>
+    <string name="app_settings_button">Настройки приложения</string>
+    <string name="app_settings_title">Настройки приложения</string>
+    <string name="highlight_toggle_enable">Включить подсветку слов по встречаемости</string>
+    <string name="highlight_toggle_disable">Отключить подсветку слов по встречаемости</string>
 </resources>
