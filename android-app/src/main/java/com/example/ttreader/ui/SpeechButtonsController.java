@@ -28,8 +28,11 @@ public final class SpeechButtonsController {
 
     private UiPlaybackMode mode = UiPlaybackMode.IDLE;
 
-    // Кэш иконок, чтобы избежать лишних инвалидаций и "мигания"
+    // Кэш иконок, чтобы избежать лишних инвалидаций и «мигания»
     private Drawable iconStart, iconPause, iconPlay, iconStop;
+    // Отдельные иконки для скипов (enabled/disabled), чтобы не трогать экземпляр из MenuItem
+    private Drawable iconSkipBackEnabled, iconSkipBackDisabled;
+    private Drawable iconSkipFwdEnabled,  iconSkipFwdDisabled;
 
     public SpeechButtonsController(Activity activity) {
         this.activity = activity;
@@ -72,10 +75,29 @@ public final class SpeechButtonsController {
         if (iconPause == null) { iconPause = get(R.drawable.ic_pause); }
         if (iconPlay  == null) { iconPlay  = get(R.drawable.ic_play); }
         if (iconStop  == null) { iconStop  = get(R.drawable.ic_stop); }
+        if (iconSkipBackEnabled == null)  { iconSkipBackEnabled  = get(R.drawable.ic_skip_back); }
+        if (iconSkipFwdEnabled  == null)  { iconSkipFwdEnabled   = get(R.drawable.ic_skip_forward); }
+        if (iconSkipBackDisabled == null) {
+            iconSkipBackDisabled = copy(iconSkipBackEnabled);
+            if (iconSkipBackDisabled != null) iconSkipBackDisabled.setAlpha(100);
+        }
+        if (iconSkipFwdDisabled == null) {
+            iconSkipFwdDisabled = copy(iconSkipFwdEnabled);
+            if (iconSkipFwdDisabled != null) iconSkipFwdDisabled.setAlpha(100);
+        }
     }
 
     private Drawable get(@DrawableRes int res) {
         Drawable d = activity.getDrawable(res);
+        return d == null ? null : d.mutate();
+    }
+
+    private Drawable copy(Drawable src) {
+        if (src == null) {
+            return null;
+        }
+        Drawable.ConstantState state = src.getConstantState();
+        Drawable d = state != null ? state.newDrawable(activity.getResources()) : null;
         return d == null ? null : d.mutate();
     }
 
@@ -128,13 +150,11 @@ public final class SpeechButtonsController {
     private void setSkipsEnabled(boolean enabled) {
         if (skipBackItem != null) {
             skipBackItem.setEnabled(enabled);
-            final Drawable d = skipBackItem.getIcon();
-            if (d != null) d.setAlpha(enabled ? 255 : 100);
+            skipBackItem.setIcon(enabled ? iconSkipBackEnabled : iconSkipBackDisabled);
         }
         if (skipFwdItem  != null) {
             skipFwdItem.setEnabled(enabled);
-            final Drawable d = skipFwdItem.getIcon();
-            if (d != null) d.setAlpha(enabled ? 255 : 100);
+            skipFwdItem.setIcon(enabled ? iconSkipFwdEnabled : iconSkipFwdDisabled);
         }
     }
 }
