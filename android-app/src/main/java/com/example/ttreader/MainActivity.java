@@ -57,6 +57,7 @@ import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.ReadingState;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
+import com.example.ttreader.ui.PagingController;
 import com.example.ttreader.ui.SpeechButtonsController;
 import com.example.ttreader.ui.SpeechButtonsController.UiPlaybackMode;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
@@ -240,6 +241,7 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     // Последний показанный режим воспроизведения для пунктов меню озвучки
     private UiPlaybackMode uiMode = UiPlaybackMode.IDLE;
     private SpeechButtonsController speechButtons;
+    private PagingController pagingController;
     private AlertDialog rhvoiceDialog;
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
     private boolean languagePairInitialized = false;
@@ -452,6 +454,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         readerLoadingIndicator = findViewById(R.id.readerLoadingIndicator);
         pagePreviousButton = findViewById(R.id.pagePreviousButton);
         pageNextButton = findViewById(R.id.pageNextButton);
+        if (pagingController == null) {
+            pagingController = new PagingController();
+        }
+        pagingController.bindViews(pagePreviousButton, pageNextButton);
         pageControls = findViewById(R.id.pageControls);
         pageNumberText = findViewById(R.id.pageNumberText);
 
@@ -581,6 +587,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 R.id.action_skip_back,
                 R.id.action_skip_forward
         );
+        if (pagingController == null) {
+            pagingController = new PagingController();
+        }
+        pagingController.bindMenu(menu, View.NO_ID, View.NO_ID);
         // синхронизировать кнопки с текущим состоянием воспроизведения
         updateUiPlaybackMode(resolveUiPlaybackMode());
 
@@ -1334,6 +1344,10 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         float nextAlpha = nextEnabled ? 1f : 0.3f;
         setAlphaWithLogging(pageNextButton, "PageNextButton", nextAlpha);
 
+        if (pagingController != null) {
+            pagingController.updateState(controlsEnabled, prevEnabled, nextEnabled);
+        }
+
         boolean hasDocument = readerView != null && readerView.getDocumentLength() > 0;
         if (hasDocument) {
             int current = readerView.getCurrentPageIndex() + 1;
@@ -1545,6 +1559,9 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             setEnabledWithLogging(pageNextButton, "PageNextButton", false);
             setAlphaWithLogging(pagePreviousButton, "PagePreviousButton", 0.3f);
             setAlphaWithLogging(pageNextButton, "PageNextButton", 0.3f);
+            if (pagingController != null) {
+                pagingController.updateState(false, false, false);
+            }
         } else {
             setEnabledWithLogging(pageControls, "PageControls", true);
             setAlphaWithLogging(pageControls, "PageControls", 1f);
