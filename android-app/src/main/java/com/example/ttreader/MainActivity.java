@@ -9,7 +9,6 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
@@ -58,10 +57,11 @@ import com.example.ttreader.data.UsageStatsDao;
 import com.example.ttreader.model.ReadingState;
 import com.example.ttreader.reader.ReaderView;
 import com.example.ttreader.reader.TokenSpan;
+import com.example.ttreader.ui.SpeechButtonsController;
+import com.example.ttreader.ui.SpeechButtonsController.UiPlaybackMode;
 import com.example.ttreader.ui.TokenInfoBottomSheet;
 import com.example.ttreader.util.DetailSpeechFormatter;
 import com.example.ttreader.util.GrammarResources;
-import com.example.ttreader.util.LoggingDrawableWrapper;
 import com.example.ttreader.tts.RhvoiceAvailability;
 
 import java.io.File;
@@ -236,11 +236,8 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     private Toolbar toolbar;
     private MenuItem languagePairMenuItem;
     private MenuItem workMenuItem;
-    private MenuItem toggleSpeechMenuItem;
-    private MenuItem stopSpeechMenuItem;
-    private MenuItem skipBackMenuItem;
-    private MenuItem skipForwardMenuItem;
     private MenuItem installTalgatMenuItem;
+    private SpeechButtonsController speechButtons;   // новый контроллер только для UI
     private AlertDialog rhvoiceDialog;
     private String currentLanguagePair = LANGUAGE_PAIR_TT_RU;
     private boolean languagePairInitialized = false;
@@ -562,29 +559,27 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         initMediaSession();
         initTextToSpeech();
         updateInstallButtonVisibility();
-        updateSpeechButtons();
 
         handleNavigationIntent(getIntent());
     }
 
     @Override public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_actions, menu);
+
         languagePairMenuItem = menu.findItem(R.id.action_language_pair);
-        workMenuItem = menu.findItem(R.id.action_select_work);
-        toggleSpeechMenuItem = menu.findItem(R.id.action_toggle_speech);
-        stopSpeechMenuItem = menu.findItem(R.id.action_stop_speech);
-        skipBackMenuItem = menu.findItem(R.id.action_skip_back);
-        skipForwardMenuItem = menu.findItem(R.id.action_skip_forward);
-        installTalgatMenuItem = menu.findItem(R.id.action_install_talgat);
-        Log.d(TAG,
-                "onCreateOptionsMenu: obtained speech menu items toggle="
-                        + (toggleSpeechMenuItem != null)
-                        + ", stop=" + (stopSpeechMenuItem != null));
+        workMenuItem         = menu.findItem(R.id.action_select_work);
+        installTalgatMenuItem= menu.findItem(R.id.action_install_talgat);
+
+        // привязка контроллера кнопок
+        if (speechButtons == null) speechButtons = new SpeechButtonsController(this);
+        speechButtons.bind(menu);
+        // начальный UI-режим — без озвучки
+        speechButtons.setMode(UiPlaybackMode.IDLE);
+
         setupLanguagePairActionView();
         setupWorkMenuItem();
         updateLanguagePairDisplay();
         updateWorkMenuDisplay();
-        updateSpeechButtons();
         updateInstallButtonVisibility();
         return true;
     }
@@ -596,39 +591,57 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
 
     @Override public boolean onOptionsItemSelected(MenuItem item) {
         if (item == null) return super.onOptionsItemSelected(item);
-        int id = item.getItemId();
-        if (id == R.id.action_language_pair) {
-            showLanguagePairMenu(getLanguagePairAnchor());
-            return true;
-        } else if (id == R.id.action_select_work) {
-            showWorkMenu(getWorkAnchor());
-            return true;
-        } else if (id == R.id.action_language_stats) {
-            openLanguageStats();
-            return true;
-        } else if (id == R.id.action_work_stats) {
-            openWorkStats();
-            return true;
-        } else if (id == R.id.action_device_stats) {
-            openDeviceStats();
-            return true;
-        } else if (id == R.id.action_toggle_speech) {
-            toggleSpeech();
-            return true;
-        } else if (id == R.id.action_stop_speech) {
-            stopSpeech();
-            return true;
-        } else if (id == R.id.action_skip_forward) {
-            handleMediaSkip(true);
-            return true;
-        } else if (id == R.id.action_skip_back) {
-            handleMediaSkip(false);
-            return true;
-        } else if (id == R.id.action_install_talgat) {
-            openTalgatInstall();
-            return true;
+        switch (item.getItemId()) {
+            case R.id.action_toggle_speech:
+                if (isSpeaking) { pauseSpeech(); }
+                else { startSpeech(); }
+                if (speechButtons != null) {
+                    speechButtons.onUserPressedToggle();
+                }
+                return true;
+
+            case R.id.action_stop_speech:
+                stopSpeech();
+                if (speechButtons != null) {
+                    speechButtons.onUserPressedStop();
+                }
+                return true;
+
+            case R.id.action_skip_forward:
+                handleMediaSkip(true);
+                return true;
+
+            case R.id.action_skip_back:
+                handleMediaSkip(false);
+                return true;
+
+            case R.id.action_language_pair:
+                showLanguagePairMenu(getLanguagePairAnchor());
+                return true;
+
+            case R.id.action_select_work:
+                showWorkMenu(getWorkAnchor());
+                return true;
+
+            case R.id.action_language_stats:
+                openLanguageStats();
+                return true;
+
+            case R.id.action_work_stats:
+                openWorkStats();
+                return true;
+
+            case R.id.action_device_stats:
+                openDeviceStats();
+                return true;
+
+            case R.id.action_install_talgat:
+                openTalgatInstall();
+                return true;
+
+            default:
+                return super.onOptionsItemSelected(item);
         }
-        return super.onOptionsItemSelected(item);
     }
 
     @Override protected void onNewIntent(Intent intent) {
@@ -2337,14 +2350,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         sheet.show(getFragmentManager(), "token-info");
     }
 
-    private void toggleSpeech() {
-        if (isSpeaking) {
-            pauseSpeech();
-        } else {
-            startSpeech();
-        }
-    }
-
     private void startSpeech() {
         finalizePendingDevicePauseEvent();
         if (!ttsReady || talgatVoice == null) return;
@@ -2371,7 +2376,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 sentencePlayer.start();
                 isSpeaking = true;
                 updatePlaybackState(PlaybackState.STATE_PLAYING);
-                updateSpeechButtons();
                 startProgressUpdates();
                 prefetchUpcomingSentences(currentSentenceIndex + 1);
                 return;
@@ -2380,7 +2384,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
         markLastModeVoice();
-        updateSpeechButtons();
         speakCurrentSentence();
     }
 
@@ -2402,7 +2405,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         }
         updatePlaybackState(PlaybackState.STATE_PAUSED);
-        updateSpeechButtons();
     }
 
     private void stopSpeech() {
@@ -2454,7 +2456,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         markLastModeVisual();
         updatePlaybackState(PlaybackState.STATE_STOPPED);
-        updateSpeechButtons();
     }
 
     private void speakCurrentSentence() {
@@ -2488,7 +2489,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 sentencePlayer.start();
                 isSpeaking = true;
                 updatePlaybackState(PlaybackState.STATE_PLAYING);
-                updateSpeechButtons();
                 startProgressUpdates();
                 return;
             } catch (IllegalStateException ignored) {
@@ -2549,7 +2549,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             }
         } else {
             updatePlaybackState(PlaybackState.STATE_PAUSED);
-            updateSpeechButtons();
         }
     }
 
@@ -2564,7 +2563,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             currentSentenceRequest = null;
         }
         updatePlaybackState(PlaybackState.STATE_PAUSED);
-        updateSpeechButtons();
     }
 
     private long estimateSentenceDurationMs(ReaderView.SentenceRange sentence) {
@@ -2598,7 +2596,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 Log.w(TAG, "initTextToSpeech: TTS engine unavailable");
             }
             updateInstallButtonVisibility();
-            updateSpeechButtons();
         }, engine);
     }
 
@@ -2735,7 +2732,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                     if (sentencePlayer == mp) {
                         sentencePlayer = null;
                     }
-                    updateSpeechButtons();
                     return;
                 }
                 long duration = request.durationMs > 0 ? request.durationMs : mp.getDuration();
@@ -2747,7 +2743,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 mp.start();
                 isSpeaking = true;
                 updatePlaybackState(PlaybackState.STATE_PLAYING);
-                updateSpeechButtons();
                 startProgressUpdates();
             });
             sentencePlayer.setOnCompletionListener(mp -> handleSentencePlaybackComplete());
@@ -3410,7 +3405,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         }
         isSpeaking = false;
         updatePlaybackState(PlaybackState.STATE_PAUSED);
-        updateSpeechButtons();
     }
 
     private void resumeSentenceAfterDetail() {
@@ -3425,7 +3419,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
                 isSpeaking = true;
                 shouldContinueSpeech = true;
                 updatePlaybackState(PlaybackState.STATE_PLAYING);
-                updateSpeechButtons();
                 startProgressUpdates();
                 return;
             } catch (IllegalStateException ignored) {
@@ -3468,7 +3461,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             markLastModeVoice();
         }
         updatePlaybackState(PlaybackState.STATE_PAUSED);
-        updateSpeechButtons();
         return true;
     }
 
@@ -3528,7 +3520,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         } else {
             awaitingResumeAfterDetail = true;
             updatePlaybackState(PlaybackState.STATE_PAUSED);
-            updateSpeechButtons();
         }
         detailAutoResume = false;
     }
@@ -3572,19 +3563,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
         float playbackSpeed = playbackState == PlaybackState.STATE_PLAYING ? 1f : 0f;
         builder.setState(playbackState, PlaybackState.PLAYBACK_POSITION_UNKNOWN, playbackSpeed);
         mediaSession.setPlaybackState(builder.build());
-    }
-
-    private String safeResourceName(int resId, String fallbackPrefix) {
-        if (fallbackPrefix == null) {
-            fallbackPrefix = "res";
-        }
-        try {
-            return getResources().getResourceEntryName(resId);
-        } catch (Resources.NotFoundException e) {
-            String fallback = fallbackPrefix + "_" + resId;
-            Log.d(TAG, "safeResourceName: missing entry for id=" + resId + ", fallback=" + fallback, e);
-            return fallback;
-        }
     }
 
     private boolean isSpeechModeActive() {
@@ -3639,110 +3617,18 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
     }
 
     private void updateSpeechButtons() {
-        boolean voiceAvailable = ttsReady && talgatVoice != null;
-        boolean sessionActive = speechSessionActive || isSpeaking || shouldContinueSpeech;
-        SpeechButtonState state = calculateSpeechButtonState(voiceAvailable, sessionActive, isSpeaking);
-        Log.d(TAG,
-                "updateSpeechButtons: start voiceAvailable=" + voiceAvailable
-                        + ", sessionActive=" + sessionActive
-                        + ", isSpeaking=" + isSpeaking
-                        + ", toggleMenuItemPresent=" + (toggleSpeechMenuItem != null)
-                        + ", stopMenuItemPresent=" + (stopSpeechMenuItem != null));
-        if (toggleSpeechMenuItem != null) {
-            toggleSpeechMenuItem.setEnabled(state.toggleEnabled);
-            Drawable toggleIcon = getDrawable(state.toggleIconRes);
-            if (toggleIcon != null) {
-                toggleIcon = toggleIcon.mutate();
-                toggleIcon.setAlpha(state.toggleEnabled ? 255 : 100);
-                String toggleIconName = safeResourceName(state.toggleIconRes, "toggle_icon");
-                Drawable loggingToggleIcon = LoggingDrawableWrapper.wrap(toggleIcon,
-                        "speech_toggle:" + toggleIconName);
-                if (loggingToggleIcon != null) {
-                    toggleSpeechMenuItem.setIcon(loggingToggleIcon);
-                } else {
-                    toggleSpeechMenuItem.setIcon(toggleIcon);
-                }
-                Log.d(TAG,
-                        "updateSpeechButtons: applied toggle icon with alpha="
-                                + (state.toggleEnabled ? 255 : 100)
-                                + ", loggingWrapperName=" + toggleIconName);
-            } else {
-                Log.w(TAG, "updateSpeechButtons: toggle icon drawable missing for resource=" + state.toggleIconRes);
-            }
-            toggleSpeechMenuItem.setTitle(getString(state.toggleDescriptionRes));
-            try {
-                String iconName = getResources().getResourceEntryName(state.toggleIconRes);
-                String descriptionName = getResources().getResourceEntryName(state.toggleDescriptionRes);
-                Log.d(TAG,
-                        "updateSpeechButtons: toggle icon=" + iconName
-                                + ", description=" + descriptionName
-                                + ", enabled=" + state.toggleEnabled
-                                + ", sessionActive=" + sessionActive
-                                + ", isSpeaking=" + isSpeaking
-                                + ", voiceAvailable=" + voiceAvailable);
-            } catch (Resources.NotFoundException e) {
-                Log.d(TAG,
-                        "updateSpeechButtons: toggle resources missing for iconRes=" + state.toggleIconRes
-                                + ", descriptionRes=" + state.toggleDescriptionRes, e);
-            }
+        if (speechButtons == null) {
+            return;
+        }
+        UiPlaybackMode targetMode;
+        if (isSpeaking) {
+            targetMode = UiPlaybackMode.PLAYING;
+        } else if (speechSessionActive || shouldContinueSpeech) {
+            targetMode = UiPlaybackMode.PAUSED;
         } else {
-            Log.d(TAG, "updateSpeechButtons: toggle menu item is null, skipping icon update");
+            targetMode = UiPlaybackMode.IDLE;
         }
-        if (stopSpeechMenuItem != null) {
-            stopSpeechMenuItem.setVisible(state.stopVisible);
-            stopSpeechMenuItem.setEnabled(state.stopEnabled);
-            Drawable stopIcon = getDrawable(R.drawable.ic_stop);
-            if (stopIcon != null) {
-                stopIcon = stopIcon.mutate();
-                stopIcon.setAlpha(state.stopEnabled ? 255 : 100);
-                String stopIconName = safeResourceName(R.drawable.ic_stop, "stop_icon");
-                Drawable loggingStopIcon = LoggingDrawableWrapper.wrap(stopIcon,
-                        "speech_stop:" + stopIconName);
-                if (loggingStopIcon != null) {
-                    stopSpeechMenuItem.setIcon(loggingStopIcon);
-                } else {
-                    stopSpeechMenuItem.setIcon(stopIcon);
-                }
-                Log.d(TAG,
-                        "updateSpeechButtons: applied stop icon with alpha="
-                                + (state.stopEnabled ? 255 : 100)
-                                + ", loggingWrapperName=" + stopIconName);
-            } else {
-                Log.w(TAG, "updateSpeechButtons: stop icon drawable missing");
-            }
-            Log.d(TAG,
-                    "updateSpeechButtons: stop icon=ic_stop"
-                            + ", visible=" + state.stopVisible
-                            + ", enabled=" + state.stopEnabled
-                            + ", sessionActive=" + sessionActive);
-        } else {
-            Log.d(TAG, "updateSpeechButtons: stop menu item is null, skipping icon update");
-        }
-        if (skipBackMenuItem != null) {
-            boolean skipVisible = sessionActive;
-            skipBackMenuItem.setVisible(skipVisible);
-            boolean skipEnabled = sessionActive;
-            skipBackMenuItem.setEnabled(skipEnabled);
-            Drawable backIcon = getDrawable(R.drawable.ic_skip_back);
-            if (backIcon != null) {
-                backIcon = backIcon.mutate();
-                backIcon.setAlpha(skipEnabled ? 255 : 100);
-                skipBackMenuItem.setIcon(backIcon);
-            }
-        }
-        if (skipForwardMenuItem != null) {
-            boolean skipVisible = sessionActive;
-            skipForwardMenuItem.setVisible(skipVisible);
-            boolean skipEnabled = sessionActive;
-            skipForwardMenuItem.setEnabled(skipEnabled);
-            Drawable forwardIcon = getDrawable(R.drawable.ic_skip_forward);
-            if (forwardIcon != null) {
-                forwardIcon = forwardIcon.mutate();
-                forwardIcon.setAlpha(skipEnabled ? 255 : 100);
-                skipForwardMenuItem.setIcon(forwardIcon);
-            }
-        }
-        updatePageControls();
+        speechButtons.setMode(targetMode);
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
@@ -3879,7 +3765,6 @@ public class MainActivity extends Activity implements ReaderView.TokenInfoProvid
             initTextToSpeech();
         } else if (ttsReady) {
             locateTalgatVoice();
-            updateSpeechButtons();
             updateInstallButtonVisibility();
         }
     }
