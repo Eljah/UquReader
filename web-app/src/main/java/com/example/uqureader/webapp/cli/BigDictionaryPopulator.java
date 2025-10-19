@@ -219,7 +219,7 @@ public final class BigDictionaryPopulator {
         System.out.println("Usage: BigDictionaryPopulator [--source <path>] [--dictionary <file>]");
         System.out.println("Options:");
         System.out.println("  --source, -s      Directory that contains *.doc files (default: web-app/src/main/resources/bigdic)");
-        System.out.println("  --dictionary, -d  Path to dictionary.db SQLite file (default: android-app/src/main/assets/dictionary.db)");
+        System.out.println("  --dictionary, -d  Path to tat_rus_dictionary.db SQLite file (default: data/tat_rus_dictionary.db)");
         System.out.println("  --help, -h        Show this help text");
     }
 
@@ -248,11 +248,11 @@ public final class BigDictionaryPopulator {
     }
 
     private static Path resolveDefaultDictionaryPath() {
-        Path candidate = Path.of("android-app", "src", "main", "assets", "dictionary.db");
+        Path candidate = Path.of("data", "tat_rus_dictionary.db");
         if (Files.exists(candidate)) {
             return candidate;
         }
-        return Path.of("dictionary.db");
+        return Path.of("tat_rus_dictionary.db");
     }
 
     private static List<Path> listDocuments(Path directory) throws IOException {
