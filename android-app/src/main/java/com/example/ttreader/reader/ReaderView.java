@@ -64,6 +64,7 @@ public class ReaderView extends TextView {
     private static final int PAGE_CHUNK_SIZE = 4000;
     private static final int MIN_PAGE_ADVANCE_CHARS = 64;
     private static final float FLOAT_TOLERANCE = 0.01f;
+    private static final String STICKY_PUNCTUATION = ",.!?;:…";
 
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
@@ -1670,9 +1671,10 @@ public class ReaderView extends TextView {
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedException();
             }
+            String prefixText = sanitizePrefix(t);
             int prefixStart = plain.length();
-            if (t.prefix != null && !t.prefix.isEmpty()) {
-                plain.append(t.prefix);
+            if (prefixText != null && !prefixText.isEmpty()) {
+                plain.append(prefixText);
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1683,8 +1685,9 @@ public class ReaderView extends TextView {
             }
 
             int start = plain.length();
-            if (t.surface != null && !t.surface.isEmpty()) {
-                plain.append(t.surface);
+            String surfaceText = t.surface == null ? "" : t.surface;
+            if (!surfaceText.isEmpty()) {
+                plain.append(surfaceText);
             }
             int end = plain.length();
 
@@ -1726,6 +1729,48 @@ public class ReaderView extends TextView {
 
         List<SentenceRange> ranges = buildSentenceRanges(plain.toString());
         return new LoadResult(plain.toString(), spans, ranges);
+    }
+
+    private String sanitizePrefix(Token token) {
+        if (token == null) {
+            return "";
+        }
+        String prefix = token.prefix == null ? "" : token.prefix;
+        if (prefix.isEmpty()) {
+            return "";
+        }
+        if (!isStickyPunctuation(token.surface)) {
+            return prefix;
+        }
+        int end = prefix.length();
+        while (end > 0) {
+            char ch = prefix.charAt(end - 1);
+            if (ch == '\t' || Character.isSpaceChar(ch)) {
+                end--;
+            } else {
+                break;
+            }
+        }
+        if (end == prefix.length()) {
+            return prefix;
+        }
+        if (end <= 0) {
+            return "";
+        }
+        return prefix.substring(0, end);
+    }
+
+    private boolean isStickyPunctuation(String surface) {
+        if (surface == null || surface.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < surface.length(); i++) {
+            char ch = surface.charAt(i);
+            if (STICKY_PUNCTUATION.indexOf(ch) < 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private TokenSpan createSyntheticSpan(CharSequence content, int start, int end) {
