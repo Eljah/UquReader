@@ -66,6 +66,8 @@ public class ReaderView extends TextView {
     private static final int PAGE_CHUNK_SIZE = 4000;
     private static final int MIN_PAGE_ADVANCE_CHARS = 64;
     private static final float FLOAT_TOLERANCE = 0.01f;
+    private static final char[] HARD_PUNCTUATION_CHARS =
+            new char[] {',', '.', '!', '?', ';', ':', '…', ')', ']', '}'};
 
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
@@ -180,6 +182,30 @@ public class ReaderView extends TextView {
         if (navigationStateListener != null) {
             navigationStateListener.onNavigationStateChanged(isNavigationReady());
         }
+    }
+
+    private static boolean isHardPunctuation(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        char first = text.charAt(0);
+        for (char punctuation : HARD_PUNCTUATION_CHARS) {
+            if (punctuation == first) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isDashLike(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        char first = text.charAt(0);
+        if (first == '—' || first == '–') {
+            return true;
+        }
+        return first == '-' && text.length() <= 2;
     }
 
     public ReaderView(Context context) {
