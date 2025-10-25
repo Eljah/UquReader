@@ -1745,8 +1745,9 @@ public class ReaderView extends TextView {
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
                 String prefix = t.prefix;
-                // 1) Убираем пробелы в начале новых строк: "\n   " -> "\n"
-                prefix = prefix.replaceAll("(?m)(\\n)[ \\t]+", "$1");
+                // 1) Убираем пробелы вокруг переводов строки
+                prefix = prefix.replaceAll("[ \\t]+\\n", "\\n");
+                prefix = prefix.replaceAll("\\n[ \\t]+", "\\n");
 
                 // 2) Если текущий токен — ПУНКТУАЦИЯ, не допускаем пробела ПЕРЕД ним.
                 String surfaceText = t.surface == null ? "" : t.surface;
@@ -1767,9 +1768,6 @@ public class ReaderView extends TextView {
                     }
                 }
 
-                // 3) Убираем "висячие" пробелы перед переводом строки: "  \n" -> "\n"
-                prefix = prefix.replaceAll("[ \\t]+\\n", "\\n");
-
                 if (!prefix.isEmpty()) {
                     plain.append(prefix);
                 }
@@ -1786,12 +1784,21 @@ public class ReaderView extends TextView {
             if (t.surface != null && !t.surface.isEmpty()) {
                 String surface = t.surface;
                 int nonWhitespaceIndex = firstNonWhitespaceIndex(surface);
-                if (nonWhitespaceIndex > 0) {
-                    if (isHardPunctuationChar(surface.charAt(nonWhitespaceIndex))
-                            || isDashLikePrefix(surface, nonWhitespaceIndex)) {
-                        surface = surface.substring(nonWhitespaceIndex);
+                boolean isHardPunctuation = nonWhitespaceIndex >= 0
+                        && isHardPunctuationChar(surface.charAt(nonWhitespaceIndex));
+                boolean isDashLike = nonWhitespaceIndex >= 0
+                        && isDashLikePrefix(surface, nonWhitespaceIndex);
+                if ((isHardPunctuation || isDashLike) && plain.length() > 0) {
+                    int last = plain.length() - 1;
+                    if (plain.charAt(last) == ' ') {
+                        plain.setCharAt(last, '\u202F');
                     }
                 }
+                if (nonWhitespaceIndex > 0 && (isHardPunctuation || isDashLike)) {
+                    surface = surface.substring(nonWhitespaceIndex);
+                }
+                surface = surface.replaceAll("[ \\t]+\\n", "\\n");
+                surface = surface.replaceAll("\\n[ \\t]+", "\\n");
                 plain.append(surface);
             }
             int end = plain.length();
