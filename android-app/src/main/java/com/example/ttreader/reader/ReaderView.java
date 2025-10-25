@@ -64,6 +64,8 @@ public class ReaderView extends TextView {
     private static final int PAGE_CHUNK_SIZE = 4000;
     private static final int MIN_PAGE_ADVANCE_CHARS = 64;
     private static final float FLOAT_TOLERANCE = 0.01f;
+    private static final char[] HARD_PUNCTUATION_CHARS =
+            new char[] {',', '.', '!', '?', ';', ':', '…', ')', ']', '}'};
 
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
@@ -180,6 +182,30 @@ public class ReaderView extends TextView {
         }
     }
 
+    private static boolean isHardPunctuation(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        char first = text.charAt(0);
+        for (char punctuation : HARD_PUNCTUATION_CHARS) {
+            if (punctuation == first) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isDashLike(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        char first = text.charAt(0);
+        if (first == '—' || first == '–') {
+            return true;
+        }
+        return first == '-' && text.length() <= 2;
+    }
+
     public ReaderView(Context context) {
         super(context);
         movementMethod = createMovementMethod();
@@ -252,6 +278,13 @@ public class ReaderView extends TextView {
         setTypeface(Typeface.SERIF);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             setLetterSpacing(0.01f);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
+            setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
         }
     }
 
@@ -982,11 +1015,20 @@ public class ReaderView extends TextView {
         if (paint == null) return null;
         int effectiveWidth = Math.max(1, width);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return StaticLayout.Builder.obtain(text, 0, text.length(), paint, effectiveWidth)
+            StaticLayout.Builder builder = StaticLayout.Builder
+                    .obtain(text, 0, text.length(), paint, effectiveWidth)
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .setIncludePad(false)
                     .setLineSpacing(getLineSpacingExtra(), getLineSpacingMultiplier())
-                    .build();
+                    .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
+                    .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
+            try {
+                builder.getClass().getMethod("setJustificationMode", int.class)
+                        .invoke(builder, Layout.JUSTIFICATION_MODE_INTER_WORD);
+            } catch (Throwable ignore) {
+                // method may be missing on older SDK versions
+            }
+            return builder.build();
         } else {
             //noinspection deprecation
             return new StaticLayout(text, paint, effectiveWidth, Layout.Alignment.ALIGN_NORMAL,
@@ -1672,7 +1714,29 @@ public class ReaderView extends TextView {
             }
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
-                plain.append(t.prefix);
+                String prefix = t.prefix;
+                prefix = prefix.replaceAll("(?m)(\\n)[ \\t]+", "$1");
+
+                String surface = t.surface == null ? "" : t.surface;
+                boolean isHardPunctuation = isHardPunctuation(surface);
+                boolean isDashLike = isDashLike(surface);
+
+                if (isHardPunctuation || isDashLike) {
+                    prefix = prefix.replaceAll("[ \\t]+$", "");
+                    if (plain.length() > 0) {
+                        int lastIndex = plain.length() - 1;
+                        char lastChar = plain.charAt(lastIndex);
+                        if (lastChar == ' ') {
+                            plain.setCharAt(lastIndex, '\\u202F');
+                        }
+                    }
+                }
+
+                prefix = prefix.replaceAll("[ \\t]+\\n", "\\n");
+
+                if (!prefix.isEmpty()) {
+                    plain.append(prefix);
+                }
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1684,7 +1748,23 @@ public class ReaderView extends TextView {
 
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
-                plain.append(t.surface);
+                String surface = t.surface;
+                int wsCount = 0;
+                while (wsCount < surface.length()) {
+                    char c = surface.charAt(wsCount);
+                    if (c == ' ' || c == '\\t') {
+                        wsCount++;
+                    } else {
+                        break;
+                    }
+                }
+                if (wsCount > 0 && wsCount < surface.length()) {
+                    String remainder = surface.substring(wsCount);
+                    if (isHardPunctuation(remainder) || isDashLike(remainder)) {
+                        surface = remainder;
+                    }
+                }
+                plain.append(surface);
             }
             int end = plain.length();
 
