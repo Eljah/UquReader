@@ -33,8 +33,10 @@ import com.example.ttreader.util.MorphDocumentParser;
 
 import java.io.File;
 import java.text.BreakIterator;
+import java.text.Normalizer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -279,6 +281,7 @@ public class ReaderView extends TextView {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             setLetterSpacing(0.01f);
         }
+        // Красивые переносы и выравнивание по ширине (кроме последней строки абзаца)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
             setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
@@ -286,6 +289,42 @@ public class ReaderView extends TextView {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
         }
+    }
+
+    // ===== Helpers for whitespace/punctuation handling =====
+    /** внутри абзаца никакого \n — превращаем любые переносы в одиночный пробел и убираем «висячие» пробелы */
+    private static String normalizeInlineWS(String s) {
+        if (s == null || s.isEmpty()) return "";
+        // Unicode-нормализация (тире/кавычки и т.п.)
+        s = Normalizer.normalize(s, Normalizer.Form.NFC);
+        // «  \n» → « », «\n  » → « », одиночные \n → « »
+        s = s.replaceAll("[ \t\u00A0\u202F]*\n[ \t\u00A0\u202F]*", " ");
+        // схлопываем множественные пробелы
+        s = s.replaceAll("[ \t\u00A0\u202F]{2,}", " ");
+        return s;
+    }
+
+    private static final Set<Character> CLOSING_PUNCT_CHARS = new HashSet<>(Arrays.asList(
+            ',', '.', '!', '?', ';', ':', '…', '»', '”', ')', ']', '}'
+    ));
+    private static final Set<Character> OPENING_QUOTE_OR_PAREN_CHARS = new HashSet<>(Arrays.asList(
+            '«', '(', '['
+    ));
+
+    /** текущий токен — закрывающий знак/тире, который должен прилипать к предыдущему слову */
+    private static boolean isClosingPunctuationOrDash(String s) {
+        if (s == null || s.isEmpty()) return false;
+        char first = s.charAt(0);
+        if (CLOSING_PUNCT_CHARS.contains(first)) {
+            return true;
+        }
+        return s.length() == 1 && (first == '—' || first == '–');
+    }
+
+    /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
+    private static boolean isOpeningQuoteOrParen(String s) {
+        if (s == null || s.isEmpty()) return false;
+        return s.length() == 1 && OPENING_QUOTE_OR_PAREN_CHARS.contains(s.charAt(0));
     }
 
     private MovementMethod createMovementMethod() {
@@ -1015,20 +1054,19 @@ public class ReaderView extends TextView {
         if (paint == null) return null;
         int effectiveWidth = Math.max(1, width);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            StaticLayout.Builder builder = StaticLayout.Builder
+            StaticLayout.Builder b = StaticLayout.Builder
                     .obtain(text, 0, text.length(), paint, effectiveWidth)
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .setIncludePad(false)
                     .setLineSpacing(getLineSpacingExtra(), getLineSpacingMultiplier())
                     .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
                     .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
+            // На новых SDK обернём и явным justification у самого layout
             try {
-                builder.getClass().getMethod("setJustificationMode", int.class)
-                        .invoke(builder, Layout.JUSTIFICATION_MODE_INTER_WORD);
-            } catch (Throwable ignore) {
-                // method may be missing on older SDK versions
-            }
-            return builder.build();
+                b.getClass().getMethod("setJustificationMode", int.class)
+                        .invoke(b, Layout.JUSTIFICATION_MODE_INTER_WORD);
+            } catch (Throwable ignore) { /* метод может отсутствовать */ }
+            return b.build();
         } else {
             //noinspection deprecation
             return new StaticLayout(text, paint, effectiveWidth, Layout.Alignment.ALIGN_NORMAL,
@@ -1708,34 +1746,25 @@ public class ReaderView extends TextView {
         double halflife = 7.0; // days
         long now = System.currentTimeMillis();
 
-        for (Token t : tokens) {
+        for (int i = 0; i < tokens.size(); i++) {
+            Token t = tokens.get(i);
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedException();
             }
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
-                String prefix = t.prefix;
-                prefix = prefix.replaceAll("(?m)(\\n)[ \\t]+", "$1");
-
-                String surface = t.surface == null ? "" : t.surface;
-                boolean isHardPunctuation = isHardPunctuation(surface);
-                boolean isDashLike = isDashLike(surface);
-
-                if (isHardPunctuation || isDashLike) {
-                    prefix = prefix.replaceAll("[ \\t]+$", "");
-                    if (plain.length() > 0) {
-                        int lastIndex = plain.length() - 1;
-                        char lastChar = plain.charAt(lastIndex);
-                        if (lastChar == ' ') {
-                            plain.setCharAt(lastIndex, '\\u202F');
-                        }
-                    }
+                String pfx = normalizeInlineWS(t.prefix);
+                // Если далее идёт закрывающий знак препинания — не допускаем хвостовых пробелов в prefix
+                String surfacePreview = (t.surface == null) ? "" : Normalizer.normalize(t.surface, Normalizer.Form.NFC);
+                if (isClosingPunctuationOrDash(surfacePreview)) {
+                    // Убираем ВСЕ типы пробелов в конце prefix (включая NBSP, NNBSP, THIN, HAIR, ZWSP)
+                    pfx = pfx.replaceAll("[ \\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+$", "");
                 }
-
-                prefix = prefix.replaceAll("[ \\t]+\\n", "\\n");
-
-                if (!prefix.isEmpty()) {
-                    plain.append(prefix);
+                if (c == ' ' || c == '\u00A0' || c == '\u202F' || c == '\u2009' || c == '\u200A' || c == '\u200B' || c == '\u2060') {
+                    plain.setCharAt(last, '\u202F');
+                }
+                if (!pfx.isEmpty()) {
+                    plain.append(pfx);
                 }
             }
             int prefixEnd = plain.length();
@@ -1748,43 +1777,43 @@ public class ReaderView extends TextView {
 
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
-                String surface = t.surface;
-                int wsCount = 0;
-                while (wsCount < surface.length()) {
-                    char c = surface.charAt(wsCount);
-                    if (c == ' ' || c == '\\t') {
-                        wsCount++;
-                    } else {
-                        break;
+                String s = normalizeInlineWS(t.surface);
+
+                if (isOpeningQuoteOrParen(s)) {
+                    plain.append(s);
+                } else {
+                    if (isClosingPunctuationOrDash(s)) {
+                        if (plain.length() > 0) {
+                            int last = plain.length() - 1;
+                            char c = plain.charAt(last);
+                            if (c == ' ') {
+                                plain.setCharAt(last, '\u202F');
+                            }
+                        }
+                        s = s.replaceFirst("^[ \t\u00A0\u202F]+", "");
                     }
+                    plain.append(s);
                 }
-                if (wsCount > 0 && wsCount < surface.length()) {
-                    String remainder = surface.substring(wsCount);
-                    if (isHardPunctuation(remainder) || isDashLike(remainder)) {
-                        surface = remainder;
-                    }
-                }
-                plain.append(surface);
             }
             int end = plain.length();
 
             if (end > start) {
-                    if (t.hasMorphology()) {
-                        Morphology morph = t.morphology;
-                        TokenSpan span = new TokenSpan(t);
-                        span.setCharacterRange(start, end);
-                        double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
-                        double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
-                        span.baseAlpha = (float) alpha;
-                        span.lastAlpha = lemmaHighlightEnabled ? span.baseAlpha : 0f;
-                        spans.add(span);
-                    } else {
-                        TokenSpan span = new TokenSpan(t);
-                        span.setCharacterRange(start, end);
-                        span.baseAlpha = 0f;
-                        span.lastAlpha = 0f;
-                        spans.add(span);
-                    }
+                if (t.hasMorphology()) {
+                    Morphology morph = t.morphology;
+                    TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
+                    double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
+                    double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
+                    span.baseAlpha = (float) alpha;
+                    span.lastAlpha = lemmaHighlightEnabled ? span.baseAlpha : 0f;
+                    spans.add(span);
+                } else {
+                    TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
+                    span.baseAlpha = 0f;
+                    span.lastAlpha = 0f;
+                    spans.add(span);
+                }
             }
         }
 
