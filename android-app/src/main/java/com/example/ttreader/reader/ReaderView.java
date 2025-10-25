@@ -1145,6 +1145,54 @@ public class ReaderView extends TextView {
         return -1;
     }
 
+    private static String normalizeLineWhitespace(String text) {
+        if (text == null || text.isEmpty()) {
+            return text == null ? "" : text;
+        }
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+        normalized = normalized.replaceAll("[ \t]+\\n", "\\n");
+        normalized = normalized.replaceAll("\\n[ \t]+", "\\n");
+        return normalized;
+    }
+
+    private static String trimLeadingSoftWhitespace(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        int length = text.length();
+        int index = 0;
+        while (index < length) {
+            char c = text.charAt(index);
+            if (c == ' ' || c == '\\t') {
+                index++;
+            } else {
+                break;
+            }
+        }
+        if (index <= 0) {
+            return text;
+        }
+        if (index >= length) {
+            return "";
+        }
+        return text.substring(index);
+    }
+
+    private static void convertTrailingSpaceToNnbsp(StringBuilder builder) {
+        if (builder == null) {
+            return;
+        }
+        int length = builder.length();
+        if (length <= 0) {
+            return;
+        }
+        int index = length - 1;
+        char last = builder.charAt(index);
+        if (last == ' ') {
+            builder.setCharAt(index, '\\u202F');
+        }
+    }
+
     private static boolean isHardPunctuationChar(char c) {
         switch (c) {
             case ',':
@@ -1170,6 +1218,21 @@ public class ReaderView extends TextView {
                         || type == Character.FINAL_QUOTE_PUNCTUATION
                         || type == Character.OTHER_PUNCTUATION;
         }
+    }
+
+    private static boolean shouldGlueToPreviousToken(Token token) {
+        if (token == null || token.surface == null) {
+            return false;
+        }
+        int index = firstNonWhitespaceIndex(token.surface);
+        if (index < 0) {
+            return false;
+        }
+        if (isDashLikePrefix(token.surface, index)) {
+            return true;
+        }
+        char c = token.surface.charAt(index);
+        return isHardPunctuationChar(c);
     }
 
     private static boolean isDashLikePrefix(CharSequence surface, int index) {
@@ -1742,37 +1805,20 @@ public class ReaderView extends TextView {
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedException();
             }
+            boolean glueToPrevious = shouldGlueToPreviousToken(t);
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
-                String prefix = t.prefix;
-                // 1) Убираем пробелы в начале новых строк: "\n   " -> "\n"
-                prefix = prefix.replaceAll("(?m)(\\n)[ \\t]+", "$1");
-
-                // 2) Если текущий токен — ПУНКТУАЦИЯ, не допускаем пробела ПЕРЕД ним.
-                String surfaceText = t.surface == null ? "" : t.surface;
-                int surfaceNonWsIndex = firstNonWhitespaceIndex(surfaceText);
-                boolean isHardPunct = surfaceNonWsIndex >= 0
-                        && isHardPunctuationChar(surfaceText.charAt(surfaceNonWsIndex));
-                boolean isDashLike = surfaceNonWsIndex >= 0
-                        && isDashLikePrefix(surfaceText, surfaceNonWsIndex);
-
-                if (isHardPunct || isDashLike) {
-                    prefix = prefix.replaceAll("[ \\t]+$", "");
-                    if (plain.length() > 0) {
-                        int last = plain.length() - 1;
-                        char lastChar = plain.charAt(last);
-                        if (lastChar == ' ') {
-                            plain.setCharAt(last, '\u202F');
-                        }
-                    }
-                }
-
-                // 3) Убираем "висячие" пробелы перед переводом строки: "  \n" -> "\n"
-                prefix = prefix.replaceAll("[ \\t]+\\n", "\\n");
-
+                String prefix = normalizeLineWhitespace(t.prefix);
                 if (!prefix.isEmpty()) {
                     plain.append(prefix);
+                    if (glueToPrevious) {
+                        convertTrailingSpaceToNnbsp(plain);
+                    }
+                } else if (glueToPrevious) {
+                    convertTrailingSpaceToNnbsp(plain);
                 }
+            } else if (glueToPrevious) {
+                convertTrailingSpaceToNnbsp(plain);
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1784,35 +1830,33 @@ public class ReaderView extends TextView {
 
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
-                String surface = t.surface;
-                int nonWhitespaceIndex = firstNonWhitespaceIndex(surface);
-                if (nonWhitespaceIndex > 0) {
-                    if (isHardPunctuationChar(surface.charAt(nonWhitespaceIndex))
-                            || isDashLikePrefix(surface, nonWhitespaceIndex)) {
-                        surface = surface.substring(nonWhitespaceIndex);
-                    }
+                String surface = normalizeLineWhitespace(t.surface);
+                if (glueToPrevious) {
+                    surface = trimLeadingSoftWhitespace(surface);
                 }
-                plain.append(surface);
+                if (!surface.isEmpty()) {
+                    plain.append(surface);
+                }
             }
             int end = plain.length();
 
             if (end > start) {
-                    if (t.hasMorphology()) {
-                        Morphology morph = t.morphology;
-                        TokenSpan span = new TokenSpan(t);
-                        span.setCharacterRange(start, end);
-                        double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
-                        double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
-                        span.baseAlpha = (float) alpha;
-                        span.lastAlpha = lemmaHighlightEnabled ? span.baseAlpha : 0f;
-                        spans.add(span);
-                    } else {
-                        TokenSpan span = new TokenSpan(t);
-                        span.setCharacterRange(start, end);
-                        span.baseAlpha = 0f;
-                        span.lastAlpha = 0f;
-                        spans.add(span);
-                    }
+                if (t.hasMorphology()) {
+                    Morphology morph = t.morphology;
+                    TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
+                    double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
+                    double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
+                    span.baseAlpha = (float) alpha;
+                    span.lastAlpha = lemmaHighlightEnabled ? span.baseAlpha : 0f;
+                    spans.add(span);
+                } else {
+                    TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
+                    span.baseAlpha = 0f;
+                    span.lastAlpha = 0f;
+                    spans.add(span);
+                }
             }
         }
 
