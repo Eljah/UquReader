@@ -253,6 +253,15 @@ public class ReaderView extends TextView {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             setLetterSpacing(0.01f);
         }
+        // Красивые переносы/выравнивание: ширина межсловно (кроме последней строки абзаца),
+        // без автоматических дефисов.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
+            setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+        }
     }
 
     private MovementMethod createMovementMethod() {
@@ -982,11 +991,18 @@ public class ReaderView extends TextView {
         if (paint == null) return null;
         int effectiveWidth = Math.max(1, width);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return StaticLayout.Builder.obtain(text, 0, text.length(), paint, effectiveWidth)
+            StaticLayout.Builder builder = StaticLayout.Builder
+                    .obtain(text, 0, text.length(), paint, effectiveWidth)
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .setIncludePad(false)
                     .setLineSpacing(getLineSpacingExtra(), getLineSpacingMultiplier())
-                    .build();
+                    .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
+                    .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
+            // Justification задаём на самом TextView (см. init), но Builder тоже не повредит на новых SDK.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                builder.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+            }
+            return builder.build();
         } else {
             //noinspection deprecation
             return new StaticLayout(text, paint, effectiveWidth, Layout.Alignment.ALIGN_NORMAL,
@@ -1114,6 +1130,62 @@ public class ReaderView extends TextView {
                         || type == Character.OTHER_PUNCTUATION
                         || type == Character.DASH_PUNCTUATION;
         }
+    }
+
+    private static int firstNonWhitespaceIndex(CharSequence text) {
+        if (text == null) {
+            return -1;
+        }
+        int length = text.length();
+        for (int i = 0; i < length; i++) {
+            if (!Character.isWhitespace(text.charAt(i))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean isHardPunctuationChar(char c) {
+        switch (c) {
+            case ',':
+            case '.':
+            case ';':
+            case ':':
+            case '!':
+            case '?':
+            case ')':
+            case ']':
+            case '}':
+            case '\u00bb':
+            case '\u203a':
+            case '\u2026':
+            case '\u2025':
+            case '\u2024':
+            case 0x27:
+            case '"':
+                return true;
+            default:
+                int type = Character.getType(c);
+                return type == Character.END_PUNCTUATION
+                        || type == Character.FINAL_QUOTE_PUNCTUATION
+                        || type == Character.OTHER_PUNCTUATION;
+        }
+    }
+
+    private static boolean isDashLikePrefix(CharSequence surface, int index) {
+        if (surface == null || index < 0 || index >= surface.length()) {
+            return false;
+        }
+        char c = surface.charAt(index);
+        if (c == '\u2014' || c == '\u2013' || c == '\u2012' || c == '\u2011'
+                || c == '\u2010') {
+            return true;
+        }
+        if (c == '-') {
+            int remaining = surface.length() - index;
+            return remaining <= 2;
+        }
+        return false;
     }
 
     private void showPageForChar(int charIndex, boolean notifyWindowChange) {
@@ -1672,7 +1744,35 @@ public class ReaderView extends TextView {
             }
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
-                plain.append(t.prefix);
+                String prefix = t.prefix;
+                // 1) Убираем пробелы в начале новых строк: "\n   " -> "\n"
+                prefix = prefix.replaceAll("(?m)(\\n)[ \\t]+", "$1");
+
+                // 2) Если текущий токен — ПУНКТУАЦИЯ, не допускаем пробела ПЕРЕД ним.
+                String surfaceText = t.surface == null ? "" : t.surface;
+                int surfaceNonWsIndex = firstNonWhitespaceIndex(surfaceText);
+                boolean isHardPunct = surfaceNonWsIndex >= 0
+                        && isHardPunctuationChar(surfaceText.charAt(surfaceNonWsIndex));
+                boolean isDashLike = surfaceNonWsIndex >= 0
+                        && isDashLikePrefix(surfaceText, surfaceNonWsIndex);
+
+                if (isHardPunct || isDashLike) {
+                    prefix = prefix.replaceAll("[ \\t]+$", "");
+                    if (plain.length() > 0) {
+                        int last = plain.length() - 1;
+                        char lastChar = plain.charAt(last);
+                        if (lastChar == ' ') {
+                            plain.setCharAt(last, '\u202F');
+                        }
+                    }
+                }
+
+                // 3) Убираем "висячие" пробелы перед переводом строки: "  \n" -> "\n"
+                prefix = prefix.replaceAll("[ \\t]+\\n", "\\n");
+
+                if (!prefix.isEmpty()) {
+                    plain.append(prefix);
+                }
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1684,7 +1784,15 @@ public class ReaderView extends TextView {
 
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
-                plain.append(t.surface);
+                String surface = t.surface;
+                int nonWhitespaceIndex = firstNonWhitespaceIndex(surface);
+                if (nonWhitespaceIndex > 0) {
+                    if (isHardPunctuationChar(surface.charAt(nonWhitespaceIndex))
+                            || isDashLikePrefix(surface, nonWhitespaceIndex)) {
+                        surface = surface.substring(nonWhitespaceIndex);
+                    }
+                }
+                plain.append(surface);
             }
             int end = plain.length();
 
