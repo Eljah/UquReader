@@ -36,7 +36,6 @@ import java.text.BreakIterator;
 import java.text.Normalizer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +45,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 public class ReaderView extends TextView {
     private static final String TAG = "ReaderViewTrace";
@@ -266,39 +266,40 @@ public class ReaderView extends TextView {
     }
 
     // ===== Helpers for whitespace/punctuation handling =====
-    /** внутри абзаца никакого \n — превращаем любые переносы в одиночный пробел и убираем «висячие» пробелы */
+    /** Внутри абзаца не допускаем \n. Нормализуем все виды пробелов и убираем «висячие» пробелы. */
     private static String normalizeInlineWS(String s) {
         if (s == null || s.isEmpty()) return "";
         // Unicode-нормализация (тире/кавычки и т.п.)
         s = Normalizer.normalize(s, Normalizer.Form.NFC);
-        // «  \n» → « », «\n  » → « », одиночные \n → « »
-        s = s.replaceAll("[ \t\u00A0\u202F]*\n[ \t\u00A0\u202F]*", " ");
-        // схлопываем множественные пробелы
-        s = s.replaceAll("[ \t\u00A0\u202F]{2,}", " ");
+        // Превращаем все разновидности пробелов в обычный пробел (кроме \n, его обрабатываем ниже)
+        // сюда попадают: NBSP(00A0), NNBSP(202F), THIN(2009), HAIR(200A), ZWSP(200B), WJ(2060)
+        s = s.replace('\u00A0', ' ')
+             .replace('\u202F', ' ')
+             .replace('\u2009', ' ')
+             .replace('\u200A', ' ')
+             .replace('\u200B', ' ')
+             .replace('\u2060', ' ');
+        // «  \n»/«\n  » → « »; одиночные \n внутри абзаца → « »
+        s = s.replaceAll("[ \\t]*\\n[ \\t]*", " ");
+        // Схлопываем множественные пробелы
+        s = s.replaceAll(" {2,}", " ");
         return s;
     }
 
-    private static final Set<Character> CLOSING_PUNCT_CHARS = new HashSet<>(Arrays.asList(
-            ',', '.', '!', '?', ';', ':', '…', '»', '”', ')', ']', '}'
-    ));
-    private static final Set<Character> OPENING_QUOTE_OR_PAREN_CHARS = new HashSet<>(Arrays.asList(
-            '«', '(', '['
-    ));
+    // Закрывающие знаки препинания и тире, которые должны прилипать к предыдущему
+    private static final Pattern CLOSING_PUNCT = Pattern.compile("^(?:[,\\.!?;:…»”\\)\\]\\}]|—|–)$");
+    private static final Pattern OPENING_QUOTE_OR_PAREN = Pattern.compile("^[«\\(\\[]$");
 
     /** текущий токен — закрывающий знак/тире, который должен прилипать к предыдущему слову */
     private static boolean isClosingPunctuationOrDash(String s) {
         if (s == null || s.isEmpty()) return false;
-        char first = s.charAt(0);
-        if (CLOSING_PUNCT_CHARS.contains(first)) {
-            return true;
-        }
-        return s.length() == 1 && (first == '—' || first == '–');
+        return CLOSING_PUNCT.matcher(s).find();
     }
 
     /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
     private static boolean isOpeningQuoteOrParen(String s) {
         if (s == null || s.isEmpty()) return false;
-        return s.length() == 1 && OPENING_QUOTE_OR_PAREN_CHARS.contains(s.charAt(0));
+        return OPENING_QUOTE_OR_PAREN.matcher(s).find();
     }
 
     private MovementMethod createMovementMethod() {
@@ -1728,14 +1729,13 @@ public class ReaderView extends TextView {
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
                 String pfx = normalizeInlineWS(t.prefix);
-                // Если далее идёт закрывающий знак препинания — не допускаем хвостовых пробелов в prefix
+                // Если следующий surface — закрывающая пунктуация/тире, режем хвостовые пробелы у prefix,
+                // чтобы не оставалось легальной точки переноса перед знаком.
                 String surfacePreview = (t.surface == null) ? "" : Normalizer.normalize(t.surface, Normalizer.Form.NFC);
                 if (isClosingPunctuationOrDash(surfacePreview)) {
-                    pfx = pfx.replaceAll("[ \t\u00A0\u202F]+$", "");
+                    pfx = pfx.replaceAll(" +$", "");
                 }
-                if (!pfx.isEmpty()) {
-                    plain.append(pfx);
-                }
+                if (!pfx.isEmpty()) plain.append(pfx);
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1749,21 +1749,27 @@ public class ReaderView extends TextView {
             if (t.surface != null && !t.surface.isEmpty()) {
                 String s = normalizeInlineWS(t.surface);
 
+                // Открывающие кавычки/скобки — переносимы, не склеиваем
                 if (isOpeningQuoteOrParen(s)) {
                     plain.append(s);
-                } else {
-                    if (isClosingPunctuationOrDash(s)) {
-                        if (plain.length() > 0) {
-                            int last = plain.length() - 1;
-                            char c = plain.charAt(last);
-                            if (c == ' ') {
-                                plain.setCharAt(last, '\u202F');
-                            }
-                        }
-                        s = s.replaceFirst("^[ \t\u00A0\u202F]+", "");
-                    }
-                    plain.append(s);
+                    continue;
                 }
+
+                // Закрывающие знаки/тире — должны прилипать:
+                if (isClosingPunctuationOrDash(s)) {
+                    if (plain.length() > 0) {
+                        int last = plain.length() - 1;
+                        char c = plain.charAt(last);
+                        // любой пробел/тонкий/_nbsp/_zwsp заменяем на узкий неразрывный
+                        if (c == ' ' || c == '\u00A0' || c == '\u202F' || c == '\u2009' || c == '\u200A' || c == '\u200B' || c == '\u2060') {
+                            plain.setCharAt(last, '\u202F'); // NNBSP
+                        }
+                    }
+                    // убираем начальные пробелы у самого surface, если они остались
+                    s = s.replaceFirst("^[ \\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+", "");
+                }
+
+                plain.append(s);
             }
             int end = plain.length();
 
