@@ -64,6 +64,8 @@ public class ReaderView extends TextView {
     private static final int PAGE_CHUNK_SIZE = 4000;
     private static final int MIN_PAGE_ADVANCE_CHARS = 64;
     private static final float FLOAT_TOLERANCE = 0.01f;
+    private static final String HARD_PUNCTUATION_CHARS = ",.!?;:…)]}»";
+    private static final int JUSTIFICATION_MODE_INTER_WORD = 1; // Layout.JUSTIFICATION_MODE_INTER_WORD
 
     private DbHelper dbHelper;
     private MemoryDao memoryDao;
@@ -252,6 +254,15 @@ public class ReaderView extends TextView {
         setTypeface(Typeface.SERIF);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             setLetterSpacing(0.01f);
+        }
+        // Красивые переносы/выравнивание: ширина межсловно (кроме последней строки абзаца),
+        // без автоматических дефисов.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
+            setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setJustificationMode(JUSTIFICATION_MODE_INTER_WORD);
         }
     }
 
@@ -982,11 +993,24 @@ public class ReaderView extends TextView {
         if (paint == null) return null;
         int effectiveWidth = Math.max(1, width);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return StaticLayout.Builder.obtain(text, 0, text.length(), paint, effectiveWidth)
+            StaticLayout.Builder builder = StaticLayout.Builder
+                    .obtain(text, 0, text.length(), paint, effectiveWidth)
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .setIncludePad(false)
                     .setLineSpacing(getLineSpacingExtra(), getLineSpacingMultiplier())
-                    .build();
+                    .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
+                    .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                builder.setJustificationMode(JUSTIFICATION_MODE_INTER_WORD);
+            } else {
+                try {
+                    builder.getClass().getMethod("setJustificationMode", int.class)
+                            .invoke(builder, JUSTIFICATION_MODE_INTER_WORD);
+                } catch (Throwable ignore) {
+                    // метод может отсутствовать на старом SDK
+                }
+            }
+            return builder.build();
         } else {
             //noinspection deprecation
             return new StaticLayout(text, paint, effectiveWidth, Layout.Alignment.ALIGN_NORMAL,
@@ -1114,6 +1138,64 @@ public class ReaderView extends TextView {
                         || type == Character.OTHER_PUNCTUATION
                         || type == Character.DASH_PUNCTUATION;
         }
+    }
+
+    private static boolean isHardPunctuation(String surface) {
+        if (surface == null) {
+            return false;
+        }
+        boolean sawPunctuation = false;
+        for (int i = 0; i < surface.length(); i++) {
+            char c = surface.charAt(i);
+            if (c == ' ' || c == '\t') {
+                continue;
+            }
+            if (HARD_PUNCTUATION_CHARS.indexOf(c) < 0) {
+                return false;
+            }
+            sawPunctuation = true;
+        }
+        return sawPunctuation;
+    }
+
+    private static boolean isDashLike(String surface) {
+        if (surface == null) {
+            return false;
+        }
+        String trimmed = surface.trim();
+        if (trimmed.isEmpty()) {
+            return false;
+        }
+        char first = trimmed.charAt(0);
+        if (first != '-' && first != '\u2013' && first != '\u2014') {
+            return false;
+        }
+        for (int i = 1; i < trimmed.length(); i++) {
+            char c = trimmed.charAt(i);
+            if (c != first) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String trimLeadingSpaceBeforePunctuation(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        int len = value.length();
+        int idx = 0;
+        while (idx < len && (value.charAt(idx) == ' ' || value.charAt(idx) == '\t')) {
+            idx++;
+        }
+        if (idx == 0) {
+            return value;
+        }
+        String tail = value.substring(idx);
+        if (tail.isEmpty()) {
+            return value;
+        }
+        return (isHardPunctuation(tail) || isDashLike(tail)) ? tail : value;
     }
 
     private void showPageForChar(int charIndex, boolean notifyWindowChange) {
@@ -1672,7 +1754,34 @@ public class ReaderView extends TextView {
             }
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
-                plain.append(t.prefix);
+                String pfx = t.prefix;
+                // 1) Убираем пробелы в начале новых строк: "\n   " -> "\n"
+                pfx = pfx.replaceAll("(?m)(\\n)[ \\t]+", "$1");
+
+                // 2) Если текущий токен — ПУНКТУАЦИЯ, не допускаем пробела ПЕРЕД ним.
+                final String surface = t.surface == null ? "" : t.surface;
+                final boolean isHardPunct = isHardPunctuation(surface);
+                final boolean isDashLike = isDashLike(surface);
+
+                if (isHardPunct || isDashLike) {
+                    // убираем обычные пробелы прямо в prefix самого токена
+                    pfx = pfx.replaceAll("[ \\t]+$", "");
+                    // если в конце plain остался пробел — превращаем его в неразрывный
+                    if (plain.length() > 0) {
+                        int last = plain.length() - 1;
+                        char c = plain.charAt(last);
+                        if (c == ' ') {
+                            // узкий неразрывный для лучшей типографики
+                            plain.setCharAt(last, '\u202F'); // U+202F NNBSP
+                        }
+                    }
+                }
+                // 3) Убираем "висячие" пробелы перед переводом строки: "  \n" -> "\n"
+                pfx = pfx.replaceAll("[ \\t]+\\n", "\n");
+
+                if (!pfx.isEmpty()) {
+                    plain.append(pfx);
+                }
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1684,7 +1793,8 @@ public class ReaderView extends TextView {
 
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
-                plain.append(t.surface);
+                String s = trimLeadingSpaceBeforePunctuation(t.surface);
+                plain.append(s);
             }
             int end = plain.length();
 
