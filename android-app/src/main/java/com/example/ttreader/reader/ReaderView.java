@@ -36,6 +36,7 @@ import java.text.BreakIterator;
 import java.text.Normalizer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -262,6 +263,42 @@ public class ReaderView extends TextView {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
         }
+    }
+
+    // ===== Helpers for whitespace/punctuation handling =====
+    /** внутри абзаца никакого \n — превращаем любые переносы в одиночный пробел и убираем «висячие» пробелы */
+    private static String normalizeInlineWS(String s) {
+        if (s == null || s.isEmpty()) return "";
+        // Unicode-нормализация (тире/кавычки и т.п.)
+        s = Normalizer.normalize(s, Normalizer.Form.NFC);
+        // «  \n» → « », «\n  » → « », одиночные \n → « »
+        s = s.replaceAll("[ \t\u00A0\u202F]*\n[ \t\u00A0\u202F]*", " ");
+        // схлопываем множественные пробелы
+        s = s.replaceAll("[ \t\u00A0\u202F]{2,}", " ");
+        return s;
+    }
+
+    private static final Set<Character> CLOSING_PUNCT_CHARS = new HashSet<>(Arrays.asList(
+            ',', '.', '!', '?', ';', ':', '…', '»', '”', ')', ']', '}'
+    ));
+    private static final Set<Character> OPENING_QUOTE_OR_PAREN_CHARS = new HashSet<>(Arrays.asList(
+            '«', '(', '['
+    ));
+
+    /** текущий токен — закрывающий знак/тире, который должен прилипать к предыдущему слову */
+    private static boolean isClosingPunctuationOrDash(String s) {
+        if (s == null || s.isEmpty()) return false;
+        char first = s.charAt(0);
+        if (CLOSING_PUNCT_CHARS.contains(first)) {
+            return true;
+        }
+        return s.length() == 1 && (first == '—' || first == '–');
+    }
+
+    /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
+    private static boolean isOpeningQuoteOrParen(String s) {
+        if (s == null || s.isEmpty()) return false;
+        return s.length() == 1 && OPENING_QUOTE_OR_PAREN_CHARS.contains(s.charAt(0));
     }
 
     private MovementMethod createMovementMethod() {
@@ -1690,13 +1727,15 @@ public class ReaderView extends TextView {
             }
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
-                String pfx = t.prefix;
-                // Нормализуем Unicode (тире/кавычки и пр.)
-                pfx = Normalizer.normalize(pfx, Normalizer.Form.NFC);
-                // Убираем висячие пробелы вокруг переносов строк
-                pfx = pfx.replaceAll("[ \t]+\n", "\n");
-                pfx = pfx.replaceAll("\n[ \t]+", "\n");
-                plain.append(pfx);
+                String pfx = normalizeInlineWS(t.prefix);
+                // Если далее идёт закрывающий знак препинания — не допускаем хвостовых пробелов в prefix
+                String surfacePreview = (t.surface == null) ? "" : Normalizer.normalize(t.surface, Normalizer.Form.NFC);
+                if (isClosingPunctuationOrDash(surfacePreview)) {
+                    pfx = pfx.replaceAll("[ \t\u00A0\u202F]+$", "");
+                }
+                if (!pfx.isEmpty()) {
+                    plain.append(pfx);
+                }
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1708,31 +1747,23 @@ public class ReaderView extends TextView {
 
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
-                String s = Normalizer.normalize(t.surface, Normalizer.Form.NFC);
+                String s = normalizeInlineWS(t.surface);
 
-                // Определяем, является ли текущий токен «жёсткой» пунктуацией / закрывающей кавычкой / тире
-                boolean isHardPunct =
-                        s.matches("^[,\\.!?;:…)]|^[]}]$"); // , . ! ? ; : … ) ] }
-                boolean isDashLike = s.startsWith("—") || s.startsWith("–");
-                boolean isClosingQuote = s.startsWith("»") || s.startsWith("”") || s.equals("\"");
-
-                if (isHardPunct || isDashLike || isClosingQuote) {
-                    // Если перед знаком остался обычный пробел — склеиваем его (NNBSP)
-                    if (plain.length() > 0) {
-                        int last = plain.length() - 1;
-                        if (plain.charAt(last) == ' ') {
-                            plain.setCharAt(last, '\u202F'); // U+202F NNBSP — узкий неразрывный пробел
+                if (isOpeningQuoteOrParen(s)) {
+                    plain.append(s);
+                } else {
+                    if (isClosingPunctuationOrDash(s)) {
+                        if (plain.length() > 0) {
+                            int last = plain.length() - 1;
+                            char c = plain.charAt(last);
+                            if (c == ' ') {
+                                plain.setCharAt(last, '\u202F');
+                            }
                         }
+                        s = s.replaceFirst("^[ \t\u00A0\u202F]+", "");
                     }
-                    // На всякий случай уберём начальные пробелы у самого surface
-                    s = s.replaceFirst("^ +", "");
+                    plain.append(s);
                 }
-
-                // Не допускаем висячих пробелов вокруг \n в самом surface
-                s = s.replaceAll("[ \t]+\n", "\n");
-                s = s.replaceAll("\n[ \t]+", "\n");
-
-                plain.append(s);
             }
             int end = plain.length();
 
