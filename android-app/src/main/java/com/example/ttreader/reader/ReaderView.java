@@ -33,6 +33,7 @@ import com.example.ttreader.util.MorphDocumentParser;
 
 import java.io.File;
 import java.text.BreakIterator;
+import java.text.Normalizer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -253,8 +254,7 @@ public class ReaderView extends TextView {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             setLetterSpacing(0.01f);
         }
-        // Красивые переносы/выравнивание: ширина межсловно (кроме последней строки абзаца),
-        // без автоматических дефисов.
+        // Красивые переносы и выравнивание по ширине (кроме последней строки абзаца)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
             setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
@@ -991,18 +991,19 @@ public class ReaderView extends TextView {
         if (paint == null) return null;
         int effectiveWidth = Math.max(1, width);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            StaticLayout.Builder builder = StaticLayout.Builder
+            StaticLayout.Builder b = StaticLayout.Builder
                     .obtain(text, 0, text.length(), paint, effectiveWidth)
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .setIncludePad(false)
                     .setLineSpacing(getLineSpacingExtra(), getLineSpacingMultiplier())
                     .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
                     .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
-            // Justification задаём на самом TextView (см. init), но Builder тоже не повредит на новых SDK.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
-            }
-            return builder.build();
+            // На новых SDK обернём и явным justification у самого layout
+            try {
+                b.getClass().getMethod("setJustificationMode", int.class)
+                        .invoke(b, Layout.JUSTIFICATION_MODE_INTER_WORD);
+            } catch (Throwable ignore) { /* метод может отсутствовать */ }
+            return b.build();
         } else {
             //noinspection deprecation
             return new StaticLayout(text, paint, effectiveWidth, Layout.Alignment.ALIGN_NORMAL,
@@ -1129,85 +1130,6 @@ public class ReaderView extends TextView {
                         || type == Character.END_PUNCTUATION
                         || type == Character.OTHER_PUNCTUATION
                         || type == Character.DASH_PUNCTUATION;
-        }
-    }
-
-    private static int firstNonWhitespaceIndex(CharSequence text) {
-        if (text == null) {
-            return -1;
-        }
-        int length = text.length();
-        for (int i = 0; i < length; i++) {
-            if (!Character.isWhitespace(text.charAt(i))) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private static boolean isHardPunctuationChar(char c) {
-        switch (c) {
-            case ',':
-            case '.':
-            case ';':
-            case ':':
-            case '!':
-            case '?':
-            case ')':
-            case ']':
-            case '}':
-            case '\u00bb':
-            case '\u203a':
-            case '\u2026':
-            case '\u2025':
-            case '\u2024':
-            case 0x27:
-            case '"':
-                return true;
-            default:
-                int type = Character.getType(c);
-                return type == Character.END_PUNCTUATION
-                        || type == Character.FINAL_QUOTE_PUNCTUATION
-                        || type == Character.OTHER_PUNCTUATION;
-        }
-    }
-
-    private static boolean isDashLikePrefix(CharSequence surface, int index) {
-        if (surface == null || index < 0 || index >= surface.length()) {
-            return false;
-        }
-        char c = surface.charAt(index);
-        if (c == '\u2014' || c == '\u2013' || c == '\u2012' || c == '\u2011'
-                || c == '\u2010') {
-            return true;
-        }
-        if (c == '-') {
-            int remaining = surface.length() - index;
-            return remaining <= 2;
-        }
-        return false;
-    }
-
-    private static String normalizeSpacesAroundNewlines(String text) {
-        if (text == null || text.isEmpty()) {
-            return text;
-        }
-        String result = text.replaceAll("[ \\t]+\\n", "\\n");
-        result = result.replaceAll("\\n[ \\t]+", "\\n");
-        return result;
-    }
-
-    private static void replaceTrailingSpaceWithNarrowNbsp(StringBuilder builder) {
-        if (builder == null) {
-            return;
-        }
-        int length = builder.length();
-        if (length <= 0) {
-            return;
-        }
-        int lastIndex = length - 1;
-        if (builder.charAt(lastIndex) == ' ') {
-            builder.setCharAt(lastIndex, '\u202F');
         }
     }
 
@@ -1761,26 +1683,20 @@ public class ReaderView extends TextView {
         double halflife = 7.0; // days
         long now = System.currentTimeMillis();
 
-        for (Token t : tokens) {
+        for (int i = 0; i < tokens.size(); i++) {
+            Token t = tokens.get(i);
             if (Thread.currentThread().isInterrupted()) {
                 throw new InterruptedException();
             }
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
-                String prefix = normalizeSpacesAroundNewlines(t.prefix);
-                if (!prefix.isEmpty()) {
-                    plain.append(prefix);
-                }
-            }
-            String surfaceText = t.surface == null ? "" : t.surface;
-            int surfaceNonWsIndex = firstNonWhitespaceIndex(surfaceText);
-            boolean isHardPunct = surfaceNonWsIndex >= 0
-                    && isHardPunctuationChar(surfaceText.charAt(surfaceNonWsIndex));
-            boolean isDashLike = surfaceNonWsIndex >= 0
-                    && isDashLikePrefix(surfaceText, surfaceNonWsIndex);
-
-            if (isHardPunct || isDashLike) {
-                replaceTrailingSpaceWithNarrowNbsp(plain);
+                String pfx = t.prefix;
+                // Нормализуем Unicode (тире/кавычки и пр.)
+                pfx = Normalizer.normalize(pfx, Normalizer.Form.NFC);
+                // Убираем висячие пробелы вокруг переносов строк
+                pfx = pfx.replaceAll("[ \t]+\n", "\n");
+                pfx = pfx.replaceAll("\n[ \t]+", "\n");
+                plain.append(pfx);
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1792,38 +1708,51 @@ public class ReaderView extends TextView {
 
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
-                if (isHardPunct || isDashLike) {
-                    replaceTrailingSpaceWithNarrowNbsp(plain);
-                }
-                String surface = normalizeSpacesAroundNewlines(t.surface);
-                int nonWhitespaceIndex = firstNonWhitespaceIndex(surface);
-                if (nonWhitespaceIndex > 0) {
-                    if (isHardPunctuationChar(surface.charAt(nonWhitespaceIndex))
-                            || isDashLikePrefix(surface, nonWhitespaceIndex)) {
-                        surface = surface.substring(nonWhitespaceIndex);
+                String s = Normalizer.normalize(t.surface, Normalizer.Form.NFC);
+
+                // Определяем, является ли текущий токен «жёсткой» пунктуацией / закрывающей кавычкой / тире
+                boolean isHardPunct =
+                        s.matches("^[,\\.!?;:…)]|^[]}]$"); // , . ! ? ; : … ) ] }
+                boolean isDashLike = s.startsWith("—") || s.startsWith("–");
+                boolean isClosingQuote = s.startsWith("»") || s.startsWith("”") || s.equals("\"");
+
+                if (isHardPunct || isDashLike || isClosingQuote) {
+                    // Если перед знаком остался обычный пробел — склеиваем его (NNBSP)
+                    if (plain.length() > 0) {
+                        int last = plain.length() - 1;
+                        if (plain.charAt(last) == ' ') {
+                            plain.setCharAt(last, '\u202F'); // U+202F NNBSP — узкий неразрывный пробел
+                        }
                     }
+                    // На всякий случай уберём начальные пробелы у самого surface
+                    s = s.replaceFirst("^ +", "");
                 }
-                plain.append(surface);
+
+                // Не допускаем висячих пробелов вокруг \n в самом surface
+                s = s.replaceAll("[ \t]+\n", "\n");
+                s = s.replaceAll("\n[ \t]+", "\n");
+
+                plain.append(s);
             }
             int end = plain.length();
 
             if (end > start) {
-                    if (t.hasMorphology()) {
-                        Morphology morph = t.morphology;
-                        TokenSpan span = new TokenSpan(t);
-                        span.setCharacterRange(start, end);
-                        double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
-                        double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
-                        span.baseAlpha = (float) alpha;
-                        span.lastAlpha = lemmaHighlightEnabled ? span.baseAlpha : 0f;
-                        spans.add(span);
-                    } else {
-                        TokenSpan span = new TokenSpan(t);
-                        span.setCharacterRange(start, end);
-                        span.baseAlpha = 0f;
-                        span.lastAlpha = 0f;
-                        spans.add(span);
-                    }
+                if (t.hasMorphology()) {
+                    Morphology morph = t.morphology;
+                    TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
+                    double s = memoryDao.getCurrentStrength(morph.lemma, span.featureKey, now, halflife);
+                    double alpha = Math.max(0, 1.0 - Math.min(1.0, s / 5.0));
+                    span.baseAlpha = (float) alpha;
+                    span.lastAlpha = lemmaHighlightEnabled ? span.baseAlpha : 0f;
+                    spans.add(span);
+                } else {
+                    TokenSpan span = new TokenSpan(t);
+                    span.setCharacterRange(start, end);
+                    span.baseAlpha = 0f;
+                    span.lastAlpha = 0f;
+                    spans.add(span);
+                }
             }
         }
 
