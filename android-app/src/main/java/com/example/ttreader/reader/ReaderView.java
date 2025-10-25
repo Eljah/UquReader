@@ -36,6 +36,7 @@ import java.text.BreakIterator;
 import java.text.Normalizer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -45,7 +46,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 
 public class ReaderView extends TextView {
     private static final String TAG = "ReaderViewTrace";
@@ -278,21 +278,27 @@ public class ReaderView extends TextView {
         return s;
     }
 
-    private static final Pattern CLOSING_PUNCT = Pattern.compile(
-            "^[,\.!?;:…»”\)\]\}]|^(—|–)$"
-    );
-    private static final Pattern OPENING_QUOTE_OR_PAREN = Pattern.compile("^[«\(\[]$");
+    private static final Set<Character> CLOSING_PUNCT_CHARS = new HashSet<>(Arrays.asList(
+            ',', '.', '!', '?', ';', ':', '…', '»', '”', ')', ']', '}'
+    ));
+    private static final Set<Character> OPENING_QUOTE_OR_PAREN_CHARS = new HashSet<>(Arrays.asList(
+            '«', '(', '['
+    ));
 
     /** текущий токен — закрывающий знак/тире, который должен прилипать к предыдущему слову */
     private static boolean isClosingPunctuationOrDash(String s) {
         if (s == null || s.isEmpty()) return false;
-        return CLOSING_PUNCT.matcher(s).find();
+        char first = s.charAt(0);
+        if (CLOSING_PUNCT_CHARS.contains(first)) {
+            return true;
+        }
+        return s.length() == 1 && (first == '—' || first == '–');
     }
 
     /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
     private static boolean isOpeningQuoteOrParen(String s) {
         if (s == null || s.isEmpty()) return false;
-        return OPENING_QUOTE_OR_PAREN.matcher(s).find();
+        return s.length() == 1 && OPENING_QUOTE_OR_PAREN_CHARS.contains(s.charAt(0));
     }
 
     private MovementMethod createMovementMethod() {
