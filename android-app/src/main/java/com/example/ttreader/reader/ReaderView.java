@@ -1188,6 +1188,29 @@ public class ReaderView extends TextView {
         return false;
     }
 
+    private static String normalizeSpacesAroundNewlines(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        String result = text.replaceAll("[ \\t]+\\n", "\\n");
+        result = result.replaceAll("\\n[ \\t]+", "\\n");
+        return result;
+    }
+
+    private static void replaceTrailingSpaceWithNarrowNbsp(StringBuilder builder) {
+        if (builder == null) {
+            return;
+        }
+        int length = builder.length();
+        if (length <= 0) {
+            return;
+        }
+        int lastIndex = length - 1;
+        if (builder.charAt(lastIndex) == ' ') {
+            builder.setCharAt(lastIndex, '\u202F');
+        }
+    }
+
     private void showPageForChar(int charIndex, boolean notifyWindowChange) {
         if (pages.isEmpty()) {
             return;
@@ -1744,35 +1767,20 @@ public class ReaderView extends TextView {
             }
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
-                String prefix = t.prefix;
-                // 1) Убираем пробелы в начале новых строк: "\n   " -> "\n"
-                prefix = prefix.replaceAll("(?m)(\\n)[ \\t]+", "$1");
-
-                // 2) Если текущий токен — ПУНКТУАЦИЯ, не допускаем пробела ПЕРЕД ним.
-                String surfaceText = t.surface == null ? "" : t.surface;
-                int surfaceNonWsIndex = firstNonWhitespaceIndex(surfaceText);
-                boolean isHardPunct = surfaceNonWsIndex >= 0
-                        && isHardPunctuationChar(surfaceText.charAt(surfaceNonWsIndex));
-                boolean isDashLike = surfaceNonWsIndex >= 0
-                        && isDashLikePrefix(surfaceText, surfaceNonWsIndex);
-
-                if (isHardPunct || isDashLike) {
-                    prefix = prefix.replaceAll("[ \\t]+$", "");
-                    if (plain.length() > 0) {
-                        int last = plain.length() - 1;
-                        char lastChar = plain.charAt(last);
-                        if (lastChar == ' ') {
-                            plain.setCharAt(last, '\u202F');
-                        }
-                    }
-                }
-
-                // 3) Убираем "висячие" пробелы перед переводом строки: "  \n" -> "\n"
-                prefix = prefix.replaceAll("[ \\t]+\\n", "\\n");
-
+                String prefix = normalizeSpacesAroundNewlines(t.prefix);
                 if (!prefix.isEmpty()) {
                     plain.append(prefix);
                 }
+            }
+            String surfaceText = t.surface == null ? "" : t.surface;
+            int surfaceNonWsIndex = firstNonWhitespaceIndex(surfaceText);
+            boolean isHardPunct = surfaceNonWsIndex >= 0
+                    && isHardPunctuationChar(surfaceText.charAt(surfaceNonWsIndex));
+            boolean isDashLike = surfaceNonWsIndex >= 0
+                    && isDashLikePrefix(surfaceText, surfaceNonWsIndex);
+
+            if (isHardPunct || isDashLike) {
+                replaceTrailingSpaceWithNarrowNbsp(plain);
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1784,7 +1792,10 @@ public class ReaderView extends TextView {
 
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
-                String surface = t.surface;
+                if (isHardPunct || isDashLike) {
+                    replaceTrailingSpaceWithNarrowNbsp(plain);
+                }
+                String surface = normalizeSpacesAroundNewlines(t.surface);
                 int nonWhitespaceIndex = firstNonWhitespaceIndex(surface);
                 if (nonWhitespaceIndex > 0) {
                     if (isHardPunctuationChar(surface.charAt(nonWhitespaceIndex))
