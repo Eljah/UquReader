@@ -253,8 +253,7 @@ public class ReaderView extends TextView {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             setLetterSpacing(0.01f);
         }
-        // Красивые переносы/выравнивание: ширина межсловно (кроме последней строки абзаца),
-        // без автоматических дефисов.
+        // Аккуратные переносы и выравнивание по ширине (кроме последней строки абзаца).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
             setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
@@ -1745,34 +1744,9 @@ public class ReaderView extends TextView {
             int prefixStart = plain.length();
             if (t.prefix != null && !t.prefix.isEmpty()) {
                 String prefix = t.prefix;
-                // 1) Убираем пробелы в начале новых строк: "\n   " -> "\n"
-                prefix = prefix.replaceAll("(?m)(\\n)[ \\t]+", "$1");
-
-                // 2) Если текущий токен — ПУНКТУАЦИЯ, не допускаем пробела ПЕРЕД ним.
-                String surfaceText = t.surface == null ? "" : t.surface;
-                int surfaceNonWsIndex = firstNonWhitespaceIndex(surfaceText);
-                boolean isHardPunct = surfaceNonWsIndex >= 0
-                        && isHardPunctuationChar(surfaceText.charAt(surfaceNonWsIndex));
-                boolean isDashLike = surfaceNonWsIndex >= 0
-                        && isDashLikePrefix(surfaceText, surfaceNonWsIndex);
-
-                if (isHardPunct || isDashLike) {
-                    prefix = prefix.replaceAll("[ \\t]+$", "");
-                    if (plain.length() > 0) {
-                        int last = plain.length() - 1;
-                        char lastChar = plain.charAt(last);
-                        if (lastChar == ' ') {
-                            plain.setCharAt(last, '\u202F');
-                        }
-                    }
-                }
-
-                // 3) Убираем "висячие" пробелы перед переводом строки: "  \n" -> "\n"
                 prefix = prefix.replaceAll("[ \\t]+\\n", "\\n");
-
-                if (!prefix.isEmpty()) {
-                    plain.append(prefix);
-                }
+                prefix = prefix.replaceAll("\\n[ \\t]+", "\\n");
+                plain.append(prefix);
             }
             int prefixEnd = plain.length();
             if (prefixEnd > prefixStart) {
@@ -1785,13 +1759,26 @@ public class ReaderView extends TextView {
             int start = plain.length();
             if (t.surface != null && !t.surface.isEmpty()) {
                 String surface = t.surface;
+                surface = surface.replaceAll("[ \\t]+\\n", "\\n");
+                surface = surface.replaceAll("\\n[ \\t]+", "\\n");
+
                 int nonWhitespaceIndex = firstNonWhitespaceIndex(surface);
-                if (nonWhitespaceIndex > 0) {
-                    if (isHardPunctuationChar(surface.charAt(nonWhitespaceIndex))
-                            || isDashLikePrefix(surface, nonWhitespaceIndex)) {
+                boolean glueToPrevious = false;
+                if (nonWhitespaceIndex >= 0) {
+                    glueToPrevious = isHardPunctuationChar(surface.charAt(nonWhitespaceIndex))
+                            || isDashLikePrefix(surface, nonWhitespaceIndex);
+                }
+
+                if (glueToPrevious && plain.length() > 0) {
+                    int last = plain.length() - 1;
+                    if (plain.charAt(last) == ' ') {
+                        plain.setCharAt(last, '\u202F');
+                    }
+                    if (nonWhitespaceIndex > 0) {
                         surface = surface.substring(nonWhitespaceIndex);
                     }
                 }
+
                 plain.append(surface);
             }
             int end = plain.length();
