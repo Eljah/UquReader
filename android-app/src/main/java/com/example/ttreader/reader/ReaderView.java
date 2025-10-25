@@ -1731,7 +1731,11 @@ public class ReaderView extends TextView {
                 // Если далее идёт закрывающий знак препинания — не допускаем хвостовых пробелов в prefix
                 String surfacePreview = (t.surface == null) ? "" : Normalizer.normalize(t.surface, Normalizer.Form.NFC);
                 if (isClosingPunctuationOrDash(surfacePreview)) {
-                    pfx = pfx.replaceAll("[ \t\u00A0\u202F]+$", "");
+                    // Убираем ВСЕ типы пробелов в конце prefix (включая NBSP, NNBSP, THIN, HAIR, ZWSP)
+                    pfx = pfx.replaceAll("[ \\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+$", "");
+                }
+                if (c == ' ' || c == '\u00A0' || c == '\u202F' || c == '\u2009' || c == '\u200A' || c == '\u200B' || c == '\u2060') {
+                    plain.setCharAt(last, '\u202F');
                 }
                 if (!pfx.isEmpty()) {
                     plain.append(pfx);
