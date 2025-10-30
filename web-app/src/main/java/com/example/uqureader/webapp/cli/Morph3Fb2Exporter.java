@@ -347,13 +347,23 @@ public final class Morph3Fb2Exporter {
                 pos++;
                 continue;
             }
-            MatchResult match = findMatchingToken(tokens, morphIndex, surface);
+            TokenNormalization normalization = normalizeTokenSurface(surface);
+            String normalizedSurface = normalization.normalizedSurface();
+            int previousIndex = morphIndex;
+            MatchResult match = findMatchingToken(tokens, morphIndex, normalizedSurface);
             if (match != null && match.token() != null) {
-                current.addToken(match.token(), surface);
+                current.addToken(match.token(), normalizedSurface);
                 morphIndex = match.nextIndex();
             } else {
-                current.addToken(new MorphToken(surface, "", ""), surface);
+                current.addToken(new MorphToken(normalizedSurface, "", ""), normalizedSurface);
             }
+            boolean matchedPunctuation = normalizedSurface != null
+                    && isPunctuationToken(normalizedSurface)
+                    && match != null
+                    && match.token() != null
+                    && representsPunctuation(match.token());
+            int consumedByMatch = matchedPunctuation ? morphIndex - previousIndex : 0;
+            morphIndex = skipExtraPunctuationTokens(tokens, morphIndex, normalization, consumedByMatch);
             pos += surface.length();
         }
         if (pos < length) {
@@ -400,6 +410,75 @@ public final class Morph3Fb2Exporter {
             end++;
         }
         return text.substring(pos, end);
+    }
+
+    private TokenNormalization normalizeTokenSurface(String surface) {
+        if (surface == null || surface.isEmpty()) {
+            return new TokenNormalization("", null, 0, false, false);
+        }
+        if (!isPunctuationToken(surface)) {
+            TokenNormalization withEmbeddedEllipsis = normalizeEmbeddedEllipsis(surface);
+            if (withEmbeddedEllipsis != null) {
+                return withEmbeddedEllipsis;
+            }
+            return new TokenNormalization(surface, null, 0, false, false);
+        }
+        char first = surface.charAt(0);
+        int length = surface.length();
+        if (first == ',') {
+            if (length > 1) {
+                return new TokenNormalization(",", ",", length, true, false);
+            }
+            return new TokenNormalization(surface, ",", length, false, false);
+        }
+        if (first == '.') {
+            if (length >= 3) {
+                StringBuilder builder = new StringBuilder();
+                int remaining = length;
+                int ellipsisCount = remaining / 3;
+                int remainder = remaining % 3;
+                for (int i = 0; i < ellipsisCount; i++) {
+                    builder.append('\u2026');
+                }
+                for (int i = 0; i < remainder; i++) {
+                    builder.append('.');
+                }
+                return new TokenNormalization(builder.toString(), ".", length, true, ellipsisCount > 0);
+            }
+            return new TokenNormalization(surface, ".", length, false, false);
+        }
+        return new TokenNormalization(surface, null, 0, false, false);
+    }
+
+    private TokenNormalization normalizeEmbeddedEllipsis(String surface) {
+        int length = surface.length();
+        if (length < 3) {
+            return null;
+        }
+        StringBuilder builder = null;
+        int ellipsisChars = 0;
+        int index = 0;
+        while (index < length) {
+            if (surface.startsWith("...", index)) {
+                if (builder == null) {
+                    builder = new StringBuilder();
+                    builder.append(surface, 0, index);
+                }
+                builder.append('\u2026');
+                ellipsisChars += 3;
+                index += 3;
+                continue;
+            }
+            if (builder != null) {
+                builder.append(surface.charAt(index));
+            }
+            index++;
+        }
+        if (ellipsisChars == 0) {
+            return null;
+        }
+        String normalized = builder != null ? builder.toString() : surface;
+        return new TokenNormalization(normalized, ".", ellipsisChars, true, true);
     }
 
     private boolean isWordStart(char ch) {
@@ -453,6 +532,67 @@ public final class Morph3Fb2Exporter {
             return new MatchResult(fallback, index + 1);
         }
         return new MatchResult(new MorphToken(surface, "", ""), startIndex);
+    }
+
+    private int skipExtraPunctuationTokens(List<MorphToken> tokens,
+                                           int index,
+                                           TokenNormalization normalization,
+                                           int consumedByMatch) {
+        if (tokens == null || normalization == null) {
+            return index;
+        }
+        if (!normalization.collapsed() || normalization.punctuationUnit() == null) {
+            return index;
+        }
+        int remaining = normalization.originalRunLength() - consumedByMatch;
+        if (remaining <= 0) {
+            return index;
+        }
+        int current = index;
+        while (remaining > 0 && current < tokens.size()) {
+            MorphToken candidate = tokens.get(current);
+            if (!matchesPunctuationUnit(candidate, normalization)) {
+                break;
+            }
+            current++;
+            remaining--;
+        }
+        return current;
+    }
+
+    private boolean representsPunctuation(MorphToken token) {
+        if (token == null) {
+            return false;
+        }
+        String value = token.token();
+        return value != null && isPunctuationToken(value);
+    }
+
+    private boolean matchesPunctuationUnit(MorphToken token, TokenNormalization normalization) {
+        if (token == null || normalization == null) {
+            return false;
+        }
+        String unit = normalization.punctuationUnit();
+        if (unit == null || unit.isEmpty()) {
+            return false;
+        }
+        List<String> candidates = candidateTokenValues(token);
+        if (candidates.isEmpty()) {
+            return false;
+        }
+        for (String candidate : candidates) {
+            String trimmed = candidate.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            if (trimmed.equals(unit)) {
+                return true;
+            }
+            if (normalization.ellipsis() && ("...".equals(trimmed) || "…".equals(trimmed))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean matchesSurface(MorphToken token, String surface) {
@@ -805,6 +945,16 @@ public final class Morph3Fb2Exporter {
     private record MatchResult(MorphToken token, int nextIndex) { }
 
     private record MorphToken(String token, String analysis, String translation) { }
+
+    private record TokenNormalization(String normalizedSurface,
+                                      String punctuationUnit,
+                                      int originalRunLength,
+                                      boolean collapsed,
+                                      boolean ellipsis) {
+        public String normalizedSurface() {
+            return normalizedSurface == null ? "" : normalizedSurface;
+        }
+    }
 
     private record Replacement(String from, String to) { }
 }
