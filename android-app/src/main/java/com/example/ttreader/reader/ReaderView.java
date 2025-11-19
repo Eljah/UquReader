@@ -1733,9 +1733,16 @@ public class ReaderView extends TextView {
                 if (isClosingPunctuationOrDash(surfacePreview)) {
                     // Убираем ВСЕ типы пробелов в конце prefix (включая NBSP, NNBSP, THIN, HAIR, ZWSP)
                     pfx = pfx.replaceAll("[ \\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+$", "");
-                }
-                if (c == ' ' || c == '\u00A0' || c == '\u202F' || c == '\u2009' || c == '\u200A' || c == '\u200B' || c == '\u2060') {
-                    plain.setCharAt(last, '\u202F');
+                    // Если перед знаком препинания уже есть пробел — превращаем его в неразрывный,
+                    // чтобы знак не «прыгал» на следующую строку.
+                    if (plain.length() > 0) {
+                        int last = plain.length() - 1;
+                        char c = plain.charAt(last);
+                        if (c == ' ' || c == '\u00A0' || c == '\u202F' || c == '\u2009' || c == '\u200A'
+                                || c == '\u200B' || c == '\u2060') {
+                            plain.setCharAt(last, '\u202F');
+                        }
+                    }
                 }
                 if (!pfx.isEmpty()) {
                     plain.append(pfx);
