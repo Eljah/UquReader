@@ -290,6 +290,7 @@ public class ReaderView extends TextView {
     ));
     private static final char NARROW_NBSP = '\u202F';
     private static final char WORD_JOINER = '\u2060';
+    private static final char ZERO_WIDTH_NBSP = '\uFEFF';
 
     /** текущий токен — закрывающий знак/тире, который должен прилипать к предыдущему слову */
     private static boolean isClosingPunctuationOrDash(String s) {
@@ -308,7 +309,7 @@ public class ReaderView extends TextView {
         }
         int last = plain.length() - 1;
         char c = plain.charAt(last);
-        if (c == WORD_JOINER) {
+        if (c == WORD_JOINER || c == ZERO_WIDTH_NBSP) {
             return;
         }
         if (BREAKABLE_WS_CHARS.contains(c)) {
@@ -316,7 +317,10 @@ public class ReaderView extends TextView {
                 plain.setCharAt(last, NARROW_NBSP);
             }
         } else {
+            // WORD_JOINER не всегда учитывается движком переноса строк на старых прошивках,
+            // поэтому дублируем его более жёстким ZWNBSP, который Android точно не рвёт.
             plain.append(WORD_JOINER);
+            plain.append(ZERO_WIDTH_NBSP);
         }
     }
 
