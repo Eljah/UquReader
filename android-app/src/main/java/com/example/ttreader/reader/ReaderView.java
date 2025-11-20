@@ -234,6 +234,9 @@ public class ReaderView extends TextView {
         super.setText(text, type);
         int length = text == null ? 0 : text.length();
         logTextEvent("setText length=" + length);
+        // Переустанавливаем режим выравнивания — на некоторых прошивках он может слетать
+        // после очередного setText() или смены стиля.
+        applyJustificationMode();
     }
 
     private void init() {
@@ -260,9 +263,7 @@ public class ReaderView extends TextView {
             setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
             setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
-        }
+        applyJustificationMode();
     }
 
     // ===== Helpers for whitespace/punctuation handling =====
@@ -1065,19 +1066,39 @@ public class ReaderView extends TextView {
                     .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
                     .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
             // На новых SDK обернём и явным justification у самого layout
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                b.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
-            } else {
-                try {
-                    b.getClass().getMethod("setJustificationMode", int.class)
-                            .invoke(b, Layout.JUSTIFICATION_MODE_INTER_WORD);
-                } catch (Throwable ignore) { /* метод может отсутствовать */ }
-            }
+            setBuilderJustificationMode(b);
             return b.build();
         } else {
             //noinspection deprecation
             return new StaticLayout(text, paint, effectiveWidth, Layout.Alignment.ALIGN_NORMAL,
                     getLineSpacingMultiplier(), getLineSpacingExtra(), false);
+        }
+    }
+
+    private void applyJustificationMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+            return;
+        }
+        // До O метода нет в API, но на некоторых сборках он появляется как скрытый — попробуем вызвать.
+        try {
+            getClass().getMethod("setJustificationMode", int.class)
+                    .invoke(this, Layout.JUSTIFICATION_MODE_INTER_WORD);
+        } catch (Throwable ignore) {
+            // Оставляем режим переноса как есть, выравнивание недоступно.
+        }
+    }
+
+    private static void setBuilderJustificationMode(StaticLayout.Builder builder) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+            return;
+        }
+        try {
+            builder.getClass().getMethod("setJustificationMode", int.class)
+                    .invoke(builder, Layout.JUSTIFICATION_MODE_INTER_WORD);
+        } catch (Throwable ignore) {
+            // метод отсутствует на старых SDK
         }
     }
 
