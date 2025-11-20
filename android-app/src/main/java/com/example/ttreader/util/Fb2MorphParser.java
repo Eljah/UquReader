@@ -254,7 +254,7 @@ public final class Fb2MorphParser {
         if (CLOSING_PUNCT_CHARS.contains(first)) {
             return true;
         }
-        return s.length() == 1 && (first == '—' || first == '–');
+        return s.length() == 1 && (first == '—' || first == '–' || first == '-');
     }
 
     private static String safeValue(String value) {

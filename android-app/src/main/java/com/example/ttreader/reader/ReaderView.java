@@ -299,7 +299,7 @@ public class ReaderView extends TextView {
         if (CLOSING_PUNCT_CHARS.contains(first)) {
             return true;
         }
-        return s.length() == 1 && (first == '—' || first == '–');
+        return s.length() == 1 && (first == '—' || first == '–' || first == '-');
     }
 
     /** гарантируем, что знак препинания не «оторвётся» и не ускачет на новую строку */
