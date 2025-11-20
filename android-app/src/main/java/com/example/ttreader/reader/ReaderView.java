@@ -325,6 +325,28 @@ public class ReaderView extends TextView {
         }
     }
 
+    private static boolean endsWithClosingPunctuationOrDash(StringBuilder plain) {
+        if (plain == null || plain.length() == 0) {
+            return false;
+        }
+        char last = plain.charAt(plain.length() - 1);
+        if (CLOSING_PUNCT_CHARS.contains(last)) {
+            return true;
+        }
+        return last == '—' || last == '–' || last == '-';
+    }
+
+    private static String protectLeadingSpaceAfterPunctuation(String prefix, StringBuilder plain) {
+        if (prefix == null || prefix.isEmpty()) {
+            return prefix;
+        }
+        if (!endsWithClosingPunctuationOrDash(plain)) {
+            return prefix;
+        }
+        return prefix.replaceFirst("^[ \\\t\\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+",
+                String.valueOf(NARROW_NBSP));
+    }
+
     /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
     private static boolean isOpeningQuoteOrParen(String s) {
         if (s == null || s.isEmpty()) return false;
@@ -1789,6 +1811,7 @@ public class ReaderView extends TextView {
                     pfx = pfx.replaceAll("[ \\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+$", "");
                 }
                 if (!pfx.isEmpty()) {
+                    pfx = protectLeadingSpaceAfterPunctuation(pfx, plain);
                     plain.append(pfx);
                 }
                 if (isClosingPunctuationOrDash(surfacePreview)) {
