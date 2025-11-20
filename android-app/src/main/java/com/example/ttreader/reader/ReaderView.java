@@ -1065,10 +1065,14 @@ public class ReaderView extends TextView {
                     .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
                     .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
             // На новых SDK обернём и явным justification у самого layout
-            try {
-                b.getClass().getMethod("setJustificationMode", int.class)
-                        .invoke(b, Layout.JUSTIFICATION_MODE_INTER_WORD);
-            } catch (Throwable ignore) { /* метод может отсутствовать */ }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                b.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+            } else {
+                try {
+                    b.getClass().getMethod("setJustificationMode", int.class)
+                            .invoke(b, Layout.JUSTIFICATION_MODE_INTER_WORD);
+                } catch (Throwable ignore) { /* метод может отсутствовать */ }
+            }
             return b.build();
         } else {
             //noinspection deprecation
