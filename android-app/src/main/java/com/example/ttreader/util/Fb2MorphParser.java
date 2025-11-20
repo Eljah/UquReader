@@ -13,8 +13,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Parser for FictionBook 2.0 documents produced by the Morph3Fb2Exporter.
@@ -35,6 +38,15 @@ public final class Fb2MorphParser {
     private static final String ATTR_TRANSLATION = "translation";
     private static final String ATTR_SURFACE = "surface";
     private static final String MORPH_STYLE_NAME = "morph";
+    private static final Set<Character> CLOSING_PUNCT_CHARS = new HashSet<>(Arrays.asList(
+            ',', '.', '!', '?', ';', ':', '…', '»', '”', ')', ']', '}'
+    ));
+    private static final Set<Character> BREAKABLE_WS_CHARS = new HashSet<>(Arrays.asList(
+            ' ', '\u00A0', '\u202F', '\u2009', '\u200A', '\u200B', '\u2060'
+    ));
+    private static final char NARROW_NBSP = '\u202F';
+    private static final char WORD_JOINER = '\u2060';
+    private static final char ZERO_WIDTH_NBSP = '\uFEFF';
 
     private Fb2MorphParser() {
     }
@@ -114,7 +126,7 @@ public final class Fb2MorphParser {
                         if (currentStyle.depth == 0 && TAG_STYLE.equals(endName)) {
                             Token token = currentStyle.buildToken();
                             if (token != null) {
-                                tokens.add(token);
+                                addTokenRespectingPunctuationBinding(tokens, token);
                             }
                             currentStyle = null;
                         }
@@ -144,6 +156,109 @@ public final class Fb2MorphParser {
             event = parser.next();
         }
         return tokens;
+    }
+
+    private static void addTokenRespectingPunctuationBinding(List<Token> tokens, Token token) {
+        if (tokens == null || token == null) {
+            return;
+        }
+        Token target = findAttachmentTarget(tokens, token);
+        if (target != null) {
+            gluePunctuationIntoTarget(target, token);
+            return;
+        }
+        tokens.add(token);
+    }
+
+    private static Token findAttachmentTarget(List<Token> tokens, Token punctuationToken) {
+        if (tokens == null || tokens.isEmpty() || punctuationToken == null) {
+            return null;
+        }
+        if (punctuationToken.hasMorphology()) {
+            return null;
+        }
+        String surfacePreview = safeTrim(punctuationToken.surface);
+        if (!isClosingPunctuationOrDash(surfacePreview)) {
+            return null;
+        }
+        if (hasVisiblePrefixContent(punctuationToken)) {
+            return null;
+        }
+        for (int i = tokens.size() - 1; i >= 0; i--) {
+            Token candidate = tokens.get(i);
+            if (candidate != null && candidate.hasMorphology()) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static void gluePunctuationIntoTarget(Token target, Token punctuationToken) {
+        StringBuilder surface = new StringBuilder(safeValue(target.surface));
+        bindClosingPunctuationToSurface(surface);
+        String glue = normalizeGluePrefix(punctuationToken.prefix);
+        if (!glue.isEmpty()) {
+            surface.append(glue);
+        }
+        surface.append(safeValue(punctuationToken.surface));
+        target.surface = surface.toString();
+    }
+
+    private static boolean hasVisiblePrefixContent(Token token) {
+        if (token == null || token.prefix == null) {
+            return false;
+        }
+        for (int i = 0; i < token.prefix.length(); i++) {
+            char c = token.prefix.charAt(i);
+            if (c == '\n' || c == '\r') {
+                return true;
+            }
+            if (!Character.isWhitespace(c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void bindClosingPunctuationToSurface(StringBuilder surface) {
+        if (surface == null || surface.length() == 0) {
+            return;
+        }
+        int last = surface.length() - 1;
+        char c = surface.charAt(last);
+        if (c == WORD_JOINER || c == ZERO_WIDTH_NBSP) {
+            return;
+        }
+        if (BREAKABLE_WS_CHARS.contains(c)) {
+            if (c != NARROW_NBSP) {
+                surface.setCharAt(last, NARROW_NBSP);
+            }
+        } else {
+            surface.append(WORD_JOINER);
+            surface.append(ZERO_WIDTH_NBSP);
+        }
+    }
+
+    private static String normalizeGluePrefix(String prefix) {
+        if (prefix == null || prefix.isEmpty()) {
+            return "";
+        }
+        String collapsed = prefix.replaceAll("[\\r\\n]+", " ");
+        collapsed = collapsed.replaceAll("[ \t\\u00A0\\u202F\\u2009\\u200A\\u200B]+", String.valueOf(NARROW_NBSP));
+        return collapsed;
+    }
+
+    private static boolean isClosingPunctuationOrDash(String s) {
+        if (s == null || s.isEmpty()) return false;
+        char first = s.charAt(0);
+        if (CLOSING_PUNCT_CHARS.contains(first)) {
+            return true;
+        }
+        return s.length() == 1 && (first == '—' || first == '–');
+    }
+
+    private static String safeValue(String value) {
+        return value == null ? "" : value;
     }
 
     private static MorphStyle startMorphStyle(StringBuilder prefix, XmlPullParser parser) {

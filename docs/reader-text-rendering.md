@@ -2,7 +2,7 @@
 
 ## Source assets ➜ tokens
 * Assets are loaded through `MorphDocumentParser.loadFromAssets`, which routes `.jsonl` to the JSONL reader and everything else to the FB2 parser. 【F:android-app/src/main/java/com/example/ttreader/util/MorphDocumentParser.java†L18-L34】
-* The FB2 parser (`Fb2MorphParser`) walks `<style name="morph">` tags, capturing any text that precedes them as `prefix` and reading the token text from the `surface` attribute or inner text. Morphology and translations are attached from custom attributes before emitting a `Token` object. Paragraph boundaries flush any accumulated prefix as a synthetic whitespace token and append a newline token. 【F:android-app/src/main/java/com/example/ttreader/util/Fb2MorphParser.java†L31-L205】
+* The FB2 parser (`Fb2MorphParser`) walks `<style name="morph">` tags, capturing any text that precedes them as `prefix` and reading the token text from the `surface` attribute or inner text. Morphology and translations are attached from custom attributes before emitting a `Token` object. Closing punctuation tokens without their own morphology and without visible prefix text are merged into the previous morph token with a narrow NBSP/word‑joiner bridge so the punctuation lives inside the same `<style name="morph">` span. Paragraph boundaries flush any accumulated prefix as a synthetic whitespace token and append a newline token. 【F:android-app/src/main/java/com/example/ttreader/util/Fb2MorphParser.java†L31-L205】
 
 ## Tokens ➜ plain text and spans
 * `ReaderView.buildContent` iterates the token list and gradually builds a `StringBuilder plain` plus a parallel `List<TokenSpan>` used for highlighting and pagination. 【F:android-app/src/main/java/com/example/ttreader/reader/ReaderView.java†L1738-L1857】
