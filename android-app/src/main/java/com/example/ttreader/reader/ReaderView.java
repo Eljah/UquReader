@@ -285,6 +285,12 @@ public class ReaderView extends TextView {
             '«', '(', '['
     ));
 
+    private static final Set<Character> BREAKABLE_WS_CHARS = new HashSet<>(Arrays.asList(
+            ' ', '\u00A0', '\u202F', '\u2009', '\u200A', '\u200B', '\u2060'
+    ));
+    private static final char NARROW_NBSP = '\u202F';
+    private static final char WORD_JOINER = '\u2060';
+
     /** текущий токен — закрывающий знак/тире, который должен прилипать к предыдущему слову */
     private static boolean isClosingPunctuationOrDash(String s) {
         if (s == null || s.isEmpty()) return false;
@@ -293,6 +299,25 @@ public class ReaderView extends TextView {
             return true;
         }
         return s.length() == 1 && (first == '—' || first == '–');
+    }
+
+    /** гарантируем, что знак препинания не «оторвётся» и не ускачет на новую строку */
+    private static void bindClosingPunctuationToPreviousToken(StringBuilder plain) {
+        if (plain == null || plain.length() == 0) {
+            return;
+        }
+        int last = plain.length() - 1;
+        char c = plain.charAt(last);
+        if (c == WORD_JOINER) {
+            return;
+        }
+        if (BREAKABLE_WS_CHARS.contains(c)) {
+            if (c != NARROW_NBSP) {
+                plain.setCharAt(last, NARROW_NBSP);
+            }
+        } else {
+            plain.append(WORD_JOINER);
+        }
     }
 
     /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
@@ -1733,19 +1758,12 @@ public class ReaderView extends TextView {
                 if (isClosingPunctuationOrDash(surfacePreview)) {
                     // Убираем ВСЕ типы пробелов в конце prefix (включая NBSP, NNBSP, THIN, HAIR, ZWSP)
                     pfx = pfx.replaceAll("[ \\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+$", "");
-                    // Если перед знаком препинания уже есть пробел — превращаем его в неразрывный,
-                    // чтобы знак не «прыгал» на следующую строку.
-                    if (plain.length() > 0) {
-                        int last = plain.length() - 1;
-                        char c = plain.charAt(last);
-                        if (c == ' ' || c == '\u00A0' || c == '\u202F' || c == '\u2009' || c == '\u200A'
-                                || c == '\u200B' || c == '\u2060') {
-                            plain.setCharAt(last, '\u202F');
-                        }
-                    }
                 }
                 if (!pfx.isEmpty()) {
                     plain.append(pfx);
+                }
+                if (isClosingPunctuationOrDash(surfacePreview)) {
+                    bindClosingPunctuationToPreviousToken(plain);
                 }
             }
             int prefixEnd = plain.length();
@@ -1764,13 +1782,7 @@ public class ReaderView extends TextView {
                     plain.append(s);
                 } else {
                     if (isClosingPunctuationOrDash(s)) {
-                        if (plain.length() > 0) {
-                            int last = plain.length() - 1;
-                            char c = plain.charAt(last);
-                            if (c == ' ') {
-                                plain.setCharAt(last, '\u202F');
-                            }
-                        }
+                        bindClosingPunctuationToPreviousToken(plain);
                         s = s.replaceFirst("^[ \t\u00A0\u202F]+", "");
                     }
                     plain.append(s);
