@@ -66,7 +66,10 @@
                         android:layout_height="match_parent"
                         android:background="@android:color/transparent"
                         android:gravity="top|start"
-                        android:padding="24dp"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:paddingTop="24dp"
+                        android:paddingBottom="24dp"
                         android:textColor="@color/reader_text_primary" />
                 </LinearLayout>
 
