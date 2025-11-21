@@ -356,7 +356,7 @@ public class ReaderView extends TextView {
         if (plain == null || plain.length() == 0) {
             return prefix;
         }
-        if (!Character.isWhitespace(prefix.charAt(0))) {
+        if (!isLeadingWhitespaceChar(prefix.charAt(0))) {
             return prefix;
         }
 
@@ -373,6 +373,10 @@ public class ReaderView extends TextView {
         }
 
         return prefix.replaceFirst("^[ \t\u00A0\u202F\u2009\u200A\u200B\u2060]+", "");
+    }
+
+    private static boolean isLeadingWhitespaceChar(char c) {
+        return Character.isWhitespace(c) || BREAKABLE_WS_CHARS.contains(c);
     }
 
     /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
