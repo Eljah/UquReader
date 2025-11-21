@@ -289,6 +289,7 @@ public class ReaderView extends TextView {
     private static final Set<Character> BREAKABLE_WS_CHARS = new HashSet<>(Arrays.asList(
             ' ', '\u00A0', '\u202F', '\u2009', '\u200A', '\u200B', '\u2060'
     ));
+    private static final char NBSP = '\u00A0';
     private static final char NARROW_NBSP = '\u202F';
     private static final char WORD_JOINER = '\u2060';
     private static final char ZERO_WIDTH_NBSP = '\uFEFF';
@@ -345,6 +346,21 @@ public class ReaderView extends TextView {
         }
         return prefix.replaceFirst("^[ \\\t\\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+",
                 String.valueOf(NARROW_NBSP));
+    }
+
+    /** предотвращаем появление пробела в начале новой строки: привязываем ведущие пробелы к предыдущему слову */
+    private static String pinLeadingWhitespaceToPreviousToken(String prefix, StringBuilder plain) {
+        if (prefix == null || prefix.isEmpty()) {
+            return prefix;
+        }
+        if (plain == null || plain.length() == 0) {
+            return prefix;
+        }
+        if (!Character.isWhitespace(prefix.charAt(0))) {
+            return prefix;
+        }
+        return prefix.replaceFirst("^[ \t\u00A0\u202F\u2009\u200A\u200B\u2060]+",
+                WORD_JOINER + String.valueOf(NBSP));
     }
 
     /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
@@ -1812,6 +1828,7 @@ public class ReaderView extends TextView {
                 }
                 if (!pfx.isEmpty()) {
                     pfx = protectLeadingSpaceAfterPunctuation(pfx, plain);
+                    pfx = pinLeadingWhitespaceToPreviousToken(pfx, plain);
                     plain.append(pfx);
                 }
                 if (isClosingPunctuationOrDash(surfacePreview)) {
