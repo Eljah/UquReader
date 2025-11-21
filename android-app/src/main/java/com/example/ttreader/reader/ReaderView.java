@@ -348,7 +348,7 @@ public class ReaderView extends TextView {
                 String.valueOf(NARROW_NBSP));
     }
 
-    /** предотвращаем появление пробела в начале новой строки: привязываем ведущие пробелы к предыдущему слову */
+    /** предотвращаем появление пробела в начале новой строки: переносим ведущие пробелы в хвост предыдущего токена */
     private static String pinLeadingWhitespaceToPreviousToken(String prefix, StringBuilder plain) {
         if (prefix == null || prefix.isEmpty()) {
             return prefix;
@@ -359,8 +359,20 @@ public class ReaderView extends TextView {
         if (!Character.isWhitespace(prefix.charAt(0))) {
             return prefix;
         }
-        return prefix.replaceFirst("^[ \t\u00A0\u202F\u2009\u200A\u200B\u2060]+",
-                WORD_JOINER + String.valueOf(NBSP));
+
+        int last = plain.length() - 1;
+        if (last >= 0) {
+            char c = plain.charAt(last);
+            if (BREAKABLE_WS_CHARS.contains(c)) {
+                if (c != NBSP) {
+                    plain.setCharAt(last, NBSP);
+                }
+            } else {
+                plain.append(NBSP);
+            }
+        }
+
+        return prefix.replaceFirst("^[ \t\u00A0\u202F\u2009\u200A\u200B\u2060]+", "");
     }
 
     /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
