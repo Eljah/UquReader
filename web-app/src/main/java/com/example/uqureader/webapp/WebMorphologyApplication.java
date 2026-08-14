@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.example.uqureader.webapp.reader.GrammarCatalog;
 import com.example.uqureader.webapp.reader.InMemoryReaderRepository;
 import com.example.uqureader.webapp.reader.LemmaStat;
 import com.example.uqureader.webapp.reader.ReaderRepository;
@@ -81,6 +82,7 @@ public class WebMorphologyApplication {
         server.createContext("/api/auth/me", this::handleMe);
         server.createContext("/api/works", this::handleWorks);
         server.createContext("/api/works/", this::handleWork);
+        server.createContext("/api/grammar", this::handleGrammar);
         server.createContext("/api/reading/events", this::handleReadingEvents);
         server.createContext("/api/reading/state", this::handleReadingState);
         server.createContext("/api/reading/stats", this::handleReadingStats);
@@ -301,6 +303,21 @@ public class WebMorphologyApplication {
                 array.add(gson.toJsonTree(token));
             }
             payload.add("tokens", array);
+            sendJson(exchange, 200, payload);
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleGrammar(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            JsonObject payload = new JsonObject();
+            payload.add("pos", gson.toJsonTree(GrammarCatalog.pos()));
+            payload.add("features", gson.toJsonTree(GrammarCatalog.features()));
             sendJson(exchange, 200, payload);
         } finally {
             exchange.close();

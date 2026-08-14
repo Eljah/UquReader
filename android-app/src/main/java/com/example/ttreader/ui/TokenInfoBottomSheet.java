@@ -81,7 +81,7 @@ public class TokenInfoBottomSheet extends DialogFragment {
             }
             List<String> codes = morphology.getFeatureCodes();
             if (!codes.isEmpty()) {
-                tvFeatureCodes.setText(getString(R.string.feature_codes_format, TextUtils.join(" + ", codes)));
+                tvFeatureCodes.setText(getString(R.string.feature_codes_format, formatFeatureList(morphology.features)));
             } else {
                 tvFeatureCodes.setVisibility(View.GONE);
             }
@@ -110,9 +110,7 @@ public class TokenInfoBottomSheet extends DialogFragment {
             TextView chip = new TextView(getActivity());
             chip.setBackgroundResource(R.drawable.feature_chip_background);
             chip.setTextSize(16f);
-            chip.setText(getString(R.string.feature_chip_format,
-                    feature.code,
-                    TextUtils.isEmpty(feature.actual) ? getCanonicalSample(feature.canonical) : feature.actual));
+            chip.setText(formatFeatureChip(feature));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -129,6 +127,29 @@ public class TokenInfoBottomSheet extends DialogFragment {
         return first.isEmpty() ? getString(R.string.feature_no_form) : first;
     }
 
+    private String formatFeatureList(List<MorphFeature> features) {
+        if (features == null || features.isEmpty()) {
+            return "";
+        }
+        java.util.ArrayList<String> labels = new java.util.ArrayList<>();
+        for (MorphFeature feature : features) {
+            labels.add(formatFeatureChip(feature));
+        }
+        return TextUtils.join("; ", labels);
+    }
+
+    private String formatFeatureChip(MorphFeature feature) {
+        FeatureMetadata metadata = GrammarResources.getFeatureMetadata(feature.code);
+        String title = metadata != null && !TextUtils.isEmpty(metadata.titleRu) ? metadata.titleRu : feature.code;
+        String example = metadata != null && metadata.examples != null && !metadata.examples.isEmpty()
+                ? metadata.examples.get(0)
+                : "";
+        if (TextUtils.isEmpty(example)) {
+            return feature.code + " - " + title;
+        }
+        return feature.code + " - " + title + ", например \"" + example + "\"";
+    }
+
     private void showFeatureDetails(Morphology morphology, MorphFeature feature) {
         FeatureMetadata metadata = GrammarResources.getFeatureMetadata(feature.code);
         StringBuilder message = new StringBuilder();
@@ -136,9 +157,6 @@ public class TokenInfoBottomSheet extends DialogFragment {
             message.append(getString(R.string.feature_dialog_tt, metadata.titleTt)).append('\n');
             message.append(getString(R.string.feature_dialog_ru, metadata.titleRu)).append('\n');
             message.append(getString(R.string.feature_dialog_desc, metadata.descriptionRu)).append('\n');
-            if (!TextUtils.isEmpty(feature.actual)) {
-                message.append(getString(R.string.feature_dialog_actual, feature.actual)).append('\n');
-            }
             if (!metadata.phoneticForms.isEmpty()) {
                 message.append(getString(R.string.feature_dialog_variants,
                         TextUtils.join(", ", metadata.phoneticForms))).append('\n');
@@ -153,7 +171,7 @@ public class TokenInfoBottomSheet extends DialogFragment {
         }
 
         new AlertDialog.Builder(getActivity())
-                .setTitle(feature.code)
+                .setTitle(formatFeatureChip(feature))
                 .setMessage(message.toString())
                 .setPositiveButton(android.R.string.ok, null)
                 .show();

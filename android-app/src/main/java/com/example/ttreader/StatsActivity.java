@@ -500,11 +500,17 @@ public class StatsActivity extends Activity {
         if (TextUtils.isEmpty(code)) return getString(R.string.stats_feature_unknown);
         FeatureMetadata metadata = GrammarResources.getFeatureMetadata(code);
         if (metadata != null) {
+            String title = null;
             if (!TextUtils.isEmpty(metadata.titleRu)) {
-                return metadata.titleRu;
+                title = metadata.titleRu;
+            } else if (!TextUtils.isEmpty(metadata.titleTt)) {
+                title = metadata.titleTt;
             }
-            if (!TextUtils.isEmpty(metadata.titleTt)) {
-                return metadata.titleTt;
+            if (!TextUtils.isEmpty(title)) {
+                if (metadata.examples != null && !metadata.examples.isEmpty()) {
+                    return code + " - " + title + ", например \"" + metadata.examples.get(0) + "\"";
+                }
+                return code + " - " + title;
             }
         }
         return code;

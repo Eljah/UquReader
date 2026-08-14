@@ -60,6 +60,7 @@ final class StaticReaderAssets {
                     <h2 id="tokenSurface"></h2>
                     <dl>
                       <dt>Лемма</dt><dd id="tokenLemma"></dd>
+                      <dt>Разбор</dt><dd id="tokenBreakdown"></dd>
                       <dt>Часть речи</dt><dd id="tokenPos"></dd>
                       <dt>Признаки</dt><dd id="tokenFeatures"></dd>
                       <dt>Перевод</dt><dd id="tokenTranslations"></dd>
@@ -355,6 +356,7 @@ final class StaticReaderAssets {
               observer: null,
               statsMode: 'lemmas',
               lastLemmaRows: [],
+              grammar: {pos: {}, features: {}},
               speech: {
                 mode: 'idle',
                 sentenceIndex: 0,
@@ -503,6 +505,7 @@ final class StaticReaderAssets {
             }
 
             async function loadWorks() {
+              await loadGrammar();
               const data = await api('/api/works');
               state.works = data.works || [];
               $('workSelect').innerHTML = state.works.map(w => `<option value="${w.id}">${escapeHtml(w.title)} · ${w.tokenCount}</option>`).join('');
@@ -511,6 +514,13 @@ final class StaticReaderAssets {
                 $('workSelect').value = state.workId;
                 await loadPage(0);
               }
+            }
+
+            async function loadGrammar() {
+              if (Object.keys(state.grammar.features).length) return;
+              const data = await api('/api/grammar');
+              state.grammar.pos = Object.fromEntries((data.pos || []).map(item => [item.code, item]));
+              state.grammar.features = Object.fromEntries((data.features || []).map(item => [item.code, item]));
             }
 
             async function loadPage(pageIndex) {
@@ -648,11 +658,56 @@ final class StaticReaderAssets {
               const morph = token.morphology || {};
               $('tokenSurface').textContent = token.surface;
               $('tokenLemma').textContent = morph.lemma || '—';
-              $('tokenPos').textContent = morph.pos || '—';
-              $('tokenFeatures').textContent = (morph.features || []).map(f => f.code).filter(Boolean).join(', ') || '—';
+              $('tokenBreakdown').textContent = formatBreakdown(token.surface, morph.segments || []);
+              $('tokenPos').textContent = formatPos(morph.pos);
+              $('tokenFeatures').textContent = formatMorphFeatures(morph.features || []);
               $('tokenTranslations').textContent = (token.translations || []).join(', ') || '—';
               $('tokenSheet').classList.remove('hidden');
               enqueue(tokenPayload(token, 'token_lookup'));
+            }
+
+            function formatPos(code) {
+              if (!code) return '—';
+              const meta = state.grammar.pos[code];
+              if (!meta) return code;
+              return `${code} — ${meta.titleRu || meta.titleTt || code}`;
+            }
+
+            function formatBreakdown(surface, segments) {
+              const parts = (segments || []).filter(Boolean);
+              if (parts.length <= 1) return surface || '—';
+              return `${surface}: ${parts.join('-')}`;
+            }
+
+            function formatFeature(code) {
+              if (!code) return '';
+              const meta = state.grammar.features[code];
+              const title = meta?.titleRu || meta?.titleTt || code;
+              const example = firstExample(meta);
+              return example ? `${code} - ${title}, например "${example}"` : `${code} - ${title}`;
+            }
+
+            function formatMorphFeatures(features) {
+              const labels = features.map(feature => formatFeature(feature.code)).filter(Boolean);
+              return labels.length ? labels.join('; ') : '—';
+            }
+
+            function formatFeatureKey(featureKey) {
+              if (!featureKey) return '—';
+              const parts = String(featureKey).split('+').filter(Boolean);
+              if (!parts.length) return featureKey;
+              const [posCode, ...featureCodes] = parts;
+              const pos = state.grammar.pos[posCode];
+              const labels = [pos ? `${posCode} — ${pos.titleRu || pos.titleTt || posCode}` : posCode];
+              for (const code of featureCodes) {
+                labels.push(formatFeature(code));
+              }
+              return labels.join('; ');
+            }
+
+            function firstExample(meta) {
+              const examples = meta?.examples || [];
+              return examples.length ? examples[0] : '';
             }
 
             function buildSentenceRanges() {
@@ -941,8 +996,9 @@ final class StaticReaderAssets {
               for (const row of rows) {
                 const element = document.createElement('div');
                 element.className = 'stat-row clickable';
+                const posLabel = formatPos(row.pos);
                 element.innerHTML = `
-                  <div class="stat-main">${escapeHtml(row.lemma)}<div class="stat-sub">${escapeHtml(row.pos)}</div></div>
+                  <div class="stat-main">${escapeHtml(row.lemma)}<div class="stat-sub">${escapeHtml(posLabel)}</div></div>
                   <div>${row.committedCount}</div>
                   <div>${row.lookupCount}</div>
                   <div class="wide-only">${row.ttsCount}</div>
@@ -983,7 +1039,7 @@ final class StaticReaderAssets {
                 .join('');
               panel.innerHTML = `
                 <div class="timeline-title">
-                  <strong>${escapeHtml(row.lemma)} · ${escapeHtml(row.pos)}</strong>
+                  <strong>${escapeHtml(row.lemma)} · ${escapeHtml(formatPos(row.pos))}</strong>
                   <button type="button" id="timelineBack">К списку</button>
                 </div>
                 <svg class="timeline-svg" viewBox="0 0 780 72" preserveAspectRatio="none" role="img" aria-label="Временной ряд слова">
@@ -1017,9 +1073,10 @@ final class StaticReaderAssets {
                 return;
               }
               for (const row of rows) {
+                const featureLabel = formatFeatureKey(row.featureKey);
                 content.insertAdjacentHTML('beforeend', `
                   <div class="stat-row">
-                    <div class="stat-main">${escapeHtml(row.featureKey)}</div>
+                    <div class="stat-main">${escapeHtml(featureLabel)}<div class="stat-sub">${escapeHtml(row.featureKey)}</div></div>
                     <div>${row.committedCount}</div>
                     <div>${row.lookupCount}</div>
                     <div class="wide-only">${row.exposureCount}</div>

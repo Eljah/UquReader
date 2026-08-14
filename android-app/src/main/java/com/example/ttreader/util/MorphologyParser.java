@@ -2,19 +2,23 @@ package com.example.ttreader.util;
 
 import com.example.ttreader.model.MorphFeature;
 import com.example.ttreader.model.Morphology;
+import com.example.ttreader.model.FeatureMetadata;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 public class MorphologyParser {
     public static Morphology parse(String surface, String analysis) {
-        if (analysis == null || !analysis.contains("+")) return null;
-        String[] parts = analysis.split("\\+");
+        String selectedAnalysis = firstAnalysis(analysis);
+        if (selectedAnalysis == null || !selectedAnalysis.contains("+")) return null;
+        String[] parts = selectedAnalysis.split("\\+");
         if (parts.length < 2) return null;
         String lemma = parts[0];
         String pos = parts[1];
         List<MorphFeature> features = new ArrayList<>();
-        List<Integer> lengths = new ArrayList<>();
         for (int i = 2; i < parts.length; i++) {
             String part = parts[i];
             String code = part;
@@ -26,63 +30,92 @@ public class MorphologyParser {
             }
             MorphFeature feature = new MorphFeature(code, canonical);
             features.add(feature);
-            lengths.add(estimateLength(canonical));
         }
-        List<String> segments = new ArrayList<>();
-        int totalEndings = 0;
-        for (Integer len : lengths) totalEndings += len;
-        int baseLen = Math.max(0, Math.min(surface.length(), surface.length() - totalEndings));
-        String baseSegment = safeSubstring(surface, 0, baseLen);
-        segments.add(baseSegment);
-        int idx = baseSegment.length();
-        for (MorphFeature feature : features) {
-            String actual = resolveActual(surface, idx, feature.canonical);
-            feature.actual = actual;
-            if (!actual.isEmpty()) segments.add(actual);
-            idx += actual.length();
+        String safeSurface = surface == null ? "" : surface;
+        String[] actuals = resolveActualsRightToLeft(safeSurface, features);
+        for (int i = 0; i < features.size(); i++) {
+            features.get(i).actual = actuals[i];
         }
-        if (segments.isEmpty()) segments.add(surface);
-        if (idx < surface.length()) {
-            String tail = surface.substring(idx);
-            if (!segments.isEmpty()) {
-                int last = segments.size() - 1;
-                segments.set(last, segments.get(last) + tail);
-            } else {
-                segments.add(tail);
-            }
-        }
+        List<String> segments = buildSegments(lemma, safeSurface, actuals);
         String featureKey = buildFeatureKey(pos, features);
         return new Morphology(lemma, pos, features, segments, featureKey, analysis);
     }
 
-    private static String safeSubstring(String value, int start, int end) {
-        if (start >= value.length()) return "";
-        end = Math.min(end, value.length());
-        if (end <= start) return "";
-        return value.substring(start, end);
-    }
-
-    private static int estimateLength(String canonical) {
-        if (canonical == null || canonical.isEmpty()) return 0;
-        String option = canonical.split("/")[0];
-        return option.length();
-    }
-
-    private static String resolveActual(String surface, int idx, String canonical) {
-        if (canonical == null || canonical.isEmpty()) return "";
-        String[] options = canonical.split("/");
-        int remaining = surface.length() - idx;
-        for (String opt : options) {
-            if (opt.isEmpty()) continue;
-            int len = Math.min(opt.length(), remaining);
-            if (len <= 0) continue;
-            String candidate = surface.substring(idx, idx + len);
-            if (candidate.equalsIgnoreCase(opt)) return candidate;
+    private static String firstAnalysis(String analysis) {
+        if (analysis == null) return null;
+        for (String variant : analysis.split(";")) {
+            String trimmed = variant.trim();
+            if (!trimmed.isEmpty()) return trimmed;
         }
-        String opt = options[0];
-        int len = Math.min(opt.length(), remaining);
-        if (len <= 0) return "";
-        return surface.substring(idx, idx + len);
+        return null;
+    }
+
+    private static String[] resolveActualsRightToLeft(String surface, List<MorphFeature> features) {
+        String[] actuals = new String[features.size()];
+        String remaining = surface == null ? "" : surface;
+        for (int i = features.size() - 1; i >= 0; i--) {
+            MorphFeature feature = features.get(i);
+            String actual = matchSuffix(remaining, candidateForms(feature.code, feature.canonical));
+            actuals[i] = actual;
+            if (!actual.isEmpty()) {
+                remaining = remaining.substring(0, remaining.length() - actual.length());
+            }
+        }
+        return actuals;
+    }
+
+    private static List<String> buildSegments(String lemma, String surface, String[] actuals) {
+        List<String> segments = new ArrayList<>();
+        int endingLength = 0;
+        for (String actual : actuals) {
+            if (actual != null) endingLength += actual.length();
+        }
+        String surfaceBase = surface.substring(0, Math.max(0, surface.length() - endingLength));
+        String base = lemma == null || lemma.isEmpty() ? surfaceBase : lemma;
+        if (!base.isEmpty()) segments.add(base);
+        for (String actual : actuals) {
+            if (actual != null && !actual.isEmpty()) segments.add(actual);
+        }
+        if (segments.isEmpty() && !surface.isEmpty()) segments.add(surface);
+        return segments;
+    }
+
+    private static String matchSuffix(String value, List<String> forms) {
+        String lower = value.toLowerCase(Locale.ROOT);
+        for (String form : forms) {
+            String normalized = normalizeForm(form);
+            if (normalized.isEmpty()) continue;
+            if (lower.endsWith(normalized.toLowerCase(Locale.ROOT))) {
+                return value.substring(value.length() - normalized.length());
+            }
+        }
+        return "";
+    }
+
+    private static List<String> candidateForms(String code, String canonical) {
+        List<String> forms = new ArrayList<>();
+        FeatureMetadata metadata = GrammarResources.getFeatureMetadata(code);
+        if (metadata != null) {
+            forms.addAll(metadata.phoneticForms);
+        }
+        if (canonical != null && !canonical.isEmpty()) {
+            Collections.addAll(forms, canonical.split("/"));
+        }
+        forms.removeIf(form -> normalizeForm(form).isEmpty());
+        forms.sort(Comparator.comparingInt((String form) -> normalizeForm(form).length()).reversed());
+        return forms;
+    }
+
+    private static String normalizeForm(String form) {
+        if (form == null) return "";
+        String normalized = form.trim();
+        if (normalized.startsWith("-")) {
+            normalized = normalized.substring(1);
+        }
+        if (normalized.equalsIgnoreCase("нулевое окончание")) {
+            return "";
+        }
+        return normalized;
     }
 
     private static String buildFeatureKey(String pos, List<MorphFeature> features) {
