@@ -59,6 +59,7 @@ public final class Main {
             HttpServer server = application.start(port);
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 server.stop(0);
+                application.close();
                 service.close();
                 try {
                     repository.close();

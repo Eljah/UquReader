@@ -87,13 +87,19 @@ public class WebMorphologyApplication {
         server.createContext("/api/reading/state", this::handleReadingState);
         server.createContext("/api/reading/stats", this::handleReadingStats);
         server.createContext("/api/tts/status", this::handleTtsStatus);
+        server.createContext("/api/tts/cache/status", this::handleTtsCacheStatus);
         server.createContext("/api/tts/page", this::handleTtsPage);
         server.createContext("/api/tts/speech", this::handleTtsPage);
         server.createContext("/reader", this::handleReaderApp);
         server.createContext("/reader/", this::handleReaderApp);
         server.setExecutor(null); // use the default executor
         server.start();
+        warmupCatalogTts();
         return server;
+    }
+
+    public void close() {
+        ttsService.close();
     }
 
     private void handleRoot(HttpExchange exchange) throws IOException {
@@ -291,6 +297,7 @@ public class WebMorphologyApplication {
             int pageIndex = parseInt(query.get("page"), 0);
             int pageSize = parseInt(query.get("pageSize"), 450);
             List<ReaderToken> tokens = catalog.page(workId, pageIndex, pageSize);
+            warmupSentenceTts(tokens);
             JsonObject payload = new JsonObject();
             payload.addProperty("workId", workId);
             payload.addProperty("title", work.get().title);
@@ -438,6 +445,29 @@ public class WebMorphologyApplication {
         }
     }
 
+    private void handleTtsCacheStatus(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            RhvoiceTtsService.CacheStatus status = ttsService.cacheStatus();
+            JsonObject payload = new JsonObject();
+            payload.addProperty("configured", ttsService.isConfigured());
+            payload.addProperty("voice", RhvoiceTtsService.TALGAT_VOICE);
+            payload.addProperty("cacheRoot", status.root().toString());
+            payload.addProperty("wavFiles", status.wavFiles());
+            payload.addProperty("warmupQueued", status.warmupQueued());
+            payload.addProperty("warmupCompleted", status.warmupCompleted());
+            payload.addProperty("warmupFailed", status.warmupFailed());
+            payload.addProperty("expectedSentences", countCatalogSentences());
+            payload.addProperty("warming", status.warmupQueued() > status.warmupCompleted() + status.warmupFailed());
+            sendJson(exchange, 200, payload);
+        } finally {
+            exchange.close();
+        }
+    }
+
     private void handleTtsPage(HttpExchange exchange) throws IOException {
         try {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -450,15 +480,29 @@ public class WebMorphologyApplication {
             }
             JsonObject request = readJsonBody(exchange);
             String text = getString(request, "text");
+            String scope = getString(request, "scope");
             if (text.isBlank()) {
                 String workId = getString(request, "workId");
                 int pageIndex = getInt(request, "pageIndex", 0);
                 int pageSize = getInt(request, "pageSize", 450);
                 text = buildPageText(workId, pageIndex, pageSize);
+                if (scope.isBlank()) {
+                    scope = "page";
+                }
             }
-            byte[] audio = ttsService.synthesize(text);
+            boolean bypassCache = "token".equalsIgnoreCase(scope) || "word".equalsIgnoreCase(scope);
+            byte[] audio;
+            if (bypassCache) {
+                audio = ttsService.synthesize(text);
+                exchange.getResponseHeaders().set("Cache-Control", "no-store");
+                exchange.getResponseHeaders().set("X-Uqureader-Tts-Cache", "bypass");
+            } else {
+                RhvoiceTtsService.CachedAudio cached = ttsService.synthesizeCached(text);
+                audio = cached.audio();
+                exchange.getResponseHeaders().set("Cache-Control", "public, max-age=31536000, immutable");
+                exchange.getResponseHeaders().set("X-Uqureader-Tts-Cache", cached.cacheHit() ? "hit" : "miss");
+            }
             exchange.getResponseHeaders().set("Content-Type", "audio/wav");
-            exchange.getResponseHeaders().set("Cache-Control", "no-store");
             exchange.sendResponseHeaders(200, audio.length);
             try (OutputStream output = exchange.getResponseBody()) {
                 output.write(audio);
@@ -471,6 +515,66 @@ public class WebMorphologyApplication {
         } finally {
             exchange.close();
         }
+    }
+
+    private void warmupCatalogTts() {
+        if (!ttsService.isConfigured()) {
+            return;
+        }
+        Thread thread = new Thread(() -> {
+            for (ReaderWork work : catalog.listWorks()) {
+                int pageSize = 450;
+                int pages = Math.max(1, (int) Math.ceil(work.tokenCount / (double) pageSize));
+                for (int page = 0; page < pages; page++) {
+                    warmupSentenceTts(catalog.page(work.id, page, pageSize));
+                }
+            }
+        }, "uqureader-tts-catalog-warmup");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private long countCatalogSentences() {
+        long count = 0;
+        for (ReaderWork work : catalog.listWorks()) {
+            int pageSize = 450;
+            int pages = Math.max(1, (int) Math.ceil(work.tokenCount / (double) pageSize));
+            for (int page = 0; page < pages; page++) {
+                count += buildSentenceTexts(catalog.page(work.id, page, pageSize)).size();
+            }
+        }
+        return count;
+    }
+
+    private void warmupSentenceTts(List<ReaderToken> tokens) {
+        if (!ttsService.isConfigured() || tokens == null || tokens.isEmpty()) {
+            return;
+        }
+        for (String sentence : buildSentenceTexts(tokens)) {
+            ttsService.warmupCached(sentence);
+        }
+    }
+
+    private List<String> buildSentenceTexts(List<ReaderToken> tokens) {
+        List<String> sentences = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (ReaderToken token : tokens) {
+            current.append(token.prefix).append(token.surface);
+            String surface = token.surface == null ? "" : token.surface;
+            if (surface.matches(".*[.!?…]+$") || current.length() >= 420) {
+                addSentence(sentences, current);
+            }
+        }
+        addSentence(sentences, current);
+        return sentences;
+    }
+
+    private void addSentence(List<String> sentences, StringBuilder current) {
+        String value = current.toString().trim();
+        if (!value.isEmpty()) {
+            sentences.add(value);
+        }
+        current.setLength(0);
     }
 
     private String buildPageText(String workId, int pageIndex, int pageSize) {

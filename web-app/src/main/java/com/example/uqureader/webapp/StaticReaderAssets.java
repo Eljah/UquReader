@@ -18,6 +18,7 @@ final class StaticReaderAssets {
                 <section class="auth" id="authPanel">
                   <div>
                     <h1>UquReader</h1>
+                    <p class="motto">UquReader: укыгыч, укыткыч вә укыттыргыч</p>
                     <p>Веб-читалка татарских книг с морфологией, серверной озвучкой Talgat и долгосрочной статистикой чтения.</p>
                   </div>
                   <form id="authForm">
@@ -113,6 +114,7 @@ final class StaticReaderAssets {
               padding: 32px;
             }
             .auth h1 { margin: 0 0 12px; font-size: 42px; letter-spacing: .05em; color: var(--primary); }
+            .auth .motto { margin: 0 0 10px; color: var(--accent-red); font-size: 21px; font-weight: 700; line-height: 1.35; }
             .auth p { margin: 0; color: var(--muted); line-height: 1.5; }
             form {
               display: grid;
@@ -855,7 +857,7 @@ final class StaticReaderAssets {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({text: range.text})
+                body: JSON.stringify({text: range.text, scope: 'sentence'})
               });
               if (!response.ok) {
                 let message = 'RHVoice Talgat не настроен на сервере';
@@ -945,7 +947,7 @@ final class StaticReaderAssets {
                   method: 'POST',
                   credentials: 'same-origin',
                   headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({text})
+                  body: JSON.stringify({text, scope: 'token'})
                 });
                 if (!response.ok) {
                   const body = await response.json().catch(() => ({}));
