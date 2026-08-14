@@ -1,8 +1,21 @@
 package com.example.uqureader.webapp;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.example.uqureader.webapp.reader.InMemoryReaderRepository;
+import com.example.uqureader.webapp.reader.LemmaStat;
+import com.example.uqureader.webapp.reader.ReaderRepository;
+import com.example.uqureader.webapp.reader.ReaderRepositoryFactory;
+import com.example.uqureader.webapp.reader.ReaderToken;
+import com.example.uqureader.webapp.reader.ReaderWork;
+import com.example.uqureader.webapp.reader.ReaderWorkCatalog;
+import com.example.uqureader.webapp.reader.ReadingEventRecord;
+import com.example.uqureader.webapp.reader.ReadingEvent;
+import com.example.uqureader.webapp.reader.ReadingState;
+import com.example.uqureader.webapp.reader.RhvoiceTtsService;
+import com.example.uqureader.webapp.reader.UserSession;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -14,9 +27,13 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -26,12 +43,22 @@ import java.util.stream.Collectors;
 public class WebMorphologyApplication {
 
     private static final String CALLBACK_PARAM = "callback";
+    private static final String SESSION_COOKIE = "uqu_session";
 
     private final MorphologyService service;
+    private final ReaderWorkCatalog catalog;
+    private final ReaderRepository repository;
+    private final RhvoiceTtsService ttsService = new RhvoiceTtsService();
     private final Gson gson = new Gson();
 
     public WebMorphologyApplication(MorphologyService service) {
+        this(service, loadCatalogOrEmpty(), new InMemoryReaderRepository());
+    }
+
+    public WebMorphologyApplication(MorphologyService service, ReaderWorkCatalog catalog, ReaderRepository repository) {
         this.service = service;
+        this.catalog = catalog;
+        this.repository = repository;
     }
 
     /**
@@ -48,6 +75,20 @@ public class WebMorphologyApplication {
         server.createContext("/api/token/", this::handleToken);
         server.createContext("/api/text", this::handleText);
         server.createContext("/api/text/", this::handleText);
+        server.createContext("/api/auth/register", this::handleRegister);
+        server.createContext("/api/auth/login", this::handleLogin);
+        server.createContext("/api/auth/logout", this::handleLogout);
+        server.createContext("/api/auth/me", this::handleMe);
+        server.createContext("/api/works", this::handleWorks);
+        server.createContext("/api/works/", this::handleWork);
+        server.createContext("/api/reading/events", this::handleReadingEvents);
+        server.createContext("/api/reading/state", this::handleReadingState);
+        server.createContext("/api/reading/stats", this::handleReadingStats);
+        server.createContext("/api/tts/status", this::handleTtsStatus);
+        server.createContext("/api/tts/page", this::handleTtsPage);
+        server.createContext("/api/tts/speech", this::handleTtsPage);
+        server.createContext("/reader", this::handleReaderApp);
+        server.createContext("/reader/", this::handleReaderApp);
         server.setExecutor(null); // use the default executor
         server.start();
         return server;
@@ -132,6 +173,316 @@ public class WebMorphologyApplication {
         }
     }
 
+    private void handleRegister(HttpExchange exchange) throws IOException {
+        try {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "POST");
+                return;
+            }
+            JsonObject request = readJsonBody(exchange);
+            UserSession session = repository.register(getString(request, "username"), getString(request, "password"));
+            sendSession(exchange, session);
+        } catch (SQLException ex) {
+            sendError(exchange, 400, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleLogin(HttpExchange exchange) throws IOException {
+        try {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "POST");
+                return;
+            }
+            JsonObject request = readJsonBody(exchange);
+            UserSession session = repository.login(getString(request, "username"), getString(request, "password"));
+            sendSession(exchange, session);
+        } catch (SQLException ex) {
+            sendError(exchange, 401, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleLogout(HttpExchange exchange) throws IOException {
+        try {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "POST");
+                return;
+            }
+            repository.logout(readSessionCookie(exchange));
+            exchange.getResponseHeaders().add("Set-Cookie", SESSION_COOKIE + "=; Path=/; Max-Age=0; SameSite=Lax");
+            JsonObject payload = new JsonObject();
+            payload.addProperty("ok", true);
+            sendJson(exchange, 200, payload);
+        } catch (SQLException ex) {
+            sendServerError(exchange, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleMe(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            Optional<UserSession> session = currentSession(exchange);
+            JsonObject payload = new JsonObject();
+            payload.addProperty("authenticated", session.isPresent());
+            session.ifPresent(value -> {
+                payload.addProperty("userId", value.userId);
+                payload.addProperty("username", value.username);
+            });
+            sendJson(exchange, 200, payload);
+        } catch (SQLException ex) {
+            sendServerError(exchange, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleWorks(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            JsonArray works = new JsonArray();
+            for (ReaderWork work : catalog.listWorks()) {
+                JsonObject item = new JsonObject();
+                item.addProperty("id", work.id);
+                item.addProperty("title", work.title);
+                item.addProperty("assetName", work.assetName);
+                item.addProperty("tokenCount", work.tokenCount);
+                item.addProperty("charCount", work.charCount);
+                works.add(item);
+            }
+            JsonObject payload = new JsonObject();
+            payload.add("works", works);
+            sendJson(exchange, 200, payload);
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleWork(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            String[] parts = exchange.getRequestURI().getPath().split("/");
+            if (parts.length < 5 || !"tokens".equals(parts[4])) {
+                sendNotFound(exchange, exchange.getRequestURI().getPath());
+                return;
+            }
+            String workId = urlDecode(parts[3]);
+            Optional<ReaderWork> work = catalog.find(workId);
+            if (work.isEmpty()) {
+                sendNotFound(exchange, workId);
+                return;
+            }
+            Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
+            int pageIndex = parseInt(query.get("page"), 0);
+            int pageSize = parseInt(query.get("pageSize"), 450);
+            List<ReaderToken> tokens = catalog.page(workId, pageIndex, pageSize);
+            JsonObject payload = new JsonObject();
+            payload.addProperty("workId", workId);
+            payload.addProperty("title", work.get().title);
+            payload.addProperty("pageIndex", pageIndex);
+            payload.addProperty("pageSize", pageSize);
+            payload.addProperty("tokenCount", work.get().tokenCount);
+            payload.addProperty("hasNext", (pageIndex + 1) * pageSize < work.get().tokenCount);
+            JsonArray array = new JsonArray();
+            for (ReaderToken token : tokens) {
+                array.add(gson.toJsonTree(token));
+            }
+            payload.add("tokens", array);
+            sendJson(exchange, 200, payload);
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleReadingEvents(HttpExchange exchange) throws IOException {
+        try {
+            Optional<UserSession> session = currentSession(exchange);
+            if (session.isEmpty()) {
+                sendError(exchange, 401, "Authentication required");
+                return;
+            }
+            if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
+                List<ReadingEventRecord> events = repository.listLemmaEvents(
+                        session.get().userId,
+                        query.getOrDefault("lemma", ""),
+                        query.getOrDefault("pos", ""),
+                        query.getOrDefault("eventType", ""),
+                        parseInt(query.get("limit"), 500));
+                JsonObject payload = new JsonObject();
+                payload.add("events", gson.toJsonTree(events));
+                sendJson(exchange, 200, payload);
+            } else if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                JsonObject request = readJsonBody(exchange);
+                List<ReadingEvent> events = parseEvents(request);
+                int accepted = repository.recordEvents(session.get().userId, session.get().sessionToken, events);
+                JsonObject payload = new JsonObject();
+                payload.addProperty("received", events.size());
+                payload.addProperty("accepted", accepted);
+                payload.addProperty("duplicates", events.size() - accepted);
+                sendJson(exchange, 200, payload);
+            } else {
+                sendMethodNotAllowed(exchange, "GET, POST");
+            }
+        } catch (SQLException ex) {
+            sendServerError(exchange, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleReadingState(HttpExchange exchange) throws IOException {
+        try {
+            Optional<UserSession> session = currentSession(exchange);
+            if (session.isEmpty()) {
+                sendError(exchange, 401, "Authentication required");
+                return;
+            }
+            if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
+                Optional<ReadingState> state = repository.findReadingState(session.get().userId, query.getOrDefault("workId", ""));
+                JsonObject payload = new JsonObject();
+                if (state.isPresent()) {
+                    payload.add("state", gson.toJsonTree(state.get()));
+                } else {
+                    payload.add("state", null);
+                }
+                sendJson(exchange, 200, payload);
+            } else if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                JsonObject request = readJsonBody(exchange);
+                ReadingState state = new ReadingState(getString(request, "workId"),
+                        getInt(request, "pageIndex", 0),
+                        getInt(request, "charIndex", 0),
+                        System.currentTimeMillis());
+                repository.saveReadingState(session.get().userId, state);
+                JsonObject payload = new JsonObject();
+                payload.addProperty("ok", true);
+                sendJson(exchange, 200, payload);
+            } else {
+                sendMethodNotAllowed(exchange, "GET, POST");
+            }
+        } catch (SQLException ex) {
+            sendServerError(exchange, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleReadingStats(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            Optional<UserSession> session = currentSession(exchange);
+            if (session.isEmpty()) {
+                sendError(exchange, 401, "Authentication required");
+                return;
+            }
+            Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
+            List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, parseInt(query.get("limit"), 100));
+            JsonObject payload = new JsonObject();
+            payload.add("lemmas", gson.toJsonTree(stats));
+            payload.add("features", gson.toJsonTree(repository.listFeatureStats(session.get().userId, parseInt(query.get("limit"), 100))));
+            sendJson(exchange, 200, payload);
+        } catch (SQLException ex) {
+            sendServerError(exchange, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleTtsStatus(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            JsonObject payload = new JsonObject();
+            payload.addProperty("configured", ttsService.isConfigured());
+            payload.addProperty("voice", RhvoiceTtsService.TALGAT_VOICE);
+            payload.addProperty("hardcodedVoice", true);
+            sendJson(exchange, 200, payload);
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private void handleTtsPage(HttpExchange exchange) throws IOException {
+        try {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "POST");
+                return;
+            }
+            if (!ttsService.isConfigured()) {
+                sendError(exchange, 503, "RHVoice server command is not configured");
+                return;
+            }
+            JsonObject request = readJsonBody(exchange);
+            String text = getString(request, "text");
+            if (text.isBlank()) {
+                String workId = getString(request, "workId");
+                int pageIndex = getInt(request, "pageIndex", 0);
+                int pageSize = getInt(request, "pageSize", 450);
+                text = buildPageText(workId, pageIndex, pageSize);
+            }
+            byte[] audio = ttsService.synthesize(text);
+            exchange.getResponseHeaders().set("Content-Type", "audio/wav");
+            exchange.getResponseHeaders().set("Cache-Control", "no-store");
+            exchange.sendResponseHeaders(200, audio.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(audio);
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            sendServerError(exchange, "RHVoice synthesis interrupted");
+        } catch (IOException ex) {
+            sendServerError(exchange, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
+    private String buildPageText(String workId, int pageIndex, int pageSize) {
+        StringBuilder builder = new StringBuilder();
+        for (ReaderToken token : catalog.page(workId, pageIndex, pageSize)) {
+            builder.append(token.prefix).append(token.surface);
+        }
+        return builder.toString();
+    }
+
+    private void handleReaderApp(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            String path = exchange.getRequestURI().getPath();
+            if (path.endsWith("/app.js")) {
+                sendText(exchange, 200, "application/javascript; charset=utf-8", StaticReaderAssets.APP_JS);
+            } else if (path.endsWith("/style.css")) {
+                sendText(exchange, 200, "text/css; charset=utf-8", StaticReaderAssets.STYLE_CSS);
+            } else {
+                sendText(exchange, 200, "text/html; charset=utf-8", StaticReaderAssets.INDEX_HTML);
+            }
+        } finally {
+            exchange.close();
+        }
+    }
+
     private JsonObject readJsonBody(HttpExchange exchange) throws IOException {
         try (InputStream input = exchange.getRequestBody();
              InputStreamReader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
@@ -142,6 +493,127 @@ public class WebMorphologyApplication {
                 return null;
             }
             return gson.fromJson(body, JsonObject.class);
+        }
+    }
+
+    private void sendSession(HttpExchange exchange, UserSession session) throws IOException {
+        long maxAge = Math.max(0, (session.expiresAtMs - System.currentTimeMillis()) / 1000);
+        exchange.getResponseHeaders().add("Set-Cookie", SESSION_COOKIE + "=" + session.sessionToken
+                + "; Path=/; Max-Age=" + maxAge + "; HttpOnly; SameSite=Lax");
+        JsonObject payload = new JsonObject();
+        payload.addProperty("userId", session.userId);
+        payload.addProperty("username", session.username);
+        payload.addProperty("expiresAtMs", session.expiresAtMs);
+        sendJson(exchange, 200, payload);
+    }
+
+    private Optional<UserSession> currentSession(HttpExchange exchange) throws SQLException {
+        return repository.findSession(readSessionCookie(exchange));
+    }
+
+    private String readSessionCookie(HttpExchange exchange) {
+        List<String> cookies = exchange.getRequestHeaders().get("Cookie");
+        if (cookies == null) {
+            return "";
+        }
+        for (String cookieHeader : cookies) {
+            String[] parts = cookieHeader.split(";");
+            for (String part : parts) {
+                String[] pair = part.trim().split("=", 2);
+                if (pair.length == 2 && SESSION_COOKIE.equals(pair[0])) {
+                    return pair[1];
+                }
+            }
+        }
+        return "";
+    }
+
+    private List<ReadingEvent> parseEvents(JsonObject request) {
+        if (request == null || !request.has("events") || !request.get("events").isJsonArray()) {
+            return List.of();
+        }
+        List<ReadingEvent> events = new ArrayList<>();
+        JsonArray array = request.getAsJsonArray("events");
+        for (JsonElement element : array) {
+            if (element == null || !element.isJsonObject()) {
+                continue;
+            }
+            JsonObject object = element.getAsJsonObject();
+            String clientEventId = ensureUuid(getString(object, "clientEventId"));
+            events.add(new ReadingEvent(
+                    clientEventId,
+                    getString(object, "eventType"),
+                    getString(object, "workId"),
+                    getInt(object, "pageIndex", -1),
+                    getInt(object, "tokenIndex", -1),
+                    getString(object, "lemma"),
+                    getString(object, "pos"),
+                    getString(object, "featureKey"),
+                    getInt(object, "charIndex", -1),
+                    getInt(object, "visibleMs", 0),
+                    getLong(object, "occurredAtMs", System.currentTimeMillis())));
+        }
+        return events;
+    }
+
+    private String ensureUuid(String value) {
+        if (value != null && !value.isBlank()) {
+            try {
+                return UUID.fromString(value).toString();
+            } catch (IllegalArgumentException ignored) {
+                // Replace malformed client IDs so one bad event does not poison the whole batch.
+            }
+        }
+        return UUID.randomUUID().toString();
+    }
+
+    private Map<String, String> parseQuery(String rawQuery) {
+        if (rawQuery == null || rawQuery.isBlank()) {
+            return Map.of();
+        }
+        return java.util.Arrays.stream(rawQuery.split("&"))
+                .map(pair -> pair.split("=", 2))
+                .filter(arr -> arr.length == 2)
+                .collect(Collectors.toMap(arr -> urlDecode(arr[0]), arr -> urlDecode(arr[1]), (a, b) -> b));
+    }
+
+    private String getString(JsonObject object, String key) {
+        if (object == null || !object.has(key) || object.get(key).isJsonNull()) {
+            return "";
+        }
+        return object.get(key).getAsString();
+    }
+
+    private int getInt(JsonObject object, String key, int fallback) {
+        if (object == null || !object.has(key) || object.get(key).isJsonNull()) {
+            return fallback;
+        }
+        try {
+            return object.get(key).getAsInt();
+        } catch (RuntimeException ex) {
+            return fallback;
+        }
+    }
+
+    private long getLong(JsonObject object, String key, long fallback) {
+        if (object == null || !object.has(key) || object.get(key).isJsonNull()) {
+            return fallback;
+        }
+        try {
+            return object.get(key).getAsLong();
+        } catch (RuntimeException ex) {
+            return fallback;
+        }
+    }
+
+    private int parseInt(String value, int fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            return fallback;
         }
     }
 
@@ -156,6 +628,16 @@ public class WebMorphologyApplication {
             body = gson.toJson(payload);
             headers.set("Content-Type", "application/json; charset=utf-8");
         }
+        byte[] response = body.getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(status, response.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(response);
+        }
+    }
+
+    private void sendText(HttpExchange exchange, int status, String contentType, String body) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", contentType);
+        exchange.getResponseHeaders().set("Cache-Control", "no-store");
         byte[] response = body.getBytes(StandardCharsets.UTF_8);
         exchange.sendResponseHeaders(status, response.length);
         try (OutputStream os = exchange.getResponseBody()) {
@@ -211,5 +693,17 @@ public class WebMorphologyApplication {
 
     private String urlDecode(String value) {
         return URLDecoder.decode(value, StandardCharsets.UTF_8);
+    }
+
+    private static ReaderWorkCatalog loadCatalogOrEmpty() {
+        try {
+            return ReaderWorkCatalog.loadDefault();
+        } catch (IOException ex) {
+            try {
+                return ReaderWorkCatalog.loadDefault();
+            } catch (IOException ignored) {
+                throw new IllegalStateException("Unable to load reader catalog", ex);
+            }
+        }
     }
 }

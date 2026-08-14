@@ -2,6 +2,9 @@ package com.example.uqureader.webapp;
 
 import com.example.uqureader.webapp.assets.JsonlTranslationAugmenter;
 import com.example.uqureader.webapp.dictionary.TatRusDictionaryImporter;
+import com.example.uqureader.webapp.reader.ReaderRepository;
+import com.example.uqureader.webapp.reader.ReaderRepositoryFactory;
+import com.example.uqureader.webapp.reader.ReaderWorkCatalog;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.BufferedReader;
@@ -49,14 +52,29 @@ public final class Main {
 
         if (args.length > 0 && "--serve".equals(args[0])) {
             MorphologyService service = new MorphologyService();
+            ReaderWorkCatalog catalog = ReaderWorkCatalog.loadDefault();
+            ReaderRepository repository = ReaderRepositoryFactory.createDefault();
             int port = args.length > 1 ? Integer.parseInt(args[1]) : 8080;
-            WebMorphologyApplication application = new WebMorphologyApplication(service);
+            WebMorphologyApplication application = new WebMorphologyApplication(service, catalog, repository);
             HttpServer server = application.start(port);
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 server.stop(0);
                 service.close();
+                try {
+                    repository.close();
+                } catch (IOException ignored) {
+                    // Best-effort shutdown.
+                }
             }));
             System.out.printf("Server started on port %d%n", server.getAddress().getPort());
+            if (System.getenv("DATABASE_URL") == null || System.getenv("DATABASE_URL").isBlank()) {
+                String sqlitePath = System.getenv("UQUREADER_SQLITE_PATH");
+                System.out.println("Reader storage: SQLite dev mode at "
+                        + (sqlitePath == null || sqlitePath.isBlank() ? ".codex/uqureader-web-dev.db" : sqlitePath)
+                        + " (set DATABASE_URL for PostgreSQL).");
+            } else {
+                System.out.println("Reader storage: PostgreSQL.");
+            }
             System.out.flush();
         } else {
             try (MorphologyService service = new MorphologyService()) {
