@@ -460,7 +460,9 @@ public class WebMorphologyApplication {
             payload.addProperty("warmupQueued", status.warmupQueued());
             payload.addProperty("warmupCompleted", status.warmupCompleted());
             payload.addProperty("warmupFailed", status.warmupFailed());
+            payload.addProperty("foregroundRequests", status.foregroundRequests());
             payload.addProperty("expectedSentences", countCatalogSentences());
+            payload.addProperty("expectedUniqueSentences", countUniqueCatalogSentences());
             payload.addProperty("warming", status.warmupQueued() > status.warmupCompleted() + status.warmupFailed());
             sendJson(exchange, 200, payload);
         } finally {
@@ -546,6 +548,23 @@ public class WebMorphologyApplication {
         return count;
     }
 
+    private long countUniqueCatalogSentences() {
+        java.util.HashSet<String> keys = new java.util.HashSet<>();
+        for (ReaderWork work : catalog.listWorks()) {
+            int pageSize = 450;
+            int pages = Math.max(1, (int) Math.ceil(work.tokenCount / (double) pageSize));
+            for (int page = 0; page < pages; page++) {
+                for (String sentence : buildSentenceTexts(catalog.page(work.id, page, pageSize))) {
+                    String key = ttsService.cacheKeyForStatus(sentence);
+                    if (!key.isEmpty()) {
+                        keys.add(key);
+                    }
+                }
+            }
+        }
+        return keys.size();
+    }
+
     private void warmupSentenceTts(List<ReaderToken> tokens) {
         if (!ttsService.isConfigured() || tokens == null || tokens.isEmpty()) {
             return;
@@ -558,15 +577,34 @@ public class WebMorphologyApplication {
     private List<String> buildSentenceTexts(List<ReaderToken> tokens) {
         List<String> sentences = new ArrayList<>();
         StringBuilder current = new StringBuilder();
+        boolean pendingEnd = false;
         for (ReaderToken token : tokens) {
+            if (pendingEnd && !isClosingPunctuation(token.surface)) {
+                addSentence(sentences, current);
+                pendingEnd = false;
+            }
             current.append(token.prefix).append(token.surface);
             String surface = token.surface == null ? "" : token.surface;
-            if (surface.matches(".*[.!?…]+$") || current.length() >= 420) {
+            if (pendingEnd && isClosingPunctuation(surface)) {
                 addSentence(sentences, current);
+                pendingEnd = false;
+            } else if (isSentenceEnding(surface)) {
+                pendingEnd = true;
+            } else if (current.length() >= 420) {
+                addSentence(sentences, current);
+                pendingEnd = false;
             }
         }
         addSentence(sentences, current);
         return sentences;
+    }
+
+    private boolean isSentenceEnding(String surface) {
+        return surface != null && surface.matches(".*[.!?…]+$");
+    }
+
+    private boolean isClosingPunctuation(String surface) {
+        return surface != null && surface.matches("[)\\]}»”’]+");
     }
 
     private void addSentence(List<String> sentences, StringBuilder current) {

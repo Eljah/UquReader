@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class RhvoiceTtsService {
@@ -32,6 +33,7 @@ public final class RhvoiceTtsService {
         return thread;
     });
     private final ConcurrentHashMap<String, Object> locks = new ConcurrentHashMap<>();
+    private final AtomicInteger foregroundRequests = new AtomicInteger();
     private final AtomicLong warmupQueued = new AtomicLong();
     private final AtomicLong warmupCompleted = new AtomicLong();
     private final AtomicLong warmupFailed = new AtomicLong();
@@ -41,6 +43,15 @@ public final class RhvoiceTtsService {
     }
 
     public CachedAudio synthesizeCached(String text) throws IOException, InterruptedException {
+        foregroundRequests.incrementAndGet();
+        try {
+            return synthesizeCachedInternal(text);
+        } finally {
+            foregroundRequests.decrementAndGet();
+        }
+    }
+
+    private CachedAudio synthesizeCachedInternal(String text) throws IOException, InterruptedException {
         String safeText = normalizeText(text);
         Path cacheFile = cachePath(safeText);
         if (Files.isRegularFile(cacheFile) && Files.size(cacheFile) > 0) {
@@ -53,7 +64,7 @@ public final class RhvoiceTtsService {
                 if (Files.isRegularFile(cacheFile) && Files.size(cacheFile) > 0) {
                     return new CachedAudio(Files.readAllBytes(cacheFile), true, cacheFile);
                 }
-                byte[] audio = synthesize(safeText);
+                byte[] audio = synthesizeInternal(safeText);
                 Files.createDirectories(cacheFile.getParent());
                 Path temp = Files.createTempFile(cacheFile.getParent(), cacheFile.getFileName().toString(), ".tmp");
                 try {
@@ -87,7 +98,10 @@ public final class RhvoiceTtsService {
         warmupQueued.incrementAndGet();
         warmupExecutor.submit(() -> {
             try {
-                synthesizeCached(safeText);
+                while (foregroundRequests.get() > 0 && !Thread.currentThread().isInterrupted()) {
+                    Thread.sleep(250);
+                }
+                synthesizeCachedInternal(safeText);
                 warmupCompleted.incrementAndGet();
             } catch (IOException | InterruptedException ex) {
                 warmupFailed.incrementAndGet();
@@ -111,10 +125,20 @@ public final class RhvoiceTtsService {
                     .filter(Files::isRegularFile)
                     .count();
         }
-        return new CacheStatus(root, files, warmupQueued.get(), warmupCompleted.get(), warmupFailed.get());
+        return new CacheStatus(root, files, warmupQueued.get(), warmupCompleted.get(), warmupFailed.get(),
+                foregroundRequests.get());
     }
 
     public byte[] synthesize(String text) throws IOException, InterruptedException {
+        foregroundRequests.incrementAndGet();
+        try {
+            return synthesizeInternal(text);
+        } finally {
+            foregroundRequests.decrementAndGet();
+        }
+    }
+
+    private byte[] synthesizeInternal(String text) throws IOException, InterruptedException {
         String safeText = normalizeText(text);
         Path tempDir = createTempDirectory();
         Path input = tempDir.resolve("input.txt");
@@ -152,6 +176,14 @@ public final class RhvoiceTtsService {
         }
     }
 
+    public String cacheKeyForStatus(String text) {
+        try {
+            return cacheKey(normalizeText(text));
+        } catch (IOException ex) {
+            return "";
+        }
+    }
+
     private String normalizeText(String text) throws IOException {
         String safeText = text == null ? "" : text.trim();
         if (safeText.isEmpty()) {
@@ -160,7 +192,17 @@ public final class RhvoiceTtsService {
         if (safeText.length() > MAX_TEXT_CHARS) {
             safeText = safeText.substring(0, MAX_TEXT_CHARS);
         }
-        return safeText;
+        return normalizeForTatarVoice(safeText);
+    }
+
+    private String normalizeForTatarVoice(String text) {
+        return text
+                .replace('ӱ', 'ү')
+                .replace('Ӱ', 'Ү')
+                .replace('ӧ', 'ө')
+                .replace('Ӧ', 'Ө')
+                .replace('ҥ', 'ң')
+                .replace('Ҥ', 'Ң');
     }
 
     private List<String> buildCommand(Path input, Path output) {
@@ -272,6 +314,7 @@ public final class RhvoiceTtsService {
     public record CachedAudio(byte[] audio, boolean cacheHit, Path path) {
     }
 
-    public record CacheStatus(Path root, long wavFiles, long warmupQueued, long warmupCompleted, long warmupFailed) {
+    public record CacheStatus(Path root, long wavFiles, long warmupQueued, long warmupCompleted, long warmupFailed,
+                              int foregroundRequests) {
     }
 }

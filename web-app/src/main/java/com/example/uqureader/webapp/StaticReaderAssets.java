@@ -66,6 +66,10 @@ final class StaticReaderAssets {
                       <dt>Признаки</dt><dd id="tokenFeatures"></dd>
                       <dt>Перевод</dt><dd id="tokenTranslations"></dd>
                     </dl>
+                    <section id="tokenAnalysesSection" class="analysis-variants hidden">
+                      <h3>Варианты Vienna</h3>
+                      <div id="tokenAnalyses"></div>
+                    </section>
                     <button id="speakToken">Озвучить</button>
                   </aside>
                 </section>
@@ -265,6 +269,49 @@ final class StaticReaderAssets {
             .token-sheet dl { display: grid; grid-template-columns: 96px 1fr; gap: 8px 12px; margin: 0 0 16px; }
             .token-sheet dt { color: var(--muted); }
             .token-sheet dd { margin: 0; }
+            .analysis-variants {
+              margin: 0 0 16px;
+              padding-top: 12px;
+              border-top: 1px solid rgba(36, 50, 77, .26);
+            }
+            .analysis-variants h3 {
+              margin: 0 0 8px;
+              font-size: 16px;
+              color: var(--primary);
+            }
+            .analysis-variant {
+              display: grid;
+              gap: 4px;
+              padding: 8px 0;
+              border-bottom: 1px solid rgba(36, 50, 77, .16);
+              font-size: 14px;
+            }
+            .analysis-variant:last-child { border-bottom: 0; }
+            .analysis-variant strong { color: var(--primary); }
+            .analysis-variant span { color: var(--muted); overflow-wrap: anywhere; }
+            .analysis-feature-rows {
+              display: grid;
+              gap: 6px;
+              margin-top: 4px;
+            }
+            .analysis-feature-row {
+              display: grid;
+              grid-template-columns: minmax(64px, 112px) 1fr;
+              gap: 8px;
+              align-items: start;
+              padding: 6px 8px;
+              border: 1px solid rgba(36, 50, 77, .12);
+              background: rgba(255, 255, 255, .5);
+            }
+            .analysis-feature-segment {
+              color: var(--primary);
+              font-weight: 700;
+              overflow-wrap: anywhere;
+            }
+            .analysis-feature-description {
+              color: var(--muted);
+              overflow-wrap: anywhere;
+            }
             #closeSheet { position: absolute; right: 10px; top: 10px; min-width: 34px; width: 34px; height: 34px; padding: 0; }
             .stats-panel {
               position: fixed;
@@ -412,6 +459,43 @@ final class StaticReaderAssets {
               };
             }
 
+            function tokenPayloads(token, eventType, visibleMs = 0) {
+              const variants = Array.isArray(token.analyses) ? token.analyses : [];
+              const payloads = [];
+              const seen = new Set();
+              for (const variant of variants) {
+                const morph = variant.morphology || {};
+                const lemma = variant.lemma || morph.lemma || '';
+                const pos = morph.pos || firstNonEmpty(variant.pos || []);
+                if (!lemma || !pos) continue;
+                const featureKey = morph.featureKey || [pos, ...(morph.features || []).map(f => f.code).filter(Boolean)].filter(Boolean).join('+');
+                const key = `${lemma}\u0000${pos}\u0000${featureKey}\u0000${eventType}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                payloads.push({
+                  clientEventId: eventId(),
+                  eventType,
+                  workId: state.workId,
+                  pageIndex: state.pageIndex,
+                  tokenIndex: token.index,
+                  lemma,
+                  pos,
+                  featureKey,
+                  charIndex: token.charStart,
+                  visibleMs,
+                  occurredAtMs: Date.now()
+                });
+              }
+              return payloads.length ? payloads : [tokenPayload(token, eventType, visibleMs)];
+            }
+
+            function firstNonEmpty(values) {
+              for (const value of values || []) {
+                if (value) return value;
+              }
+              return '';
+            }
+
             function enqueue(events) {
               if (!Array.isArray(events)) events = [events];
               state.queue.push(...events);
@@ -473,7 +557,7 @@ final class StaticReaderAssets {
               for (const token of state.tokens) {
                 const total = state.visibleMs.get(token.index) || 0;
                 if (total >= 700) {
-                  events.push(tokenPayload(token, finalCommit ? 'token_committed' : 'token_exposed', total));
+                  events.push(...tokenPayloads(token, finalCommit ? 'token_committed' : 'token_exposed', total));
                   state.visibleMs.set(token.index, 0);
                 }
               }
@@ -664,8 +748,83 @@ final class StaticReaderAssets {
               $('tokenPos').textContent = formatPos(morph.pos);
               $('tokenFeatures').textContent = formatMorphFeatures(morph.features || []);
               $('tokenTranslations').textContent = (token.translations || []).join(', ') || '—';
+              renderAnalysisVariants(token.analyses || []);
               $('tokenSheet').classList.remove('hidden');
-              enqueue(tokenPayload(token, 'token_lookup'));
+              enqueue(tokenPayloads(token, 'token_lookup'));
+            }
+
+            function renderAnalysisVariants(analyses) {
+              const section = $('tokenAnalysesSection');
+              const container = $('tokenAnalyses');
+              if (!analyses || analyses.length === 0) {
+                container.innerHTML = '';
+                section.classList.add('hidden');
+                return;
+              }
+              section.classList.remove('hidden');
+              container.innerHTML = analyses.map((variant, index) => {
+                const segments = formatViennaSegments(variant.segments || []);
+                const gloss = (variant.gloss || []).filter(Boolean).join(' ');
+                const pos = (variant.pos || []).filter(Boolean).join(' ');
+                const descriptions = [
+                  ...(variant.posDescriptions || []),
+                  ...(variant.glossDescriptions || [])
+                ].filter(Boolean).join('; ');
+                const translations = (variant.translations || []).filter(Boolean).join(', ');
+                const morphology = variant.morphology || {};
+                const features = morphology.features ? formatMorphFeatures(morphology.features) : '';
+                return `
+                  <div class="analysis-variant">
+                    <strong>${index + 1}. ${escapeHtml(variant.lemma || morphology.lemma || '—')}</strong>
+                    <span>${escapeHtml(segments || variant.analysis || '—')}</span>
+                    <span>${escapeHtml([pos, gloss].filter(Boolean).join(' · ') || '—')}</span>
+                    <span><b>Признаки:</b></span>
+                    ${renderAnalysisFeatureRows(variant.featureRows || [], descriptions || (features && features !== '—' ? features : ''))}
+                    <span><b>Перевод леммы:</b> ${escapeHtml(translations || '—')}</span>
+                  </div>
+                `;
+              }).join('');
+            }
+
+            function renderAnalysisFeatureRows(rows, fallback) {
+              const visible = (rows || []).filter(row => {
+                const descriptions = (row.descriptions || []).filter(Boolean);
+                return row.segment || row.pos || row.gloss || descriptions.length > 0;
+              });
+              if (visible.length === 0) {
+                return `<span>${escapeHtml(fallback || '—')}</span>`;
+              }
+              return `
+                <div class="analysis-feature-rows">
+                  ${visible.map(row => {
+                    const descriptions = (row.descriptions || []).filter(Boolean).join('; ');
+                    const codes = [row.pos, isGrammarGloss(row.gloss) ? row.gloss : ''].filter(Boolean).join(' · ');
+                    const text = descriptions || codes;
+                    return `
+                      <div class="analysis-feature-row">
+                        <span class="analysis-feature-segment">${escapeHtml(formatViennaSegmentLabel(row.segment))}</span>
+                        <span class="analysis-feature-description">${escapeHtml(text || '—')}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `;
+            }
+
+            function formatViennaSegments(segments) {
+              return (segments || [])
+                .filter(Boolean)
+                .map((segment, index) => index === 0 ? segment : segment.replace(/^-+/, ''))
+                .join('-');
+            }
+
+            function formatViennaSegmentLabel(segment) {
+              if (!segment) return '—';
+              return segment.startsWith('-') ? `-${segment.replace(/^-+/, '')}` : segment;
+            }
+
+            function isGrammarGloss(gloss) {
+              return /^-?[A-Z0-9_.]+$/.test(gloss || '');
             }
 
             function formatPos(code) {
@@ -715,21 +874,40 @@ final class StaticReaderAssets {
             function buildSentenceRanges() {
               const ranges = [];
               let current = null;
-              let text = '';
+              let pendingEnd = false;
               for (let i = 0; i < state.tokens.length; i++) {
                 const token = state.tokens[i];
+                if (pendingEnd && !isClosingPunctuation(token.surface)) {
+                  pushSentence(ranges, current);
+                  current = null;
+                  pendingEnd = false;
+                }
                 if (!current) current = {startToken: i, endToken: i, text: ''};
                 const part = `${token.prefix || ''}${token.surface || ''}`;
                 current.text += part;
-                text += part;
                 current.endToken = i;
-                if (/[.!?…]+$/u.test(token.surface || '') || current.text.length >= 420) {
+                if (pendingEnd && isClosingPunctuation(token.surface)) {
                   pushSentence(ranges, current);
                   current = null;
+                  pendingEnd = false;
+                } else if (isSentenceEnding(token.surface)) {
+                  pendingEnd = true;
+                } else if (current.text.length >= 420) {
+                  pushSentence(ranges, current);
+                  current = null;
+                  pendingEnd = false;
                 }
               }
               pushSentence(ranges, current);
               return ranges;
+            }
+
+            function isSentenceEnding(surface) {
+              return /[.!?…]+$/u.test(surface || '');
+            }
+
+            function isClosingPunctuation(surface) {
+              return /^[)\\]}»”’]+$/u.test(surface || '');
             }
 
             function pushSentence(ranges, range) {
@@ -827,7 +1005,7 @@ final class StaticReaderAssets {
                 await state.speech.audio.play();
                 startProgressUpdates();
                 prefetchSentences(index + 1);
-                enqueue(range.tokens.map(t => tokenPayload(t, 'token_tts_played')));
+                enqueue(range.tokens.flatMap(t => tokenPayloads(t, 'token_tts_played')));
                 setSpeechStatus(`Озвучивает Talgat: ${index + 1}/${state.speech.ranges.length}`);
               } catch (error) {
                 state.speech.mode = 'idle';
@@ -960,7 +1138,7 @@ final class StaticReaderAssets {
                   setSpeechStatus('');
                 });
                 await audio.play();
-                enqueue(tokenPayload(token, 'token_tts_played'));
+                enqueue(tokenPayloads(token, 'token_tts_played'));
                 setSpeechStatus('Озвучивает Talgat');
               } catch (error) {
                 setSpeechStatus(error.message);

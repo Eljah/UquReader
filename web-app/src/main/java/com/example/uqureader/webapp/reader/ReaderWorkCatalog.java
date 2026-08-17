@@ -22,6 +22,9 @@ import java.util.Optional;
 
 public final class ReaderWorkCatalog {
     private static final int DEFAULT_PAGE_SIZE = 450;
+    private static final Map<String, String> KNOWN_TITLES = Map.of(
+            "elnet_puncheryshte", "Элнет пӱнчерыште"
+    );
 
     private final Map<String, ReaderWork> works;
 
@@ -81,6 +84,10 @@ public final class ReaderWorkCatalog {
         if (Files.isDirectory(androidAssets)) {
             return androidAssets;
         }
+        Path siblingAndroidAssets = Path.of("..", "android-app", "src", "main", "assets");
+        if (Files.isDirectory(siblingAndroidAssets)) {
+            return siblingAndroidAssets;
+        }
         return Path.of("src", "main", "resources", "assets");
     }
 
@@ -100,12 +107,14 @@ public final class ReaderWorkCatalog {
                 String prefix = getString(object, "prefix");
                 String surface = getString(object, "surface");
                 String analysis = getString(object, "analysis");
+                List<ReaderAnalysisVariant> analyses = getAnalyses(object, surface);
                 List<String> translations = getStringList(object, "translations");
                 cursor += prefix.length();
                 int start = cursor;
                 cursor += surface.length();
-                MorphologyData morphology = WebMorphologyParser.parse(surface, analysis);
-                tokens.add(new ReaderToken(tokens.size(), start, cursor, prefix, surface, analysis, morphology, translations));
+                MorphologyData morphology = primaryMorphology(surface, analysis, analyses);
+                tokens.add(new ReaderToken(tokens.size(), start, cursor, prefix, surface, analysis,
+                        morphology, analyses, translations));
             }
         }
         String fileName = path.getFileName().toString();
@@ -136,12 +145,141 @@ public final class ReaderWorkCatalog {
         return result;
     }
 
+    private static List<ReaderAnalysisVariant> getAnalyses(JsonObject object, String surface) {
+        JsonElement value = object.get("analyses");
+        if (value == null || !value.isJsonArray()) {
+            return List.of();
+        }
+        List<ReaderAnalysisVariant> result = new ArrayList<>();
+        for (JsonElement element : value.getAsJsonArray()) {
+            if (element == null || !element.isJsonObject()) {
+                continue;
+            }
+            JsonObject variant = element.getAsJsonObject();
+            String analysis = getString(variant, "analysis");
+            String lemma = getString(variant, "lemma");
+            List<String> segments = getStringList(variant, "segments");
+            List<String> gloss = getStringList(variant, "gloss");
+            List<String> pos = getStringList(variant, "pos");
+            List<String> translations = getStringList(variant, "translations");
+            List<String> posDescriptions = pos.stream()
+                    .map(ViennaGrammarCatalog::describePos)
+                    .filter(description -> !description.isBlank())
+                    .toList();
+            List<String> glossDescriptions = gloss.stream()
+                    .skip(1)
+                    .map(ViennaGrammarCatalog::describeFeatureGloss)
+                    .filter(description -> !description.isBlank())
+                    .toList();
+            List<ReaderAnalysisFeatureRow> featureRows = buildFeatureRows(segments, gloss, pos);
+            MorphologyData morphology = buildViennaMorphology(lemma, analysis, segments, gloss, pos);
+            result.add(new ReaderAnalysisVariant(analysis, lemma, segments, gloss, pos, translations,
+                    posDescriptions, glossDescriptions, featureRows, morphology));
+        }
+        return result;
+    }
+
+    private static MorphologyData primaryMorphology(String surface, String analysis,
+                                                    List<ReaderAnalysisVariant> analyses) {
+        if (analyses != null && !analyses.isEmpty() && analyses.get(0).morphology != null) {
+            return analyses.get(0).morphology;
+        }
+        return WebMorphologyParser.parse(surface, analysis);
+    }
+
+    private static MorphologyData buildViennaMorphology(String lemma, String analysis, List<String> segments,
+                                                        List<String> gloss, List<String> pos) {
+        String primaryPos = firstNonEmpty(pos);
+        List<MorphFeatureData> features = new ArrayList<>();
+        int max = Math.max(segments.size(), Math.max(gloss.size(), pos.size()));
+        for (int index = 1; index < max; index++) {
+            String code = firstNonEmpty(getAt(pos, index), getAt(gloss, index));
+            String canonical = getAt(gloss, index);
+            String actual = getAt(segments, index);
+            if (!code.isBlank() || !canonical.isBlank() || !actual.isBlank()) {
+                features.add(new MorphFeatureData(code, canonical, actual));
+            }
+        }
+        String featureKey = buildViennaFeatureKey(primaryPos, features);
+        return new MorphologyData(lemma, primaryPos, features, segments, featureKey, analysis);
+    }
+
+    private static String buildViennaFeatureKey(String pos, List<MorphFeatureData> features) {
+        StringBuilder builder = new StringBuilder(pos == null ? "" : pos);
+        for (MorphFeatureData feature : features) {
+            if (feature.code == null || feature.code.isBlank()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append('+');
+            }
+            builder.append(feature.code);
+        }
+        return builder.toString();
+    }
+
+    private static String firstNonEmpty(List<String> values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private static String firstNonEmpty(String first, String second) {
+        return first != null && !first.isBlank() ? first : second == null ? "" : second;
+    }
+
+    private static List<ReaderAnalysisFeatureRow> buildFeatureRows(List<String> segments, List<String> gloss,
+                                                                   List<String> pos) {
+        int max = Math.max(segments.size(), Math.max(gloss.size(), pos.size()));
+        if (max == 0) {
+            return List.of();
+        }
+        List<ReaderAnalysisFeatureRow> rows = new ArrayList<>();
+        for (int index = 0; index < max; index++) {
+            String segment = getAt(segments, index);
+            String posCode = getAt(pos, index);
+            String glossCode = getAt(gloss, index);
+            List<String> descriptions = new ArrayList<>();
+            String posDescription = ViennaGrammarCatalog.describePos(posCode);
+            if (!posDescription.isBlank()) {
+                descriptions.add(posDescription);
+            }
+            String glossDescription = ViennaGrammarCatalog.describeFeatureGloss(glossCode);
+            if (!glossDescription.isBlank()) {
+                descriptions.add(glossDescription);
+            }
+            rows.add(new ReaderAnalysisFeatureRow(segment, posCode, glossCode, descriptions));
+        }
+        return rows;
+    }
+
+    private static String getAt(List<String> values, int index) {
+        return index >= 0 && index < values.size() ? values.get(index) : "";
+    }
+
     private static String normalizeId(String value) {
         return value.trim().toLowerCase(Locale.ROOT).replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}]+", "_")
                 .replaceAll("^_+|_+$", "");
     }
 
     private static String prettifyTitle(String id) {
+        String known = KNOWN_TITLES.get(id);
+        if (known != null) {
+            return known;
+        }
+        if (id.endsWith("_vienna")) {
+            String base = id.substring(0, id.length() - "_vienna".length());
+            String baseTitle = KNOWN_TITLES.get(base);
+            if (baseTitle != null) {
+                return baseTitle + " · Vienna";
+            }
+        }
         String[] parts = id.replace('_', ' ').split("\\s+");
         StringBuilder builder = new StringBuilder();
         for (String part : parts) {
