@@ -98,6 +98,7 @@ final class StaticReaderAssets {
               --speech: rgba(36, 50, 77, .12);
               --speech-token: rgba(194, 68, 50, .28);
               --shadow: rgba(36, 50, 77, .24);
+              --loading-track: rgba(36, 50, 77, .18);
             }
             * { box-sizing: border-box; }
             body {
@@ -204,6 +205,7 @@ final class StaticReaderAssets {
             }
             .speech-status { color: var(--toolbar-icon); font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
             .page {
+              position: relative;
               width: calc(100vw - 48px);
               max-width: 980px;
               min-height: calc(100vh - 56px - 56px);
@@ -250,6 +252,39 @@ final class StaticReaderAssets {
               background: var(--speech-token);
               color: var(--accent-red);
               box-shadow: inset 0 0 0 2px var(--accent-red);
+            }
+            .page.loading {
+              opacity: .68;
+            }
+            .page-loading {
+              display: grid;
+              justify-items: center;
+              align-content: center;
+              min-height: 320px;
+              gap: 16px;
+              color: var(--primary);
+              text-align: center;
+            }
+            .page-spinner {
+              width: 44px;
+              height: 44px;
+              border-radius: 50%;
+              border: 4px solid var(--loading-track);
+              border-top-color: var(--accent-red);
+              animation: page-spin .8s linear infinite;
+            }
+            .page-loading strong {
+              font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI", system-ui, sans-serif;
+              font-size: 18px;
+              letter-spacing: 0;
+            }
+            .page-loading span {
+              font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI", system-ui, sans-serif;
+              font-size: 14px;
+              color: var(--muted);
+            }
+            @keyframes page-spin {
+              to { transform: rotate(360deg); }
             }
             .token-sheet {
               position: fixed;
@@ -395,6 +430,8 @@ final class StaticReaderAssets {
               workId: null,
               pageIndex: 0,
               pageSize: 450,
+              pageRequestId: 0,
+              isLoadingPage: false,
               hasNext: false,
               tokens: [],
               visibleSince: new Map(),
@@ -610,31 +647,81 @@ final class StaticReaderAssets {
             }
 
             async function loadPage(pageIndex) {
+              const requestId = ++state.pageRequestId;
+              const targetPage = Math.max(0, pageIndex);
+              const targetWork = state.workId;
+              setPageLoading(true, targetPage);
               stopSpeech(false);
               commitVisible(true);
+              await new Promise(resolve => requestAnimationFrame(resolve));
               await flushEvents();
-              state.pageIndex = Math.max(0, pageIndex);
-              const data = await api(`/api/works/${encodeURIComponent(state.workId)}/tokens?page=${state.pageIndex}&pageSize=${state.pageSize}`);
-              state.tokens = data.tokens || [];
-              state.hasNext = Boolean(data.hasNext);
-              renderPage();
-              await api('/api/reading/state', {
-                method: 'POST',
-                body: JSON.stringify({workId: state.workId, pageIndex: state.pageIndex, charIndex: state.tokens[0]?.charStart || 0})
-              });
-              enqueue({
-                clientEventId: eventId(),
-                eventType: 'page_visible',
-                workId: state.workId,
-                pageIndex: state.pageIndex,
-                tokenIndex: -1,
-                lemma: '',
-                pos: '',
-                featureKey: '',
-                charIndex: state.tokens[0]?.charStart || 0,
-                visibleMs: 0,
-                occurredAtMs: Date.now()
-              });
+              try {
+                const data = await api(`/api/works/${encodeURIComponent(targetWork)}/tokens?page=${targetPage}&pageSize=${state.pageSize}`);
+                if (requestId !== state.pageRequestId || targetWork !== state.workId) return;
+                state.pageIndex = targetPage;
+                state.tokens = data.tokens || [];
+                state.hasNext = Boolean(data.hasNext);
+                renderPage();
+                await api('/api/reading/state', {
+                  method: 'POST',
+                  body: JSON.stringify({workId: state.workId, pageIndex: state.pageIndex, charIndex: state.tokens[0]?.charStart || 0})
+                });
+                enqueue({
+                  clientEventId: eventId(),
+                  eventType: 'page_visible',
+                  workId: state.workId,
+                  pageIndex: state.pageIndex,
+                  tokenIndex: -1,
+                  lemma: '',
+                  pos: '',
+                  featureKey: '',
+                  charIndex: state.tokens[0]?.charStart || 0,
+                  visibleMs: 0,
+                  occurredAtMs: Date.now()
+                });
+              } catch (error) {
+                if (requestId === state.pageRequestId) {
+                  renderPageError(error);
+                }
+              } finally {
+                if (requestId === state.pageRequestId) {
+                  setPageLoading(false);
+                }
+              }
+            }
+
+            function setPageLoading(loading, pageIndex = state.pageIndex) {
+              state.isLoadingPage = loading;
+              const page = $('page');
+              page.classList.toggle('loading', loading);
+              if (loading) {
+                if (state.observer) state.observer.disconnect();
+                page.innerHTML = `
+                  <div class="page-loading">
+                    <div class="page-spinner" aria-hidden="true"></div>
+                    <strong>Загрузка книги</strong>
+                    <span>Страница ${pageIndex + 1}</span>
+                  </div>`;
+              }
+              updateReaderControls();
+            }
+
+            function updateReaderControls() {
+              $('workSelect').disabled = state.isLoadingPage;
+              $('prevPage').disabled = state.isLoadingPage || state.pageIndex === 0;
+              $('nextPage').disabled = state.isLoadingPage || !state.hasNext;
+              $('speakPage').disabled = state.isLoadingPage || state.tokens.length === 0;
+              $('pageStatus').textContent = state.isLoadingPage ? 'Загрузка...' : `${state.pageIndex + 1}`;
+            }
+
+            function renderPageError(error) {
+              $('page').innerHTML = `
+                <div class="page-loading">
+                  <strong>Не удалось загрузить книгу</strong>
+                  <span>${escapeHtml(error.message || 'Ошибка загрузки')}</span>
+                </div>`;
+              state.tokens = [];
+              state.hasNext = false;
             }
 
             function renderPage() {
@@ -663,9 +750,8 @@ final class StaticReaderAssets {
                 paragraph.append(span);
               }
               page.append(fragment);
-              $('pageStatus').textContent = `${state.pageIndex + 1}`;
-              $('prevPage').disabled = state.pageIndex === 0;
-              $('nextPage').disabled = !state.hasNext;
+              page.classList.remove('loading');
+              updateReaderControls();
               state.speech.ranges = buildSentenceRanges();
               state.observer = new IntersectionObserver(entries => {
                 const now = performance.now();
