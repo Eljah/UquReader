@@ -825,8 +825,24 @@ final class StaticReaderAssets {
                 .replace(/--/g, '—');
             }
 
-            function openToken(token) {
+            async function openToken(token) {
               state.selectedToken = token;
+              renderTokenSheet(token);
+              $('tokenSheet').classList.remove('hidden');
+              enqueue(tokenPayloads(token, 'token_lookup'));
+              if (token.fullAnalysesLoaded || token.loadingAnalyses) return;
+              token.loadingAnalyses = true;
+              try {
+                const data = await api(`/api/works/${encodeURIComponent(state.workId)}/tokens/${token.index}`);
+                if (state.selectedToken !== token || !data.token) return;
+                Object.assign(token, data.token, {fullAnalysesLoaded: true, loadingAnalyses: false});
+                renderTokenSheet(token);
+              } catch (_) {
+                token.loadingAnalyses = false;
+              }
+            }
+
+            function renderTokenSheet(token) {
               const morph = token.morphology || {};
               $('tokenSurface').textContent = token.surface;
               $('tokenLemma').textContent = morph.lemma || '—';
@@ -835,8 +851,6 @@ final class StaticReaderAssets {
               $('tokenFeatures').textContent = formatMorphFeatures(morph.features || []);
               $('tokenTranslations').textContent = (token.translations || []).join(', ') || '—';
               renderAnalysisVariants(token.analyses || []);
-              $('tokenSheet').classList.remove('hidden');
-              enqueue(tokenPayloads(token, 'token_lookup'));
             }
 
             function renderAnalysisVariants(analyses) {

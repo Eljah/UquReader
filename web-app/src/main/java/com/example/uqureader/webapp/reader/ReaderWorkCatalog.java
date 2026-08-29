@@ -75,6 +75,14 @@ public final class ReaderWorkCatalog {
         return work.tokens.subList(start, end);
     }
 
+    public Optional<ReaderToken> token(String workId, int index) {
+        ReaderWork work = works.get(workId);
+        if (work == null || index < 0 || index >= work.tokens.size()) {
+            return Optional.empty();
+        }
+        return Optional.of(work.tokens.get(index));
+    }
+
     private static Path resolveAssetsDir() {
         String override = System.getenv("UQUREADER_ASSETS_DIR");
         if (override != null && !override.isBlank()) {

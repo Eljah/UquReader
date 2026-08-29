@@ -305,6 +305,19 @@ public class WebMorphologyApplication {
                 sendNotFound(exchange, workId);
                 return;
             }
+            if (parts.length >= 6 && !parts[5].isBlank()) {
+                int tokenIndex = parseInt(parts[5], -1);
+                Optional<ReaderToken> token = catalog.token(workId, tokenIndex);
+                if (token.isEmpty()) {
+                    sendNotFound(exchange, exchange.getRequestURI().getPath());
+                    return;
+                }
+                JsonObject payload = new JsonObject();
+                payload.addProperty("workId", workId);
+                payload.add("token", gson.toJsonTree(token.get()));
+                sendJson(exchange, 200, payload);
+                return;
+            }
             Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
             int pageIndex = parseInt(query.get("page"), 0);
             int pageSize = parseInt(query.get("pageSize"), 450);
@@ -318,13 +331,35 @@ public class WebMorphologyApplication {
             payload.addProperty("hasNext", (pageIndex + 1) * pageSize < work.get().tokenCount);
             JsonArray array = new JsonArray();
             for (ReaderToken token : tokens) {
-                array.add(gson.toJsonTree(token));
+                array.add(toPageTokenJson(token));
             }
             payload.add("tokens", array);
             sendJson(exchange, 200, payload);
         } finally {
             exchange.close();
         }
+    }
+
+    private JsonObject toPageTokenJson(ReaderToken token) {
+        JsonObject item = new JsonObject();
+        item.addProperty("index", token.index);
+        item.addProperty("charStart", token.charStart);
+        item.addProperty("charEnd", token.charEnd);
+        item.addProperty("prefix", token.prefix);
+        item.addProperty("surface", token.surface);
+        item.addProperty("analysis", token.analysis);
+        item.add("morphology", gson.toJsonTree(token.morphology));
+        item.add("translations", gson.toJsonTree(token.translations));
+        JsonArray analyses = new JsonArray();
+        for (var variant : token.analyses) {
+            JsonObject analysis = new JsonObject();
+            analysis.addProperty("lemma", variant.lemma);
+            analysis.add("pos", gson.toJsonTree(variant.pos));
+            analysis.add("morphology", gson.toJsonTree(variant.morphology));
+            analyses.add(analysis);
+        }
+        item.add("analyses", analyses);
+        return item;
     }
 
     private void handleGrammar(HttpExchange exchange) throws IOException {
