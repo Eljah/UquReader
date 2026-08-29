@@ -35,6 +35,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +53,15 @@ public class WebMorphologyApplication {
     private final ReaderRepository repository;
     private final RhvoiceTtsService ttsService = new RhvoiceTtsService();
     private final Gson gson = new Gson();
+    private final ExecutorService httpExecutor = Executors.newFixedThreadPool(
+            Math.max(4, Math.min(16, Runtime.getRuntime().availableProcessors() * 2)),
+            runnable -> {
+                Thread thread = new Thread(runnable, "uqureader-http");
+                thread.setDaemon(true);
+                return thread;
+            });
+    private volatile long catalogSentenceCount = -1;
+    private volatile long uniqueCatalogSentenceCount = -1;
 
     public WebMorphologyApplication(MorphologyService service) {
         this(service, loadCatalogOrEmpty(), new InMemoryReaderRepository());
@@ -92,7 +103,7 @@ public class WebMorphologyApplication {
         server.createContext("/api/tts/speech", this::handleTtsPage);
         server.createContext("/reader", this::handleReaderApp);
         server.createContext("/reader/", this::handleReaderApp);
-        server.setExecutor(null); // use the default executor
+        server.setExecutor(httpExecutor);
         server.start();
         warmupCatalogTts();
         return server;
@@ -100,6 +111,7 @@ public class WebMorphologyApplication {
 
     public void close() {
         ttsService.close();
+        httpExecutor.shutdownNow();
     }
 
     private void handleRoot(HttpExchange exchange) throws IOException {
@@ -297,7 +309,6 @@ public class WebMorphologyApplication {
             int pageIndex = parseInt(query.get("page"), 0);
             int pageSize = parseInt(query.get("pageSize"), 450);
             List<ReaderToken> tokens = catalog.page(workId, pageIndex, pageSize);
-            warmupSentenceTts(tokens);
             JsonObject payload = new JsonObject();
             payload.addProperty("workId", workId);
             payload.addProperty("title", work.get().title);
@@ -461,8 +472,8 @@ public class WebMorphologyApplication {
             payload.addProperty("warmupCompleted", status.warmupCompleted());
             payload.addProperty("warmupFailed", status.warmupFailed());
             payload.addProperty("foregroundRequests", status.foregroundRequests());
-            payload.addProperty("expectedSentences", countCatalogSentences());
-            payload.addProperty("expectedUniqueSentences", countUniqueCatalogSentences());
+            payload.addProperty("expectedSentences", cachedCatalogSentenceCount());
+            payload.addProperty("expectedUniqueSentences", cachedUniqueCatalogSentenceCount());
             payload.addProperty("warming", status.warmupQueued() > status.warmupCompleted() + status.warmupFailed());
             sendJson(exchange, 200, payload);
         } finally {
@@ -546,6 +557,32 @@ public class WebMorphologyApplication {
             }
         }
         return count;
+    }
+
+    private long cachedCatalogSentenceCount() {
+        long count = catalogSentenceCount;
+        if (count >= 0) {
+            return count;
+        }
+        synchronized (this) {
+            if (catalogSentenceCount < 0) {
+                catalogSentenceCount = countCatalogSentences();
+            }
+            return catalogSentenceCount;
+        }
+    }
+
+    private long cachedUniqueCatalogSentenceCount() {
+        long count = uniqueCatalogSentenceCount;
+        if (count >= 0) {
+            return count;
+        }
+        synchronized (this) {
+            if (uniqueCatalogSentenceCount < 0) {
+                uniqueCatalogSentenceCount = countUniqueCatalogSentences();
+            }
+            return uniqueCatalogSentenceCount;
+        }
     }
 
     private long countUniqueCatalogSentences() {

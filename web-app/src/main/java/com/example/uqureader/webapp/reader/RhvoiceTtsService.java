@@ -37,9 +37,21 @@ public final class RhvoiceTtsService {
     private final AtomicLong warmupQueued = new AtomicLong();
     private final AtomicLong warmupCompleted = new AtomicLong();
     private final AtomicLong warmupFailed = new AtomicLong();
+    private volatile Boolean configured;
+    private volatile CacheStatus cachedStatus;
+    private volatile long cachedStatusAtMs;
 
     public boolean isConfigured() {
-        return commandExists(defaultCommand());
+        Boolean cached = configured;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (this) {
+            if (configured == null) {
+                configured = commandExists(defaultCommand());
+            }
+            return configured;
+        }
     }
 
     public CachedAudio synthesizeCached(String text) throws IOException, InterruptedException {
@@ -117,6 +129,11 @@ public final class RhvoiceTtsService {
     }
 
     public CacheStatus cacheStatus() throws IOException {
+        long now = System.currentTimeMillis();
+        CacheStatus cached = cachedStatus;
+        if (cached != null && now - cachedStatusAtMs < 30_000) {
+            return cached;
+        }
         Path root = cacheRoot();
         long files;
         try (var stream = Files.walk(root)) {
@@ -125,8 +142,11 @@ public final class RhvoiceTtsService {
                     .filter(Files::isRegularFile)
                     .count();
         }
-        return new CacheStatus(root, files, warmupQueued.get(), warmupCompleted.get(), warmupFailed.get(),
+        CacheStatus status = new CacheStatus(root, files, warmupQueued.get(), warmupCompleted.get(), warmupFailed.get(),
                 foregroundRequests.get());
+        cachedStatus = status;
+        cachedStatusAtMs = now;
+        return status;
     }
 
     public byte[] synthesize(String text) throws IOException, InterruptedException {
