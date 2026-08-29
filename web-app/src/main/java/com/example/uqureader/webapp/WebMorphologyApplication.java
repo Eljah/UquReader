@@ -693,9 +693,7 @@ public class WebMorphologyApplication {
     }
 
     private void sendSession(HttpExchange exchange, UserSession session) throws IOException {
-        long maxAge = Math.max(0, (session.expiresAtMs - System.currentTimeMillis()) / 1000);
-        exchange.getResponseHeaders().add("Set-Cookie", SESSION_COOKIE + "=" + session.sessionToken
-                + "; Path=/; Max-Age=" + maxAge + "; HttpOnly; SameSite=Lax");
+        setSessionCookie(exchange, session);
         JsonObject payload = new JsonObject();
         payload.addProperty("userId", session.userId);
         payload.addProperty("username", session.username);
@@ -703,8 +701,16 @@ public class WebMorphologyApplication {
         sendJson(exchange, 200, payload);
     }
 
+    private void setSessionCookie(HttpExchange exchange, UserSession session) {
+        long maxAge = Math.max(0, (session.expiresAtMs - System.currentTimeMillis()) / 1000);
+        exchange.getResponseHeaders().add("Set-Cookie", SESSION_COOKIE + "=" + session.sessionToken
+                + "; Path=/; Max-Age=" + maxAge + "; HttpOnly; SameSite=Lax");
+    }
+
     private Optional<UserSession> currentSession(HttpExchange exchange) throws SQLException {
-        return repository.findSession(readSessionCookie(exchange));
+        Optional<UserSession> session = repository.findSession(readSessionCookie(exchange));
+        session.ifPresent(value -> setSessionCookie(exchange, value));
+        return session;
     }
 
     private String readSessionCookie(HttpExchange exchange) {

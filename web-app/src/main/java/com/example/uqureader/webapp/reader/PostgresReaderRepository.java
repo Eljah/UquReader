@@ -70,14 +70,15 @@ public final class PostgresReaderRepository implements ReaderRepository {
         }
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
-                     "SELECT s.user_id, u.username, s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at > now()")) {
+                     "SELECT s.user_id, u.username FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at > now()")) {
             statement.setString(1, token);
             try (ResultSet rs = statement.executeQuery()) {
                 if (!rs.next()) {
                     return Optional.empty();
                 }
-                return Optional.of(new UserSession(rs.getLong(1), rs.getString(2), token,
-                        rs.getTimestamp(3).toInstant().toEpochMilli()));
+                long expiresAtMs = System.currentTimeMillis() + SESSION_TTL_MS;
+                refreshSession(connection, token, expiresAtMs);
+                return Optional.of(new UserSession(rs.getLong(1), rs.getString(2), token, expiresAtMs));
             }
         }
     }
@@ -338,6 +339,15 @@ public final class PostgresReaderRepository implements ReaderRepository {
             statement.executeUpdate();
         }
         return new UserSession(userId, username, token, expiresAtMs);
+    }
+
+    private void refreshSession(Connection connection, String token, long expiresAtMs) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE sessions SET expires_at=? WHERE token=?")) {
+            statement.setTimestamp(1, Timestamp.from(Instant.ofEpochMilli(expiresAtMs)));
+            statement.setString(2, token);
+            statement.executeUpdate();
+        }
     }
 
     private void bindEvent(PreparedStatement statement, long userId, String sessionToken, ReadingEvent event) throws SQLException {

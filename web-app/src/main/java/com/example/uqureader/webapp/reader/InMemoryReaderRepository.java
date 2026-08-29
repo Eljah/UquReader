@@ -57,7 +57,10 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         if (session == null || session.expiresAtMs < System.currentTimeMillis()) {
             return Optional.empty();
         }
-        return Optional.of(session);
+        UserSession refreshed = new UserSession(session.userId, session.username, session.sessionToken,
+                System.currentTimeMillis() + SESSION_TTL_MS);
+        sessions.put(token, refreshed);
+        return Optional.of(refreshed);
     }
 
     @Override

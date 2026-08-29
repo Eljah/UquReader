@@ -88,7 +88,9 @@ public final class SqliteReaderRepository implements ReaderRepository {
                 if (!rs.next()) {
                     return Optional.empty();
                 }
-                return Optional.of(new UserSession(rs.getLong(1), rs.getString(2), token, rs.getLong(3)));
+                long expiresAtMs = System.currentTimeMillis() + SESSION_TTL_MS;
+                refreshSession(connection, token, expiresAtMs);
+                return Optional.of(new UserSession(rs.getLong(1), rs.getString(2), token, expiresAtMs));
             }
         }
     }
@@ -331,6 +333,15 @@ public final class SqliteReaderRepository implements ReaderRepository {
             statement.executeUpdate();
         }
         return new UserSession(userId, username, token, expiresAtMs);
+    }
+
+    private void refreshSession(Connection connection, String token, long expiresAtMs) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "UPDATE sessions SET expires_at_ms=? WHERE token=?")) {
+            statement.setLong(1, expiresAtMs);
+            statement.setString(2, token);
+            statement.executeUpdate();
+        }
     }
 
     private void bindEvent(PreparedStatement statement, long userId, String sessionToken, ReadingEvent event) throws SQLException {
