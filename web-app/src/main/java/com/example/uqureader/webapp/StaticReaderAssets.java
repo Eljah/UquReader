@@ -771,10 +771,10 @@ final class StaticReaderAssets {
                 state.pageCount = data.pageCount || 0;
                 state.sourcePage = Number.isInteger(data.sourcePage) ? data.sourcePage : -1;
                 renderPage();
-                await api('/api/reading/state', {
+                api('/api/reading/state', {
                   method: 'POST',
                   body: JSON.stringify({workId: state.workId, pageIndex: state.pageIndex, charIndex: state.tokens[0]?.charStart || 0})
-                });
+                }).catch(() => {});
                 enqueue({
                   clientEventId: eventId(),
                   eventType: 'page_visible',
