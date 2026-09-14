@@ -37,9 +37,21 @@ public final class ReaderWorkCatalog {
         Map<String, ReaderWork> loaded = new LinkedHashMap<>();
         if (Files.isDirectory(assetsDir)) {
             try (var stream = Files.list(assetsDir)) {
-                List<Path> files = stream
+                List<Path> allFiles = stream
                         .filter(path -> path.getFileName().toString().endsWith(".ttmorph.jsonl"))
                         .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                        .toList();
+                java.util.Set<String> viennaIds = allFiles.stream()
+                        .map(path -> path.getFileName().toString())
+                        .filter(name -> name.endsWith(".vienna.ttmorph.jsonl"))
+                        .map(name -> name.replace(".vienna.ttmorph.jsonl", ""))
+                        .collect(java.util.stream.Collectors.toSet());
+                List<Path> files = allFiles.stream()
+                        .filter(path -> {
+                            String name = path.getFileName().toString();
+                            String baseId = name.replace(".ttmorph.jsonl", "");
+                            return name.contains(".vienna.") || !viennaIds.contains(baseId);
+                        })
                         .toList();
                 for (Path file : files) {
                     ReaderWork work = readJsonl(file);
