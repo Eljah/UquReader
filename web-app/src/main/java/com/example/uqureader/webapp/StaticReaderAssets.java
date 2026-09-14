@@ -530,6 +530,7 @@ final class StaticReaderAssets {
               tokens: [],
               visibleSince: new Map(),
               visibleMs: new Map(),
+              exposedTokens: new Set(),
               queue: [],
               isFlushing: false,
               selectedToken: null,
@@ -723,8 +724,14 @@ final class StaticReaderAssets {
               for (const token of state.tokens) {
                 const total = state.visibleMs.get(token.index) || 0;
                 if (total >= 700) {
-                  events.push(...tokenPayloads(token, finalCommit ? 'token_committed' : 'token_exposed', total, context));
-                  state.visibleMs.set(token.index, 0);
+                  if (finalCommit) {
+                    events.push(...tokenPayloads(token, 'token_committed', total, context));
+                    state.visibleMs.set(token.index, 0);
+                    state.exposedTokens.delete(token.index);
+                  } else if (!state.exposedTokens.has(token.index)) {
+                    events.push(...tokenPayloads(token, 'token_exposed', total, context));
+                    state.exposedTokens.add(token.index);
+                  }
                 }
               }
               if (events.length) {
@@ -864,6 +871,7 @@ final class StaticReaderAssets {
               if (state.observer) state.observer.disconnect();
               state.visibleSince.clear();
               state.visibleMs.clear();
+              state.exposedTokens.clear();
               const page = $('page');
               page.textContent = '';
               const fragment = document.createDocumentFragment();
@@ -1713,6 +1721,7 @@ final class StaticReaderAssets {
               commitVisible(true);
               state.visibleSince.clear();
               state.visibleMs.clear();
+              state.exposedTokens.clear();
               flushEvents();
               state.workId = event.target.value;
               await loadPage(0);
