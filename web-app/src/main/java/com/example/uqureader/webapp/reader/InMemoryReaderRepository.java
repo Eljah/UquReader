@@ -105,13 +105,15 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public synchronized List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, int limit) {
+    public synchronized List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String lemmaQuery, int limit) {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
+        String safeQuery = normalizeLemma(lemmaQuery);
         Map<String, LemmaStats> buckets = new HashMap<>();
         for (LemmaStats stats : lemmaStats.values()) {
-            if (stats.userId != userId || !matchesScope(stats.language, safeLanguage) || !matchesScope(stats.workId, safeWorkId)) {
+            if (stats.userId != userId || !matchesScope(stats.language, safeLanguage) || !matchesScope(stats.workId, safeWorkId)
+                    || !matchesLemmaQuery(stats.lemma, safeQuery)) {
                 continue;
             }
             String key = stats.lemma + ":" + stats.pos;
@@ -151,6 +153,8 @@ public final class InMemoryReaderRepository implements ReaderRepository {
 
     private static Comparator<LemmaStat> lemmaStatComparator(String sort) {
         return switch (sort == null ? "" : sort) {
+            case "lemma" -> Comparator.comparing((LemmaStat stat) -> stat.lemma)
+                    .thenComparing(stat -> stat.pos);
             case "frequent" -> Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed()
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.committedCount).reversed())
                     .thenComparing(stat -> stat.lemma);
@@ -158,6 +162,12 @@ public final class InMemoryReaderRepository implements ReaderRepository {
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.lemma);
             case "opened" -> Comparator.comparingLong((LemmaStat stat) -> stat.lookupCount).reversed()
+                    .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
+                    .thenComparing(stat -> stat.lemma);
+            case "tts" -> Comparator.comparingLong((LemmaStat stat) -> stat.ttsCount).reversed()
+                    .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
+                    .thenComparing(stat -> stat.lemma);
+            case "visible" -> Comparator.comparingLong((LemmaStat stat) -> stat.totalVisibleMs).reversed()
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.lemma);
             default -> Comparator.comparingDouble((LemmaStat stat) -> lookupToReadRatio(stat)).reversed()
@@ -169,6 +179,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
 
     private static Comparator<FeatureStat> featureStatComparator(String sort) {
         return switch (sort == null ? "" : sort) {
+            case "lemma" -> Comparator.comparing((FeatureStat stat) -> stat.featureKey);
             case "frequent" -> Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed()
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.committedCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
@@ -176,6 +187,12 @@ public final class InMemoryReaderRepository implements ReaderRepository {
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
             case "opened" -> Comparator.comparingLong((FeatureStat stat) -> stat.lookupCount).reversed()
+                    .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed())
+                    .thenComparing(stat -> stat.featureKey);
+            case "tts" -> Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed()
+                    .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.committedCount).reversed())
+                    .thenComparing(stat -> stat.featureKey);
+            case "visible" -> Comparator.comparingLong((FeatureStat stat) -> stat.totalVisibleMs).reversed()
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
             default -> Comparator.comparingDouble((FeatureStat stat) -> lookupToReadRatio(stat)).reversed()
@@ -191,6 +208,28 @@ public final class InMemoryReaderRepository implements ReaderRepository {
 
     private static double lookupToReadRatio(FeatureStat stat) {
         return stat.committedCount > 0 ? (double) stat.lookupCount / stat.committedCount : stat.lookupCount;
+    }
+
+    private static boolean matchesLemmaQuery(String lemma, String query) {
+        if (query == null || query.isBlank()) {
+            return true;
+        }
+        String value = normalizeLemma(lemma);
+        if (!query.contains("*")) {
+            return value.contains(query);
+        }
+        int cursor = 0;
+        for (String part : query.split("\\*", -1)) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            int index = value.indexOf(part, cursor);
+            if (index < 0) {
+                return false;
+            }
+            cursor = index + part.length();
+        }
+        return true;
     }
 
     @Override

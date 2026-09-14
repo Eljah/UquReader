@@ -55,10 +55,14 @@ final class StaticReaderAssets {
                       <select id="statsWork" aria-label="Книга для статистики"></select>
                       <select id="statsSort" aria-label="Сортировка статистики">
                         <option value="problem">Проблемные</option>
+                        <option value="lemma">По алфавиту</option>
                         <option value="frequent">Частые</option>
                         <option value="read">Прочитанные</option>
                         <option value="opened">Открытые</option>
+                        <option value="tts">Озвученные</option>
+                        <option value="visible">По видимости</option>
                       </select>
+                      <input id="statsSearch" aria-label="Поиск леммы" placeholder="Лемма или маска: *лан*">
                     </div>
                     <div class="stats-tabs">
                       <button id="lemmaStatsTab" class="active">Леммы</button>
@@ -406,8 +410,8 @@ final class StaticReaderAssets {
             }
             .stats-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
             .stats-head h2 { margin: 0; font-size: 24px; color: var(--primary); letter-spacing: .05em; }
-            .stats-filters { display: grid; grid-template-columns: minmax(130px, 180px) minmax(180px, 1fr) minmax(150px, 190px); gap: 10px; padding: 12px 0 4px; }
-            .stats-filters select { width: 100%; min-height: 40px; }
+            .stats-filters { display: grid; grid-template-columns: minmax(130px, 170px) minmax(180px, 1fr) minmax(150px, 190px) minmax(170px, 220px); gap: 10px; padding: 12px 0 4px; }
+            .stats-filters select, .stats-filters input { width: 100%; min-height: 40px; }
             .stats-tabs { display: flex; gap: 8px; padding: 14px 0; }
             .stats-tabs button { background: var(--surface-muted); color: var(--primary); border-color: var(--primary); }
             .stats-tabs button.active { background: var(--primary); color: var(--toolbar-icon); }
@@ -422,6 +426,16 @@ final class StaticReaderAssets {
               font-size: 15px;
             }
             .stat-row.header { position: sticky; top: 0; background: var(--surface-muted); color: var(--muted); font-weight: 700; z-index: 1; }
+            .stat-sort {
+              min-height: 32px;
+              padding: 0;
+              border: 0;
+              background: transparent;
+              color: inherit;
+              text-align: left;
+              font-weight: 700;
+            }
+            .stat-sort:hover, .stat-sort.active { color: var(--accent-red); background: transparent; }
             .stat-row.clickable { cursor: pointer; }
             .stat-row.clickable:hover { background: var(--surface-muted); }
             .stat-main { min-width: 0; overflow-wrap: anywhere; }
@@ -437,6 +451,7 @@ final class StaticReaderAssets {
               border: 1px solid transparent;
             }
             .memory-flag.good { color: #176d3b; background: rgba(23, 109, 59, .12); border-color: rgba(23, 109, 59, .30); }
+            .memory-flag.neutral { color: var(--muted); background: rgba(36, 50, 77, .08); border-color: rgba(36, 50, 77, .18); }
             .memory-flag.warn { color: #7a5200; background: rgba(226, 193, 113, .35); border-color: rgba(122, 82, 0, .25); }
             .memory-flag.bad { color: var(--accent-red); background: rgba(194, 68, 50, .14); border-color: rgba(194, 68, 50, .32); }
             .timeline-panel {
@@ -524,6 +539,8 @@ final class StaticReaderAssets {
               statsLanguage: '',
               statsWorkId: '',
               statsSort: 'problem',
+              statsSearch: '',
+              statsSearchTimer: null,
               statsRequestId: 0,
               lastLemmaRows: [],
               statsCache: new Map(),
@@ -1418,7 +1435,7 @@ final class StaticReaderAssets {
               const requestId = ++state.statsRequestId;
               refreshStatsFilters();
               const mode = state.statsMode === 'features' ? 'features' : 'lemmas';
-              const cacheKey = `${mode}|${state.statsLanguage}|${state.statsWorkId}|${state.statsSort}`;
+              const cacheKey = `${mode}|${state.statsLanguage}|${state.statsWorkId}|${state.statsSort}|${state.statsSearch}`;
               if (state.statsCache.has(cacheKey)) {
                 if (requestId !== state.statsRequestId) return;
                 renderStatsRows(state.statsCache.get(cacheKey));
@@ -1427,6 +1444,7 @@ final class StaticReaderAssets {
               const params = new URLSearchParams({limit: '200', mode, sort: state.statsSort});
               if (state.statsLanguage) params.set('language', state.statsLanguage);
               if (state.statsWorkId) params.set('workId', state.statsWorkId);
+              if (mode === 'lemmas' && state.statsSearch) params.set('q', state.statsSearch);
               const data = await api(`/api/reading/stats?${params.toString()}`);
               if (requestId !== state.statsRequestId) return;
               const rows = mode === 'features' ? (data.features || []) : (data.lemmas || []);
@@ -1447,7 +1465,8 @@ final class StaticReaderAssets {
               const languageSelect = $('statsLanguage');
               const workSelect = $('statsWork');
               const sortSelect = $('statsSort');
-              if (!languageSelect || !workSelect || !sortSelect) return;
+              const searchInput = $('statsSearch');
+              if (!languageSelect || !workSelect || !sortSelect || !searchInput) return;
               const languages = [...new Set(state.works.map(work => work.language || '').filter(Boolean))].sort();
               if (state.statsLanguage && !languages.includes(state.statsLanguage)) state.statsLanguage = '';
               languageSelect.innerHTML = [
@@ -1463,6 +1482,7 @@ final class StaticReaderAssets {
               ].join('');
               workSelect.value = state.statsWorkId;
               sortSelect.value = state.statsSort;
+              searchInput.value = state.statsSearch;
             }
 
             function languageLabel(language) {
@@ -1473,7 +1493,15 @@ final class StaticReaderAssets {
 
             function renderLemmaStats(rows) {
               const content = $('statsContent');
-              content.innerHTML = '<div class="stat-row header"><div>Лемма</div><div>Прочитано</div><div>Открыто</div><div class="wide-only">Озвучено</div><div class="wide-only">Видимость</div></div>';
+              content.innerHTML = `
+                <div class="stat-row header">
+                  <div>${sortButton('Лемма', 'lemma')}</div>
+                  <div>${sortButton('Прочитано', 'read')}</div>
+                  <div>${sortButton('Открыто', 'opened')}</div>
+                  <div class="wide-only">${sortButton('Озвучено', 'tts')}</div>
+                  <div class="wide-only">${sortButton('Видимость', 'visible')}</div>
+                </div>`;
+              bindStatSortButtons(content);
               if (!rows.length) {
                 content.insertAdjacentHTML('beforeend', '<p class="message">Пока нет сохраненной статистики.</p>');
                 return;
@@ -1602,7 +1630,15 @@ final class StaticReaderAssets {
 
             function renderFeatureStats(rows) {
               const content = $('statsContent');
-              content.innerHTML = '<div class="stat-row header"><div>Признак</div><div>Прочитано</div><div>Открыто</div><div class="wide-only">Показано</div><div class="wide-only">Видимость</div></div>';
+              content.innerHTML = `
+                <div class="stat-row header">
+                  <div>${sortButton('Признак', 'lemma')}</div>
+                  <div>${sortButton('Прочитано', 'read')}</div>
+                  <div>${sortButton('Открыто', 'opened')}</div>
+                  <div class="wide-only">${sortButton('Показано', 'frequent')}</div>
+                  <div class="wide-only">${sortButton('Видимость', 'visible')}</div>
+                </div>`;
+              bindStatSortButtons(content);
               if (!rows.length) {
                 content.insertAdjacentHTML('beforeend', '<p class="message">Пока нет статистики по признакам.</p>');
                 return;
@@ -1624,10 +1660,26 @@ final class StaticReaderAssets {
               }
             }
 
+            function sortButton(label, sort) {
+              const active = state.statsSort === sort ? ' active' : '';
+              return `<button type="button" class="stat-sort${active}" data-sort="${escapeHtml(sort)}">${escapeHtml(label)}</button>`;
+            }
+
+            function bindStatSortButtons(root) {
+              for (const button of root.querySelectorAll('.stat-sort')) {
+                button.addEventListener('click', async event => {
+                  event.stopPropagation();
+                  state.statsSort = button.dataset.sort || 'problem';
+                  await loadStats();
+                });
+              }
+            }
+
             function memorySignal(row) {
               const readCount = Number(row.committedCount || 0);
               const lookupCount = Number(row.lookupCount || 0);
-              if (!lookupCount) return {className: 'good', label: 'усвоено'};
+              if (readCount < 5 && !lookupCount) return {className: 'neutral', label: 'мало данных'};
+              if (!lookupCount) return {className: 'good', label: 'не открывалось'};
               const ratio = lookupCount / Math.max(1, readCount);
               if (ratio >= 0.5 || lookupCount >= 8) return {className: 'bad', label: 'часто открывается'};
               if (ratio >= 0.2 || lookupCount >= 3) return {className: 'warn', label: 'повторить'};
@@ -1696,6 +1748,14 @@ final class StaticReaderAssets {
             $('statsSort').addEventListener('change', async event => {
               state.statsSort = event.target.value;
               await loadStats();
+            });
+            $('statsSearch').addEventListener('input', event => {
+              state.statsSearch = event.target.value.trim();
+              if (state.statsSearchTimer) clearTimeout(state.statsSearchTimer);
+              state.statsSearchTimer = setTimeout(() => {
+                state.statsSearchTimer = null;
+                loadStats();
+              }, 250);
             });
             document.addEventListener('visibilitychange', () => {
               if (document.hidden) {

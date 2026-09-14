@@ -226,10 +226,11 @@ public final class PostgresReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, int limit) throws SQLException {
+    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String lemmaQuery, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
+        String searchPattern = searchPattern(lemmaQuery);
         String orderBy = lemmaStatsOrderBy(sort);
         List<LemmaStat> result = new ArrayList<>();
         try (Connection connection = open();
@@ -237,13 +238,16 @@ public final class PostgresReaderRepository implements ReaderRepository {
                      "SELECT lemma, pos, SUM(exposure_count), SUM(committed_count), SUM(lookup_count), SUM(tts_count), "
                              + "SUM(total_visible_ms), MAX(last_seen_at) FROM user_lemma_scope_stats "
                              + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
+                             + "AND (?='' OR lemma ILIKE ? ESCAPE '\\') "
                              + "GROUP BY lemma, pos ORDER BY " + orderBy + " LIMIT ?")) {
             statement.setLong(1, userId);
             statement.setString(2, safeLanguage);
             statement.setString(3, safeLanguage);
             statement.setString(4, safeWorkId);
             statement.setString(5, safeWorkId);
-            statement.setInt(6, safeLimit);
+            statement.setString(6, searchPattern);
+            statement.setString(7, searchPattern);
+            statement.setInt(8, safeLimit);
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
                     result.add(new LemmaStat(rs.getString(1), rs.getString(2), safeLanguage, safeWorkId, rs.getLong(3),
@@ -326,9 +330,12 @@ public final class PostgresReaderRepository implements ReaderRepository {
 
     private static String lemmaStatsOrderBy(String sort) {
         return switch (sort == null ? "" : sort) {
+            case "lemma" -> "lemma ASC, pos ASC";
             case "frequent" -> "SUM(exposure_count) DESC, SUM(committed_count) DESC, lemma ASC";
             case "read" -> "SUM(committed_count) DESC, SUM(exposure_count) DESC, lemma ASC";
             case "opened" -> "SUM(lookup_count) DESC, SUM(exposure_count) DESC, lemma ASC";
+            case "tts" -> "SUM(tts_count) DESC, SUM(exposure_count) DESC, lemma ASC";
+            case "visible" -> "SUM(total_visible_ms) DESC, SUM(exposure_count) DESC, lemma ASC";
             default -> "CASE WHEN SUM(committed_count) > 0 THEN SUM(lookup_count)::numeric / SUM(committed_count) "
                     + "ELSE SUM(lookup_count)::numeric END DESC, SUM(lookup_count) DESC, SUM(exposure_count) DESC, lemma ASC";
         };
@@ -336,12 +343,37 @@ public final class PostgresReaderRepository implements ReaderRepository {
 
     private static String featureStatsOrderBy(String sort) {
         return switch (sort == null ? "" : sort) {
+            case "lemma" -> "feature_key ASC";
             case "frequent" -> "SUM(exposure_count) DESC, SUM(committed_count) DESC, feature_key ASC";
             case "read" -> "SUM(committed_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
             case "opened" -> "SUM(lookup_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
+            case "tts" -> "SUM(exposure_count) DESC, SUM(committed_count) DESC, feature_key ASC";
+            case "visible" -> "SUM(total_visible_ms) DESC, SUM(exposure_count) DESC, feature_key ASC";
             default -> "CASE WHEN SUM(committed_count) > 0 THEN SUM(lookup_count)::numeric / SUM(committed_count) "
                     + "ELSE SUM(lookup_count)::numeric END DESC, SUM(lookup_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
         };
+    }
+
+    private static String searchPattern(String query) {
+        if (query == null || query.isBlank()) {
+            return "";
+        }
+        String normalized = normalizeLemma(query);
+        StringBuilder builder = new StringBuilder("%");
+        for (int i = 0; i < normalized.length(); i++) {
+            char ch = normalized.charAt(i);
+            if (ch == '*') {
+                builder.append('%');
+            } else if (ch == '%' || ch == '_' || ch == '\\') {
+                builder.append('\\').append(ch);
+            } else {
+                builder.append(ch);
+            }
+        }
+        if (builder.charAt(builder.length() - 1) != '%') {
+            builder.append('%');
+        }
+        return builder.toString();
     }
 
     @Override
