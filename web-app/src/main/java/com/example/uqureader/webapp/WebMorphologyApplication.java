@@ -71,11 +71,6 @@ public class WebMorphologyApplication {
         this.service = service;
         this.catalog = catalog;
         this.repository = repository;
-        try {
-            this.repository.refreshScopedStats(this.catalog.workLanguages());
-        } catch (SQLException ex) {
-            System.err.println("Unable to refresh reading statistics: " + ex.getMessage());
-        }
     }
 
     /**
@@ -110,6 +105,7 @@ public class WebMorphologyApplication {
         server.createContext("/reader/", this::handleReaderApp);
         server.setExecutor(httpExecutor);
         server.start();
+        warmupReadingStats();
         warmupCatalogTts();
         return server;
     }
@@ -620,6 +616,18 @@ public class WebMorphologyApplication {
                 }
             }
         }, "uqureader-tts-catalog-warmup");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void warmupReadingStats() {
+        Thread thread = new Thread(() -> {
+            try {
+                repository.refreshScopedStats(catalog.workLanguages());
+            } catch (SQLException ex) {
+                System.err.println("Unable to refresh reading statistics: " + ex.getMessage());
+            }
+        }, "uqureader-reading-stats-warmup");
         thread.setDaemon(true);
         thread.start();
     }
