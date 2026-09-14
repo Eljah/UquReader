@@ -312,39 +312,28 @@ public final class SqliteReaderRepository implements ReaderRepository {
         try (Connection connection = open()) {
             connection.setAutoCommit(false);
             try {
-                if (workLanguages != null) {
-                    try (PreparedStatement statement = connection.prepareStatement(
-                            "UPDATE reading_events SET language=? WHERE work_id=? AND (language IS NULL OR language='')")) {
-                        for (Map.Entry<String, String> entry : workLanguages.entrySet()) {
-                            statement.setString(1, normalizeScope(entry.getValue()));
-                            statement.setString(2, entry.getKey());
-                            statement.addBatch();
-                        }
-                        statement.executeBatch();
-                    }
-                }
                 try (Statement statement = connection.createStatement()) {
                     statement.executeUpdate("DELETE FROM user_lemma_scope_stats");
                     statement.executeUpdate("INSERT INTO user_lemma_scope_stats(user_id, language, work_id, lemma, pos, "
                             + "exposure_count, committed_count, lookup_count, tts_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, last_char_index) "
-                            + "SELECT user_id, COALESCE(NULLIF(language, ''), 'unknown'), work_id, lower(lemma), pos, "
+                            + "SELECT user_id, CASE WHEN language<>'' THEN language WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr' ELSE 'tt' END, work_id, lower(lemma), pos, "
                             + "SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_tts_played' THEN 1 ELSE 0 END), "
                             + "SUM(visible_ms), MIN(occurred_at_ms), MAX(occurred_at_ms), MAX(char_index) "
                             + "FROM reading_events WHERE lemma<>'' AND pos<>'' "
-                            + "GROUP BY user_id, COALESCE(NULLIF(language, ''), 'unknown'), work_id, lower(lemma), pos");
+                            + "GROUP BY user_id, CASE WHEN language<>'' THEN language WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr' ELSE 'tt' END, work_id, lower(lemma), pos");
                     statement.executeUpdate("DELETE FROM user_feature_scope_stats");
                     statement.executeUpdate("INSERT INTO user_feature_scope_stats(user_id, language, work_id, feature_key, "
                             + "exposure_count, committed_count, lookup_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms) "
-                            + "SELECT user_id, COALESCE(NULLIF(language, ''), 'unknown'), work_id, feature_key, "
+                            + "SELECT user_id, CASE WHEN language<>'' THEN language WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr' ELSE 'tt' END, work_id, feature_key, "
                             + "SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END), "
                             + "SUM(visible_ms), MIN(occurred_at_ms), MAX(occurred_at_ms) "
                             + "FROM reading_events WHERE feature_key<>'' "
-                            + "GROUP BY user_id, COALESCE(NULLIF(language, ''), 'unknown'), work_id, feature_key");
+                            + "GROUP BY user_id, CASE WHEN language<>'' THEN language WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr' ELSE 'tt' END, work_id, feature_key");
                 }
                 connection.commit();
             } catch (SQLException ex) {
