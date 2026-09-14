@@ -16,6 +16,7 @@ import com.example.uqureader.webapp.reader.ReadingEventRecord;
 import com.example.uqureader.webapp.reader.ReadingEvent;
 import com.example.uqureader.webapp.reader.ReadingState;
 import com.example.uqureader.webapp.reader.RhvoiceTtsService;
+import com.example.uqureader.webapp.reader.TimelinePoint;
 import com.example.uqureader.webapp.reader.UserSession;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
@@ -95,6 +96,7 @@ public class WebMorphologyApplication {
         server.createContext("/api/works/", this::handleWork);
         server.createContext("/api/grammar", this::handleGrammar);
         server.createContext("/api/reading/events", this::handleReadingEvents);
+        server.createContext("/api/reading/timeline", this::handleReadingTimeline);
         server.createContext("/api/reading/state", this::handleReadingState);
         server.createContext("/api/reading/stats", this::handleReadingStats);
         server.createContext("/api/tts/status", this::handleTtsStatus);
@@ -485,6 +487,46 @@ public class WebMorphologyApplication {
         }
     }
 
+    private void handleReadingTimeline(HttpExchange exchange) throws IOException {
+        try {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendMethodNotAllowed(exchange, "GET");
+                return;
+            }
+            Optional<UserSession> session = currentSession(exchange);
+            if (session.isEmpty()) {
+                sendError(exchange, 401, "Authentication required");
+                return;
+            }
+            Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
+            String kind = query.getOrDefault("kind", "lemma");
+            List<TimelinePoint> points;
+            if ("feature".equals(kind)) {
+                points = repository.listFeatureTimeline(session.get().userId,
+                        query.getOrDefault("featureKey", ""),
+                        query.getOrDefault("language", ""),
+                        query.getOrDefault("workId", ""),
+                        query.getOrDefault("eventType", ""),
+                        parseInt(query.get("limit"), 2_000));
+            } else {
+                points = repository.listLemmaTimeline(session.get().userId,
+                        query.getOrDefault("lemma", ""),
+                        query.getOrDefault("pos", ""),
+                        query.getOrDefault("language", ""),
+                        query.getOrDefault("workId", ""),
+                        query.getOrDefault("eventType", ""),
+                        parseInt(query.get("limit"), 2_000));
+            }
+            JsonObject payload = new JsonObject();
+            payload.add("points", gson.toJsonTree(points));
+            sendJson(exchange, 200, payload);
+        } catch (SQLException ex) {
+            sendServerError(exchange, ex.getMessage());
+        } finally {
+            exchange.close();
+        }
+    }
+
     private void handleReadingStats(HttpExchange exchange) throws IOException {
         try {
             if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -499,12 +541,16 @@ public class WebMorphologyApplication {
             Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
             String language = query.getOrDefault("language", "");
             String workId = query.getOrDefault("workId", "");
-            List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, language, workId,
-                    parseInt(query.get("limit"), 100));
+            String mode = query.getOrDefault("mode", "all");
+            int limit = parseInt(query.get("limit"), 100);
             JsonObject payload = new JsonObject();
-            payload.add("lemmas", gson.toJsonTree(stats));
-            payload.add("features", gson.toJsonTree(repository.listFeatureStats(session.get().userId, language, workId,
-                    parseInt(query.get("limit"), 100))));
+            if (!"features".equals(mode)) {
+                List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, language, workId, limit);
+                payload.add("lemmas", gson.toJsonTree(stats));
+            }
+            if (!"lemmas".equals(mode)) {
+                payload.add("features", gson.toJsonTree(repository.listFeatureStats(session.get().userId, language, workId, limit)));
+            }
             sendJson(exchange, 200, payload);
         } catch (SQLException ex) {
             sendServerError(exchange, ex.getMessage());

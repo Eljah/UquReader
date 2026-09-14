@@ -175,7 +175,25 @@ public final class PostgresReaderRepository implements ReaderRepository {
                                  + "committed_count=user_feature_scope_stats.committed_count + excluded.committed_count, "
                                  + "lookup_count=user_feature_scope_stats.lookup_count + excluded.lookup_count, "
                                  + "total_visible_ms=user_feature_scope_stats.total_visible_ms + excluded.total_visible_ms, "
-                                 + "last_seen_at=GREATEST(user_feature_scope_stats.last_seen_at, excluded.last_seen_at)")) {
+                                 + "last_seen_at=GREATEST(user_feature_scope_stats.last_seen_at, excluded.last_seen_at)");
+                 PreparedStatement upsertLemmaTimeline = connection.prepareStatement(
+                         "INSERT INTO user_lemma_timeline_stats(user_id, language, work_id, lemma, pos, event_type, bucket_start, "
+                                 + "event_count, total_visible_ms, first_seen_at, last_seen_at) "
+                                 + "VALUES (?, ?, ?, ?, ?, ?, to_timestamp(? / 1000.0), ?, ?, to_timestamp(? / 1000.0), to_timestamp(? / 1000.0)) "
+                                 + "ON CONFLICT(user_id, language, work_id, lemma, pos, event_type, bucket_start) DO UPDATE SET "
+                                 + "event_count=user_lemma_timeline_stats.event_count + excluded.event_count, "
+                                 + "total_visible_ms=user_lemma_timeline_stats.total_visible_ms + excluded.total_visible_ms, "
+                                 + "first_seen_at=LEAST(user_lemma_timeline_stats.first_seen_at, excluded.first_seen_at), "
+                                 + "last_seen_at=GREATEST(user_lemma_timeline_stats.last_seen_at, excluded.last_seen_at)");
+                 PreparedStatement upsertFeatureTimeline = connection.prepareStatement(
+                         "INSERT INTO user_feature_timeline_stats(user_id, language, work_id, feature_key, event_type, bucket_start, "
+                                 + "event_count, total_visible_ms, first_seen_at, last_seen_at) "
+                                 + "VALUES (?, ?, ?, ?, ?, to_timestamp(? / 1000.0), ?, ?, to_timestamp(? / 1000.0), to_timestamp(? / 1000.0)) "
+                                 + "ON CONFLICT(user_id, language, work_id, feature_key, event_type, bucket_start) DO UPDATE SET "
+                                 + "event_count=user_feature_timeline_stats.event_count + excluded.event_count, "
+                                 + "total_visible_ms=user_feature_timeline_stats.total_visible_ms + excluded.total_visible_ms, "
+                                 + "first_seen_at=LEAST(user_feature_timeline_stats.first_seen_at, excluded.first_seen_at), "
+                                 + "last_seen_at=GREATEST(user_feature_timeline_stats.last_seen_at, excluded.last_seen_at)")) {
                 for (ReadingEvent event : events) {
                     bindEvent(insertEvent, userId, sessionToken, event);
                     int inserted = insertEvent.executeUpdate();
@@ -188,10 +206,14 @@ public final class PostgresReaderRepository implements ReaderRepository {
                         upsertStats.executeUpdate();
                         bindScopedLemmaStats(upsertScopedLemmaStats, userId, event);
                         upsertScopedLemmaStats.executeUpdate();
+                        bindLemmaTimeline(upsertLemmaTimeline, userId, event);
+                        upsertLemmaTimeline.executeUpdate();
                     }
                     if (!event.featureKey.isBlank()) {
                         bindScopedFeatureStats(upsertScopedFeatureStats, userId, event);
                         upsertScopedFeatureStats.executeUpdate();
+                        bindFeatureTimeline(upsertFeatureTimeline, userId, event);
+                        upsertFeatureTimeline.executeUpdate();
                     }
                 }
                 connection.commit();
@@ -301,6 +323,77 @@ public final class PostgresReaderRepository implements ReaderRepository {
     }
 
     @Override
+    public List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language,
+                                                 String workId, String eventType, int limit) throws SQLException {
+        int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
+        String safeType = eventType == null ? "" : eventType;
+        List<TimelinePoint> result = new ArrayList<>();
+        try (Connection connection = open();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT event_type, bucket_start, SUM(event_count), SUM(total_visible_ms), MIN(first_seen_at), MAX(last_seen_at) "
+                             + "FROM user_lemma_timeline_stats "
+                             + "WHERE user_id=? AND lemma=? AND pos=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
+                             + "AND (?='' OR event_type=?) "
+                             + "GROUP BY event_type, bucket_start ORDER BY bucket_start ASC, event_type ASC LIMIT ?")) {
+            statement.setLong(1, userId);
+            statement.setString(2, normalizeLemma(lemma));
+            statement.setString(3, pos == null ? "" : pos);
+            statement.setString(4, safeLanguage);
+            statement.setString(5, safeLanguage);
+            statement.setString(6, safeWorkId);
+            statement.setString(7, safeWorkId);
+            statement.setString(8, safeType);
+            statement.setString(9, safeType);
+            statement.setInt(10, safeLimit);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new TimelinePoint(rs.getString(1), rs.getTimestamp(2).toInstant().toEpochMilli(),
+                            rs.getLong(3), rs.getLong(4), rs.getTimestamp(5).toInstant().toEpochMilli(),
+                            rs.getTimestamp(6).toInstant().toEpochMilli()));
+                }
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language,
+                                                   String workId, String eventType, int limit) throws SQLException {
+        int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
+        String safeType = eventType == null ? "" : eventType;
+        List<TimelinePoint> result = new ArrayList<>();
+        try (Connection connection = open();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT event_type, bucket_start, SUM(event_count), SUM(total_visible_ms), MIN(first_seen_at), MAX(last_seen_at) "
+                             + "FROM user_feature_timeline_stats "
+                             + "WHERE user_id=? AND feature_key=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
+                             + "AND (?='' OR event_type=?) "
+                             + "GROUP BY event_type, bucket_start ORDER BY bucket_start ASC, event_type ASC LIMIT ?")) {
+            statement.setLong(1, userId);
+            statement.setString(2, featureKey == null ? "" : featureKey);
+            statement.setString(3, safeLanguage);
+            statement.setString(4, safeLanguage);
+            statement.setString(5, safeWorkId);
+            statement.setString(6, safeWorkId);
+            statement.setString(7, safeType);
+            statement.setString(8, safeType);
+            statement.setInt(9, safeLimit);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new TimelinePoint(rs.getString(1), rs.getTimestamp(2).toInstant().toEpochMilli(),
+                            rs.getLong(3), rs.getLong(4), rs.getTimestamp(5).toInstant().toEpochMilli(),
+                            rs.getTimestamp(6).toInstant().toEpochMilli()));
+                }
+            }
+        }
+        return result;
+    }
+
+    @Override
     public void refreshScopedStats(Map<String, String> workLanguages) throws SQLException {
         try (Connection connection = open()) {
             connection.setAutoCommit(false);
@@ -357,6 +450,50 @@ public final class PostgresReaderRepository implements ReaderRepository {
                                 ELSE 'tt'
                               END,
                               work_id, feature_key
+                            """);
+                    statement.executeUpdate("TRUNCATE user_lemma_timeline_stats");
+                    statement.executeUpdate("""
+                            INSERT INTO user_lemma_timeline_stats(user_id, language, work_id, lemma, pos, event_type,
+                              bucket_start, event_count, total_visible_ms, first_seen_at, last_seen_at)
+                            SELECT user_id,
+                              CASE
+                                WHEN language<>'' THEN language
+                                WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr'
+                                ELSE 'tt'
+                              END,
+                              work_id, lower(lemma), pos, event_type,
+                              date_trunc('hour', occurred_at), COUNT(*), SUM(visible_ms), MIN(occurred_at), MAX(occurred_at)
+                            FROM reading_events
+                            WHERE lemma<>'' AND pos<>''
+                            GROUP BY user_id,
+                              CASE
+                                WHEN language<>'' THEN language
+                                WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr'
+                                ELSE 'tt'
+                              END,
+                              work_id, lower(lemma), pos, event_type, date_trunc('hour', occurred_at)
+                            """);
+                    statement.executeUpdate("TRUNCATE user_feature_timeline_stats");
+                    statement.executeUpdate("""
+                            INSERT INTO user_feature_timeline_stats(user_id, language, work_id, feature_key, event_type,
+                              bucket_start, event_count, total_visible_ms, first_seen_at, last_seen_at)
+                            SELECT user_id,
+                              CASE
+                                WHEN language<>'' THEN language
+                                WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr'
+                                ELSE 'tt'
+                              END,
+                              work_id, feature_key, event_type,
+                              date_trunc('hour', occurred_at), COUNT(*), SUM(visible_ms), MIN(occurred_at), MAX(occurred_at)
+                            FROM reading_events
+                            WHERE feature_key<>''
+                            GROUP BY user_id,
+                              CASE
+                                WHEN language<>'' THEN language
+                                WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr'
+                                ELSE 'tt'
+                              END,
+                              work_id, feature_key, event_type, date_trunc('hour', occurred_at)
                             """);
                 }
                 connection.commit();
@@ -477,6 +614,39 @@ public final class PostgresReaderRepository implements ReaderRepository {
                     )
                     """);
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_feature_scope_problem_idx ON user_feature_scope_stats(user_id, language, work_id, lookup_count DESC, committed_count ASC)");
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS user_lemma_timeline_stats(
+                      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                      language TEXT NOT NULL,
+                      work_id TEXT NOT NULL,
+                      lemma TEXT NOT NULL,
+                      pos TEXT NOT NULL,
+                      event_type TEXT NOT NULL,
+                      bucket_start TIMESTAMPTZ NOT NULL,
+                      event_count BIGINT NOT NULL DEFAULT 0,
+                      total_visible_ms BIGINT NOT NULL DEFAULT 0,
+                      first_seen_at TIMESTAMPTZ NOT NULL,
+                      last_seen_at TIMESTAMPTZ NOT NULL,
+                      PRIMARY KEY(user_id, language, work_id, lemma, pos, event_type, bucket_start)
+                    )
+                    """);
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_lemma_timeline_lookup_idx ON user_lemma_timeline_stats(user_id, language, work_id, lemma, pos, bucket_start)");
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS user_feature_timeline_stats(
+                      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                      language TEXT NOT NULL,
+                      work_id TEXT NOT NULL,
+                      feature_key TEXT NOT NULL,
+                      event_type TEXT NOT NULL,
+                      bucket_start TIMESTAMPTZ NOT NULL,
+                      event_count BIGINT NOT NULL DEFAULT 0,
+                      total_visible_ms BIGINT NOT NULL DEFAULT 0,
+                      first_seen_at TIMESTAMPTZ NOT NULL,
+                      last_seen_at TIMESTAMPTZ NOT NULL,
+                      PRIMARY KEY(user_id, language, work_id, feature_key, event_type, bucket_start)
+                    )
+                    """);
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_feature_timeline_lookup_idx ON user_feature_timeline_stats(user_id, language, work_id, feature_key, bucket_start)");
         }
     }
 
@@ -563,8 +733,40 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setLong(10, event.occurredAtMs);
     }
 
+    private void bindLemmaTimeline(PreparedStatement statement, long userId, ReadingEvent event) throws SQLException {
+        statement.setLong(1, userId);
+        statement.setString(2, eventLanguage(event));
+        statement.setString(3, event.workId);
+        statement.setString(4, normalizeLemma(event.lemma));
+        statement.setString(5, event.pos);
+        statement.setString(6, event.eventType);
+        statement.setLong(7, timelineBucketStartMs(event.occurredAtMs));
+        statement.setLong(8, 1);
+        statement.setLong(9, event.visibleMs);
+        statement.setLong(10, event.occurredAtMs);
+        statement.setLong(11, event.occurredAtMs);
+    }
+
+    private void bindFeatureTimeline(PreparedStatement statement, long userId, ReadingEvent event) throws SQLException {
+        statement.setLong(1, userId);
+        statement.setString(2, eventLanguage(event));
+        statement.setString(3, event.workId);
+        statement.setString(4, event.featureKey);
+        statement.setString(5, event.eventType);
+        statement.setLong(6, timelineBucketStartMs(event.occurredAtMs));
+        statement.setLong(7, 1);
+        statement.setLong(8, event.visibleMs);
+        statement.setLong(9, event.occurredAtMs);
+        statement.setLong(10, event.occurredAtMs);
+    }
+
     private boolean isExposure(ReadingEvent event) {
         return "token_exposed".equals(event.eventType) || "token_committed".equals(event.eventType);
+    }
+
+    private static long timelineBucketStartMs(long occurredAtMs) {
+        long hourMs = 60L * 60L * 1_000L;
+        return Math.floorDiv(occurredAtMs, hourMs) * hourMs;
     }
 
     private Connection open() throws SQLException {

@@ -60,6 +60,15 @@ final class StaticReaderAssets {
                     </div>
                     <div id="statsContent" class="stats-content"></div>
                   </section>
+                  <section id="timelineModal" class="timeline-modal hidden" aria-modal="true" role="dialog">
+                    <div class="timeline-dialog">
+                      <div class="timeline-title">
+                        <strong id="timelineTitle"></strong>
+                        <button type="button" id="timelineClose">Закрыть</button>
+                      </div>
+                      <div id="timelineBody"></div>
+                    </div>
+                  </section>
                   <aside id="tokenSheet" class="token-sheet hidden">
                     <button id="closeSheet" title="Закрыть">×</button>
                     <h2 id="tokenSurface"></h2>
@@ -415,6 +424,25 @@ final class StaticReaderAssets {
               padding: 14px 0 18px;
               border-bottom: 2px solid var(--primary);
             }
+            .timeline-modal {
+              position: fixed;
+              inset: 0;
+              z-index: 40;
+              display: grid;
+              place-items: center;
+              padding: 20px;
+              background: rgba(18, 24, 36, .42);
+            }
+            .timeline-modal.hidden { display: none; }
+            .timeline-dialog {
+              width: min(920px, calc(100vw - 40px));
+              max-height: min(680px, calc(100vh - 40px));
+              overflow: auto;
+              background: var(--surface);
+              border: 2px solid var(--primary);
+              box-shadow: 0 22px 60px rgba(18, 24, 36, .22);
+              padding: 18px;
+            }
             .timeline-title {
               display: flex;
               justify-content: space-between;
@@ -475,6 +503,7 @@ final class StaticReaderAssets {
               statsLanguage: '',
               statsWorkId: '',
               lastLemmaRows: [],
+              statsCache: new Map(),
               grammar: {pos: {}, features: {}},
               speech: {
                 mode: 'idle',
@@ -619,6 +648,7 @@ final class StaticReaderAssets {
                   if (!r.ok) throw new Error('flush failed');
                   return r.json();
                 });
+                state.statsCache.clear();
               } catch (_) {
                 state.queue.unshift(...batch);
                 localStorage.setItem('uqureader.pendingEvents', JSON.stringify(state.queue.slice(-5000)));
@@ -1356,14 +1386,26 @@ final class StaticReaderAssets {
 
             async function loadStats() {
               refreshStatsFilters();
-              const params = new URLSearchParams({limit: '200'});
+              const mode = state.statsMode === 'features' ? 'features' : 'lemmas';
+              const cacheKey = `${mode}|${state.statsLanguage}|${state.statsWorkId}`;
+              if (state.statsCache.has(cacheKey)) {
+                renderStatsRows(state.statsCache.get(cacheKey));
+                return;
+              }
+              const params = new URLSearchParams({limit: '200', mode});
               if (state.statsLanguage) params.set('language', state.statsLanguage);
               if (state.statsWorkId) params.set('workId', state.statsWorkId);
               const data = await api(`/api/reading/stats?${params.toString()}`);
+              const rows = mode === 'features' ? (data.features || []) : (data.lemmas || []);
+              state.statsCache.set(cacheKey, rows);
+              renderStatsRows(rows);
+            }
+
+            function renderStatsRows(rows) {
               if (state.statsMode === 'features') {
-                renderFeatureStats(data.features || []);
+                renderFeatureStats(rows || []);
               } else {
-                state.lastLemmaRows = data.lemmas || [];
+                state.lastLemmaRows = rows || [];
                 renderLemmaStats(state.lastLemmaRows);
               }
             }
@@ -1411,9 +1453,55 @@ final class StaticReaderAssets {
                   <div>${row.lookupCount}</div>
                   <div class="wide-only">${row.ttsCount}</div>
                   <div class="wide-only">${Math.round((row.totalVisibleMs || 0) / 1000)} с</div>`;
-                element.addEventListener('click', () => loadLemmaTimeline(row));
+                element.addEventListener('click', () => loadTimeline('lemma', row));
                 content.append(element);
               }
+            }
+
+            async function loadTimeline(kind, row) {
+              const params = new URLSearchParams({kind, limit: '5000'});
+              if (kind === 'feature') {
+                params.set('featureKey', row.featureKey);
+              } else {
+                params.set('lemma', row.lemma);
+                params.set('pos', row.pos);
+              }
+              if (state.statsLanguage) params.set('language', state.statsLanguage);
+              if (state.statsWorkId) params.set('workId', state.statsWorkId);
+              const data = await api(`/api/reading/timeline?${params.toString()}`);
+              renderTimelineModal(kind, row, data.points || []);
+            }
+
+            function renderTimelineModal(kind, row, points) {
+              const modal = $('timelineModal');
+              const body = $('timelineBody');
+              $('timelineTitle').textContent = kind === 'feature'
+                ? `${formatFeatureKey(row.featureKey)} · ${row.featureKey}`
+                : `${row.lemma} · ${formatPos(row.pos)}`;
+              const min = points.reduce((value, point) => Math.min(value, point.bucketStartMs || value), points[0]?.bucketStartMs || Date.now());
+              const max = points.reduce((value, point) => Math.max(value, point.bucketStartMs || value), min);
+              const span = Math.max(1, max - min);
+              const dots = points.map((point, index) => {
+                const x = 24 + Math.round(((point.bucketStartMs - min) / span) * 732);
+                const y = 36 + ((index % 3) - 1) * 10;
+                const color = EVENT_COLORS[point.eventType] || '#7a8790';
+                const radius = Math.min(11, 4 + Math.log2((point.eventCount || 1) + 1));
+                const title = `${labelEvent(point.eventType)} · ${formatDate(point.bucketStartMs)} · ${point.eventCount}`;
+                return `<circle cx="${x}" cy="${y}" r="${radius}" fill="${color}"><title>${escapeHtml(title)}</title></circle>`;
+              }).join('');
+              const legend = Object.entries(EVENT_COLORS)
+                .filter(([type]) => points.some(point => point.eventType === type))
+                .map(([type, color]) => `<span><i class="legend-dot" style="background:${color}"></i>${escapeHtml(labelEvent(type))}</span>`)
+                .join('');
+              const total = points.reduce((sum, point) => sum + (point.eventCount || 0), 0);
+              body.innerHTML = `
+                <svg class="timeline-svg" viewBox="0 0 780 72" preserveAspectRatio="none" role="img" aria-label="Timeline">
+                  <line x1="24" y1="36" x2="756" y2="36" stroke="#ccd6d0" stroke-width="2" stroke-linecap="round"></line>
+                  ${dots}
+                </svg>
+                <div class="timeline-axis"><span>${formatDate(min)}</span><span>${formatDate(max)}</span></div>
+                <div class="timeline-legend">${legend || 'Нет событий для временного ряда'}<span>Всего: ${total}</span></div>`;
+              modal.classList.remove('hidden');
             }
 
             async function loadLemmaTimeline(row) {
@@ -1486,13 +1574,17 @@ final class StaticReaderAssets {
               for (const row of rows) {
                 const featureLabel = formatFeatureKey(row.featureKey);
                 content.insertAdjacentHTML('beforeend', `
-                  <div class="stat-row">
+                  <div class="stat-row clickable" data-feature-key="${escapeHtml(row.featureKey)}">
                     <div class="stat-main">${escapeHtml(featureLabel)}<div class="stat-sub">${escapeHtml(row.featureKey)}</div></div>
                     <div>${row.committedCount}</div>
                     <div>${row.lookupCount}</div>
                     <div class="wide-only">${row.exposureCount}</div>
                     <div class="wide-only">${Math.round((row.totalVisibleMs || 0) / 1000)} с</div>
                   </div>`);
+              }
+              for (const element of content.querySelectorAll('[data-feature-key]')) {
+                const row = rows.find(item => item.featureKey === element.dataset.featureKey);
+                if (row) element.addEventListener('click', () => loadTimeline('feature', row));
               }
             }
 
@@ -1530,6 +1622,10 @@ final class StaticReaderAssets {
               await loadStats();
             });
             $('closeStats').addEventListener('click', () => $('statsPanel').classList.add('hidden'));
+            $('timelineClose').addEventListener('click', () => $('timelineModal').classList.add('hidden'));
+            $('timelineModal').addEventListener('click', event => {
+              if (event.target === $('timelineModal')) $('timelineModal').classList.add('hidden');
+            });
             $('lemmaStatsTab').addEventListener('click', async () => {
               state.statsMode = 'lemmas';
               $('lemmaStatsTab').classList.add('active');
@@ -1557,6 +1653,9 @@ final class StaticReaderAssets {
                 flushEvents(true);
                 if (state.speech.mode === 'playing') pauseSpeech();
               }
+            });
+            document.addEventListener('keydown', event => {
+              if (event.key === 'Escape') $('timelineModal').classList.add('hidden');
             });
             window.addEventListener('pagehide', () => {
               commitVisible(true);

@@ -182,6 +182,20 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         return result.subList(0, Math.min(result.size(), safeLimit));
     }
 
+    @Override
+    public synchronized List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language,
+                                                              String workId, String eventType, int limit) {
+        return timelineFromRaw(userId, normalizeLemma(lemma), pos == null ? "" : pos, "", normalizeScope(language),
+                normalizeScope(workId), eventType == null ? "" : eventType, Math.min(10_000, limit <= 0 ? 2_000 : limit));
+    }
+
+    @Override
+    public synchronized List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language,
+                                                                String workId, String eventType, int limit) {
+        return timelineFromRaw(userId, "", "", featureKey == null ? "" : featureKey, normalizeScope(language),
+                normalizeScope(workId), eventType == null ? "" : eventType, Math.min(10_000, limit <= 0 ? 2_000 : limit));
+    }
+
     public synchronized int rawEventCount() {
         return rawEvents.size();
     }
@@ -247,6 +261,35 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         stats.lastSeenAtMs = Math.max(stats.lastSeenAtMs, event.occurredAtMs);
     }
 
+    private List<TimelinePoint> timelineFromRaw(long userId, String lemma, String pos, String featureKey,
+                                                String language, String workId, String eventType, int limit) {
+        Map<String, TimelineBucket> buckets = new HashMap<>();
+        for (StoredEvent stored : rawEvents) {
+            ReadingEvent event = stored.event;
+            if (stored.userId != userId || !matchesScope(eventLanguage(event), language) || !matchesScope(event.workId, workId)) {
+                continue;
+            }
+            if (!featureKey.isBlank()) {
+                if (!featureKey.equals(event.featureKey)) {
+                    continue;
+                }
+            } else if (!lemma.equals(normalizeLemma(event.lemma)) || !pos.equals(event.pos)) {
+                continue;
+            }
+            if (!eventType.isBlank() && !eventType.equals(event.eventType)) {
+                continue;
+            }
+            long bucketStart = timelineBucketStartMs(event.occurredAtMs);
+            String key = event.eventType + ":" + bucketStart;
+            buckets.computeIfAbsent(key, ignored -> new TimelineBucket(event.eventType, bucketStart)).add(event);
+        }
+        List<TimelinePoint> result = buckets.values().stream()
+                .map(TimelineBucket::toPoint)
+                .sorted(Comparator.comparingLong((TimelinePoint point) -> point.bucketStartMs).thenComparing(point -> point.eventType))
+                .toList();
+        return result.subList(0, Math.min(result.size(), limit));
+    }
+
     private static String normalizeUsername(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
@@ -270,6 +313,11 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         }
         String value = event.workId == null ? "" : event.workId.toLowerCase(Locale.ROOT);
         return value.contains("elnet") || value.contains("puncheryshte") ? "mhr" : "tt";
+    }
+
+    private static long timelineBucketStartMs(long occurredAtMs) {
+        long hourMs = 60L * 60L * 1_000L;
+        return Math.floorDiv(occurredAtMs, hourMs) * hourMs;
     }
 
     private static ReadingEventRecord toRecord(ReadingEvent event) {
@@ -307,6 +355,31 @@ public final class InMemoryReaderRepository implements ReaderRepository {
             lookupCount += other.lookupCount;
             totalVisibleMs += other.totalVisibleMs;
             lastSeenAtMs = Math.max(lastSeenAtMs, other.lastSeenAtMs);
+        }
+    }
+
+    private static final class TimelineBucket {
+        final String eventType;
+        final long bucketStartMs;
+        long eventCount;
+        long totalVisibleMs;
+        long firstSeenAtMs;
+        long lastSeenAtMs;
+
+        TimelineBucket(String eventType, long bucketStartMs) {
+            this.eventType = eventType;
+            this.bucketStartMs = bucketStartMs;
+        }
+
+        void add(ReadingEvent event) {
+            eventCount++;
+            totalVisibleMs += event.visibleMs;
+            firstSeenAtMs = firstSeenAtMs == 0 ? event.occurredAtMs : Math.min(firstSeenAtMs, event.occurredAtMs);
+            lastSeenAtMs = Math.max(lastSeenAtMs, event.occurredAtMs);
+        }
+
+        TimelinePoint toPoint() {
+            return new TimelinePoint(eventType, bucketStartMs, eventCount, totalVisibleMs, firstSeenAtMs, lastSeenAtMs);
         }
     }
 

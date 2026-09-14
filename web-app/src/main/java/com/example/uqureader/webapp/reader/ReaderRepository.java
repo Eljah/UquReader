@@ -28,6 +28,12 @@ public interface ReaderRepository extends Closeable {
     List<ReadingEventRecord> listLemmaEvents(long userId, String lemma, String pos, String language, String workId,
                                              String eventType, int limit) throws SQLException;
 
+    List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language, String workId,
+                                          String eventType, int limit) throws SQLException;
+
+    List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language, String workId,
+                                            String eventType, int limit) throws SQLException;
+
     default void refreshScopedStats(Map<String, String> workLanguages) throws SQLException {
     }
 }

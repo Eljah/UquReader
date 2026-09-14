@@ -308,6 +308,75 @@ public final class SqliteReaderRepository implements ReaderRepository {
     }
 
     @Override
+    public List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language,
+                                                 String workId, String eventType, int limit) throws SQLException {
+        int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
+        String safeType = eventType == null ? "" : eventType;
+        List<TimelinePoint> result = new ArrayList<>();
+        try (Connection connection = open();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT event_type, (occurred_at_ms / 3600000) * 3600000 AS bucket_start, COUNT(*), SUM(visible_ms), "
+                             + "MIN(occurred_at_ms), MAX(occurred_at_ms) FROM reading_events "
+                             + "WHERE user_id=? AND lemma=? AND pos=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
+                             + "AND (?='' OR event_type=?) "
+                             + "GROUP BY event_type, bucket_start ORDER BY bucket_start ASC, event_type ASC LIMIT ?")) {
+            statement.setLong(1, userId);
+            statement.setString(2, normalizeLemma(lemma));
+            statement.setString(3, pos == null ? "" : pos);
+            statement.setString(4, safeLanguage);
+            statement.setString(5, safeLanguage);
+            statement.setString(6, safeWorkId);
+            statement.setString(7, safeWorkId);
+            statement.setString(8, safeType);
+            statement.setString(9, safeType);
+            statement.setInt(10, safeLimit);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new TimelinePoint(rs.getString(1), rs.getLong(2), rs.getLong(3),
+                            rs.getLong(4), rs.getLong(5), rs.getLong(6)));
+                }
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language,
+                                                   String workId, String eventType, int limit) throws SQLException {
+        int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
+        String safeType = eventType == null ? "" : eventType;
+        List<TimelinePoint> result = new ArrayList<>();
+        try (Connection connection = open();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT event_type, (occurred_at_ms / 3600000) * 3600000 AS bucket_start, COUNT(*), SUM(visible_ms), "
+                             + "MIN(occurred_at_ms), MAX(occurred_at_ms) FROM reading_events "
+                             + "WHERE user_id=? AND feature_key=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
+                             + "AND (?='' OR event_type=?) "
+                             + "GROUP BY event_type, bucket_start ORDER BY bucket_start ASC, event_type ASC LIMIT ?")) {
+            statement.setLong(1, userId);
+            statement.setString(2, featureKey == null ? "" : featureKey);
+            statement.setString(3, safeLanguage);
+            statement.setString(4, safeLanguage);
+            statement.setString(5, safeWorkId);
+            statement.setString(6, safeWorkId);
+            statement.setString(7, safeType);
+            statement.setString(8, safeType);
+            statement.setInt(9, safeLimit);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new TimelinePoint(rs.getString(1), rs.getLong(2), rs.getLong(3),
+                            rs.getLong(4), rs.getLong(5), rs.getLong(6)));
+                }
+            }
+        }
+        return result;
+    }
+
+    @Override
     public void refreshScopedStats(Map<String, String> workLanguages) throws SQLException {
         try (Connection connection = open()) {
             connection.setAutoCommit(false);
