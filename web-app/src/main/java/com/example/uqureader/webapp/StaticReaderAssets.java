@@ -581,14 +581,22 @@ final class StaticReaderAssets {
               return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
             }
 
-            function tokenPayload(token, eventType, visibleMs = 0) {
+            function readingContext() {
+              return {
+                workId: state.workId,
+                language: currentWork()?.language || '',
+                pageIndex: state.pageIndex
+              };
+            }
+
+            function tokenPayload(token, eventType, visibleMs = 0, context = readingContext()) {
               const morph = token.morphology || {};
               return {
                 clientEventId: eventId(),
                 eventType,
-                workId: state.workId,
-                language: currentWork()?.language || '',
-                pageIndex: state.pageIndex,
+                workId: context.workId,
+                language: context.language,
+                pageIndex: context.pageIndex,
                 tokenIndex: token.index,
                 lemma: normalizeLemma(morph.lemma || ''),
                 pos: morph.pos || '',
@@ -599,7 +607,7 @@ final class StaticReaderAssets {
               };
             }
 
-            function tokenPayloads(token, eventType, visibleMs = 0) {
+            function tokenPayloads(token, eventType, visibleMs = 0, context = readingContext()) {
               const variants = Array.isArray(token.analyses) ? token.analyses : [];
               const payloads = [];
               const seen = new Set();
@@ -615,9 +623,9 @@ final class StaticReaderAssets {
                 payloads.push({
                   clientEventId: eventId(),
                   eventType,
-                  workId: state.workId,
-                  language: currentWork()?.language || '',
-                  pageIndex: state.pageIndex,
+                  workId: context.workId,
+                  language: context.language,
+                  pageIndex: context.pageIndex,
                   tokenIndex: token.index,
                   lemma: normalizeLemma(lemma),
                   pos,
@@ -627,7 +635,7 @@ final class StaticReaderAssets {
                   occurredAtMs: Date.now()
                 });
               }
-              return payloads.length ? payloads : [tokenPayload(token, eventType, visibleMs)];
+              return payloads.length ? payloads : [tokenPayload(token, eventType, visibleMs, context)];
             }
 
             function firstNonEmpty(values) {
@@ -706,6 +714,7 @@ final class StaticReaderAssets {
             function commitVisible(finalCommit) {
               const now = performance.now();
               const events = [];
+              const context = readingContext();
               for (const [index, started] of state.visibleSince.entries()) {
                 const elapsed = Math.round(now - started);
                 state.visibleSince.set(index, now);
@@ -714,7 +723,7 @@ final class StaticReaderAssets {
               for (const token of state.tokens) {
                 const total = state.visibleMs.get(token.index) || 0;
                 if (total >= 700) {
-                  events.push(...tokenPayloads(token, finalCommit ? 'token_committed' : 'token_exposed', total));
+                  events.push(...tokenPayloads(token, finalCommit ? 'token_committed' : 'token_exposed', total, context));
                   state.visibleMs.set(token.index, 0);
                 }
               }
@@ -1701,6 +1710,10 @@ final class StaticReaderAssets {
               location.reload();
             });
             $('workSelect').addEventListener('change', async event => {
+              commitVisible(true);
+              state.visibleSince.clear();
+              state.visibleMs.clear();
+              flushEvents();
               state.workId = event.target.value;
               await loadPage(0);
             });

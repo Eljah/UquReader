@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -879,25 +880,73 @@ public class WebMorphologyApplication {
             JsonObject object = element.getAsJsonObject();
             String clientEventId = ensureUuid(getString(object, "clientEventId"));
             String workId = getString(object, "workId");
-            String language = getString(object, "language");
-            if (language.isBlank()) {
-                language = catalog.find(workId).map(work -> work.language).orElse("");
+            String eventType = getString(object, "eventType");
+            int tokenIndex = getInt(object, "tokenIndex", -1);
+            String lemma = getString(object, "lemma");
+            String pos = getString(object, "pos");
+            if (!isValidCatalogEvent(workId, tokenIndex, eventType, lemma, pos)) {
+                continue;
             }
+            String language = catalog.find(workId).map(work -> work.language).orElse("");
             events.add(new ReadingEvent(
                     clientEventId,
-                    getString(object, "eventType"),
+                    eventType,
                     workId,
                     language,
                     getInt(object, "pageIndex", -1),
-                    getInt(object, "tokenIndex", -1),
-                    getString(object, "lemma"),
-                    getString(object, "pos"),
+                    tokenIndex,
+                    lemma,
+                    pos,
                     getString(object, "featureKey"),
                     getInt(object, "charIndex", -1),
                     getInt(object, "visibleMs", 0),
                     getLong(object, "occurredAtMs", System.currentTimeMillis())));
         }
         return events;
+    }
+
+    private boolean isValidCatalogEvent(String workId, int tokenIndex, String eventType, String lemma, String pos) {
+        if (eventType == null || !eventType.startsWith("token_")) {
+            return true;
+        }
+        if (tokenIndex < 0 || lemma == null || lemma.isBlank() || pos == null || pos.isBlank()) {
+            return false;
+        }
+        return catalog.token(workId, tokenIndex)
+                .map(token -> tokenHasAnalysis(token, lemma, pos))
+                .orElse(false);
+    }
+
+    private boolean tokenHasAnalysis(ReaderToken token, String lemma, String pos) {
+        String safeLemma = normalizeLemma(lemma);
+        String safePos = pos == null ? "" : pos;
+        if (token.morphology != null
+                && safeLemma.equals(normalizeLemma(token.morphology.lemma))
+                && safePos.equals(token.morphology.pos)) {
+            return true;
+        }
+        for (var variant : token.analyses) {
+            String variantLemma = variant.lemma == null || variant.lemma.isBlank()
+                    ? variant.morphology == null ? "" : variant.morphology.lemma
+                    : variant.lemma;
+            String variantPos = "";
+            if (variant.morphology != null && !variant.morphology.pos.isBlank()) {
+                variantPos = variant.morphology.pos;
+            } else if (!variant.pos.isEmpty()) {
+                variantPos = variant.pos.get(0);
+            }
+            if (safeLemma.equals(normalizeLemma(variantLemma)) && safePos.equals(variantPos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String normalizeLemma(String value) {
+        if (value == null) {
+            return "";
+        }
+        return Normalizer.normalize(value.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFC);
     }
 
     private String ensureUuid(String value) {
