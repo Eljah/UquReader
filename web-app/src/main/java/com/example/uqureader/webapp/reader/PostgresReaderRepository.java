@@ -412,7 +412,6 @@ public final class PostgresReaderRepository implements ReaderRepository {
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_user_time_idx ON reading_events(user_id, occurred_at)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_work_token_idx ON reading_events(work_id, token_index)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_lemma_time_idx ON reading_events(user_id, lemma, pos, event_type, occurred_at)");
-            statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_scope_time_idx ON reading_events(user_id, language, work_id, occurred_at)");
             statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS user_lemma_stats(
                       user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
