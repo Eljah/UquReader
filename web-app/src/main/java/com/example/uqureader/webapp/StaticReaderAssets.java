@@ -564,6 +564,8 @@ final class StaticReaderAssets {
               token_tts_played: '#9b3d2e',
               page_visible: '#7a8790'
             };
+            const MAX_VISIBLE_INTERVAL_MS = 60000;
+            const MAX_TOKEN_VISIBLE_MS = 120000;
 
             async function api(path, options = {}) {
               const response = await fetch(path, {
@@ -618,7 +620,7 @@ final class StaticReaderAssets {
                 const pos = morph.pos || firstNonEmpty(variant.pos || []);
                 if (!lemma || !pos) continue;
                 const featureKey = morph.featureKey || [pos, ...(morph.features || []).map(f => f.code).filter(Boolean)].filter(Boolean).join('+');
-                const key = `${lemma}\u0000${pos}\u0000${featureKey}\u0000${eventType}`;
+                const key = `${normalizeLemma(lemma)}\u0000${pos}\u0000${eventType}`;
                 if (seen.has(key)) continue;
                 seen.add(key);
                 payloads.push({
@@ -717,9 +719,9 @@ final class StaticReaderAssets {
               const events = [];
               const context = readingContext();
               for (const [index, started] of state.visibleSince.entries()) {
-                const elapsed = Math.round(now - started);
+                const elapsed = Math.min(MAX_VISIBLE_INTERVAL_MS, Math.round(now - started));
                 state.visibleSince.set(index, now);
-                state.visibleMs.set(index, (state.visibleMs.get(index) || 0) + elapsed);
+                state.visibleMs.set(index, Math.min(MAX_TOKEN_VISIBLE_MS, (state.visibleMs.get(index) || 0) + elapsed));
               }
               for (const token of state.tokens) {
                 const total = state.visibleMs.get(token.index) || 0;
@@ -893,7 +895,8 @@ final class StaticReaderAssets {
                   } else {
                     const started = state.visibleSince.get(index);
                     if (started) {
-                      state.visibleMs.set(index, (state.visibleMs.get(index) || 0) + Math.round(now - started));
+                      const elapsed = Math.min(MAX_VISIBLE_INTERVAL_MS, Math.round(now - started));
+                      state.visibleMs.set(index, Math.min(MAX_TOKEN_VISIBLE_MS, (state.visibleMs.get(index) || 0) + elapsed));
                       state.visibleSince.delete(index);
                     }
                     entry.target.classList.remove('visible');

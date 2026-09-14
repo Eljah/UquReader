@@ -20,6 +20,7 @@ import java.util.UUID;
 
 public final class PostgresReaderRepository implements ReaderRepository {
     private static final long SESSION_TTL_MS = Duration.ofDays(30).toMillis();
+    private static final int MAX_EVENT_VISIBLE_MS = 120_000;
 
     private final String jdbcUrl;
     private final Properties properties;
@@ -469,7 +470,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
                               SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END),
                               SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END),
                               SUM(CASE WHEN event_type='token_tts_played' THEN 1 ELSE 0 END),
-                              SUM(visible_ms), MIN(occurred_at), MAX(occurred_at), MAX(char_index)
+                              SUM(LEAST(visible_ms, 120000)), MIN(occurred_at), MAX(occurred_at), MAX(char_index)
                             FROM reading_events
                             WHERE lemma<>'' AND pos<>''
                             GROUP BY user_id,
@@ -494,7 +495,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
                               SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END),
                               SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END),
                               SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END),
-                              SUM(visible_ms), MIN(occurred_at), MAX(occurred_at)
+                              SUM(LEAST(visible_ms, 120000)), MIN(occurred_at), MAX(occurred_at)
                             FROM reading_events
                             WHERE feature_key<>''
                             GROUP BY user_id,
@@ -516,7 +517,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
                                 ELSE 'tt'
                               END,
                               work_id, lower(lemma), pos, event_type,
-                              date_trunc('hour', occurred_at), COUNT(*), SUM(visible_ms), MIN(occurred_at), MAX(occurred_at)
+                              date_trunc('hour', occurred_at), COUNT(*), SUM(LEAST(visible_ms, 120000)), MIN(occurred_at), MAX(occurred_at)
                             FROM reading_events
                             WHERE lemma<>'' AND pos<>''
                             GROUP BY user_id,
@@ -538,7 +539,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
                                 ELSE 'tt'
                               END,
                               work_id, feature_key, event_type,
-                              date_trunc('hour', occurred_at), COUNT(*), SUM(visible_ms), MIN(occurred_at), MAX(occurred_at)
+                              date_trunc('hour', occurred_at), COUNT(*), SUM(LEAST(visible_ms, 120000)), MIN(occurred_at), MAX(occurred_at)
                             FROM reading_events
                             WHERE feature_key<>''
                             GROUP BY user_id,
@@ -739,7 +740,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setString(10, event.pos);
         statement.setString(11, event.featureKey);
         statement.setInt(12, event.charIndex);
-        statement.setInt(13, event.visibleMs);
+        statement.setInt(13, eventVisibleMs(event));
         statement.setLong(14, event.occurredAtMs);
     }
 
@@ -751,7 +752,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setLong(5, "token_committed".equals(event.eventType) ? 1 : 0);
         statement.setLong(6, "token_lookup".equals(event.eventType) ? 1 : 0);
         statement.setLong(7, "token_tts_played".equals(event.eventType) ? 1 : 0);
-        statement.setLong(8, event.visibleMs);
+        statement.setLong(8, eventVisibleMs(event));
         statement.setLong(9, event.occurredAtMs);
         statement.setLong(10, event.occurredAtMs);
         statement.setString(11, event.workId);
@@ -768,7 +769,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setLong(7, "token_committed".equals(event.eventType) ? 1 : 0);
         statement.setLong(8, "token_lookup".equals(event.eventType) ? 1 : 0);
         statement.setLong(9, "token_tts_played".equals(event.eventType) ? 1 : 0);
-        statement.setLong(10, event.visibleMs);
+        statement.setLong(10, eventVisibleMs(event));
         statement.setLong(11, event.occurredAtMs);
         statement.setLong(12, event.occurredAtMs);
         statement.setInt(13, event.charIndex);
@@ -782,7 +783,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setLong(5, isExposure(event) ? 1 : 0);
         statement.setLong(6, "token_committed".equals(event.eventType) ? 1 : 0);
         statement.setLong(7, "token_lookup".equals(event.eventType) ? 1 : 0);
-        statement.setLong(8, event.visibleMs);
+        statement.setLong(8, eventVisibleMs(event));
         statement.setLong(9, event.occurredAtMs);
         statement.setLong(10, event.occurredAtMs);
     }
@@ -796,7 +797,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setString(6, event.eventType);
         statement.setLong(7, timelineBucketStartMs(event.occurredAtMs));
         statement.setLong(8, 1);
-        statement.setLong(9, event.visibleMs);
+        statement.setLong(9, eventVisibleMs(event));
         statement.setLong(10, event.occurredAtMs);
         statement.setLong(11, event.occurredAtMs);
     }
@@ -809,13 +810,17 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setString(5, event.eventType);
         statement.setLong(6, timelineBucketStartMs(event.occurredAtMs));
         statement.setLong(7, 1);
-        statement.setLong(8, event.visibleMs);
+        statement.setLong(8, eventVisibleMs(event));
         statement.setLong(9, event.occurredAtMs);
         statement.setLong(10, event.occurredAtMs);
     }
 
     private boolean isExposure(ReadingEvent event) {
         return "token_exposed".equals(event.eventType) || "token_committed".equals(event.eventType);
+    }
+
+    private static int eventVisibleMs(ReadingEvent event) {
+        return Math.min(MAX_EVENT_VISIBLE_MS, Math.max(0, event.visibleMs));
     }
 
     private static long timelineBucketStartMs(long occurredAtMs) {
