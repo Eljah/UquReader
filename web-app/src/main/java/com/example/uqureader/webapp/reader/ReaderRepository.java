@@ -21,9 +21,9 @@ public interface ReaderRepository extends Closeable {
 
     int recordEvents(long userId, String sessionToken, List<ReadingEvent> events) throws SQLException;
 
-    List<LemmaStat> listLemmaStats(long userId, String language, String workId, int limit) throws SQLException;
+    List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, int limit) throws SQLException;
 
-    List<FeatureStat> listFeatureStats(long userId, String language, String workId, int limit) throws SQLException;
+    List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, int limit) throws SQLException;
 
     List<ReadingEventRecord> listLemmaEvents(long userId, String lemma, String pos, String language, String workId,
                                              String eventType, int limit) throws SQLException;

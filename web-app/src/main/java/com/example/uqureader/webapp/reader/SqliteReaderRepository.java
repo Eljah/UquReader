@@ -212,17 +212,18 @@ public final class SqliteReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, int limit) throws SQLException {
+    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
+        String orderBy = lemmaStatsOrderBy(sort);
         List<LemmaStat> result = new ArrayList<>();
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
                      "SELECT lemma, pos, SUM(exposure_count), SUM(committed_count), SUM(lookup_count), SUM(tts_count), "
                              + "SUM(total_visible_ms), MAX(last_seen_at_ms) FROM user_lemma_scope_stats "
                              + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
-                             + "GROUP BY lemma, pos ORDER BY SUM(lookup_count) DESC, SUM(committed_count) ASC, lemma ASC LIMIT ?")) {
+                             + "GROUP BY lemma, pos ORDER BY " + orderBy + " LIMIT ?")) {
             statement.setLong(1, userId);
             statement.setString(2, safeLanguage);
             statement.setString(3, safeLanguage);
@@ -240,17 +241,18 @@ public final class SqliteReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<FeatureStat> listFeatureStats(long userId, String language, String workId, int limit) throws SQLException {
+    public List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
+        String orderBy = featureStatsOrderBy(sort);
         List<FeatureStat> result = new ArrayList<>();
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
                      "SELECT feature_key, SUM(exposure_count), SUM(committed_count), SUM(lookup_count), "
                              + "SUM(total_visible_ms), MAX(last_seen_at_ms) FROM user_feature_scope_stats "
                              + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
-                             + "GROUP BY feature_key ORDER BY SUM(lookup_count) DESC, feature_key ASC LIMIT ?")) {
+                             + "GROUP BY feature_key ORDER BY " + orderBy + " LIMIT ?")) {
             statement.setLong(1, userId);
             statement.setString(2, safeLanguage);
             statement.setString(3, safeLanguage);
@@ -305,6 +307,26 @@ public final class SqliteReaderRepository implements ReaderRepository {
             }
         }
         return result;
+    }
+
+    private static String lemmaStatsOrderBy(String sort) {
+        return switch (sort == null ? "" : sort) {
+            case "frequent" -> "SUM(exposure_count) DESC, SUM(committed_count) DESC, lemma ASC";
+            case "read" -> "SUM(committed_count) DESC, SUM(exposure_count) DESC, lemma ASC";
+            case "opened" -> "SUM(lookup_count) DESC, SUM(exposure_count) DESC, lemma ASC";
+            default -> "CASE WHEN SUM(committed_count) > 0 THEN CAST(SUM(lookup_count) AS REAL) / SUM(committed_count) "
+                    + "ELSE CAST(SUM(lookup_count) AS REAL) END DESC, SUM(lookup_count) DESC, SUM(exposure_count) DESC, lemma ASC";
+        };
+    }
+
+    private static String featureStatsOrderBy(String sort) {
+        return switch (sort == null ? "" : sort) {
+            case "frequent" -> "SUM(exposure_count) DESC, SUM(committed_count) DESC, feature_key ASC";
+            case "read" -> "SUM(committed_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
+            case "opened" -> "SUM(lookup_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
+            default -> "CASE WHEN SUM(committed_count) > 0 THEN CAST(SUM(lookup_count) AS REAL) / SUM(committed_count) "
+                    + "ELSE CAST(SUM(lookup_count) AS REAL) END DESC, SUM(lookup_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
+        };
     }
 
     @Override

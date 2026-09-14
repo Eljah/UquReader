@@ -53,6 +53,12 @@ final class StaticReaderAssets {
                     <div class="stats-filters">
                       <select id="statsLanguage" aria-label="Язык статистики"></select>
                       <select id="statsWork" aria-label="Книга для статистики"></select>
+                      <select id="statsSort" aria-label="Сортировка статистики">
+                        <option value="problem">Проблемные</option>
+                        <option value="frequent">Частые</option>
+                        <option value="read">Прочитанные</option>
+                        <option value="opened">Открытые</option>
+                      </select>
                     </div>
                     <div class="stats-tabs">
                       <button id="lemmaStatsTab" class="active">Леммы</button>
@@ -400,7 +406,7 @@ final class StaticReaderAssets {
             }
             .stats-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
             .stats-head h2 { margin: 0; font-size: 24px; color: var(--primary); letter-spacing: .05em; }
-            .stats-filters { display: grid; grid-template-columns: minmax(130px, 180px) minmax(180px, 1fr); gap: 10px; padding: 12px 0 4px; }
+            .stats-filters { display: grid; grid-template-columns: minmax(130px, 180px) minmax(180px, 1fr) minmax(150px, 190px); gap: 10px; padding: 12px 0 4px; }
             .stats-filters select { width: 100%; min-height: 40px; }
             .stats-tabs { display: flex; gap: 8px; padding: 14px 0; }
             .stats-tabs button { background: var(--surface-muted); color: var(--primary); border-color: var(--primary); }
@@ -419,7 +425,20 @@ final class StaticReaderAssets {
             .stat-row.clickable { cursor: pointer; }
             .stat-row.clickable:hover { background: var(--surface-muted); }
             .stat-main { min-width: 0; overflow-wrap: anywhere; }
-            .stat-sub { color: var(--muted); font-size: 13px; }
+            .stat-sub { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+            .memory-flag {
+              display: inline-flex;
+              align-items: center;
+              min-height: 20px;
+              padding: 1px 7px;
+              border-radius: 999px;
+              font-size: 12px;
+              font-weight: 700;
+              border: 1px solid transparent;
+            }
+            .memory-flag.good { color: #176d3b; background: rgba(23, 109, 59, .12); border-color: rgba(23, 109, 59, .30); }
+            .memory-flag.warn { color: #7a5200; background: rgba(226, 193, 113, .35); border-color: rgba(122, 82, 0, .25); }
+            .memory-flag.bad { color: var(--accent-red); background: rgba(194, 68, 50, .14); border-color: rgba(194, 68, 50, .32); }
             .timeline-panel {
               padding: 14px 0 18px;
               border-bottom: 2px solid var(--primary);
@@ -475,6 +494,7 @@ final class StaticReaderAssets {
               .app-title { font-size: 16px; padding-right: 0; }
               #statsButton, #logoutButton, #speechStatus { grid-column: 1 / -1; }
               .page { width: calc(100vw - 48px); padding: 24px; font-size: 20px; line-height: 1.55; }
+              .stats-filters { grid-template-columns: 1fr; }
               .stat-row { grid-template-columns: 1fr 70px 70px; }
               .stat-row .wide-only { display: none; }
             }
@@ -496,12 +516,15 @@ final class StaticReaderAssets {
               visibleSince: new Map(),
               visibleMs: new Map(),
               queue: [],
+              isFlushing: false,
               selectedToken: null,
               flushTimer: null,
               observer: null,
               statsMode: 'lemmas',
               statsLanguage: '',
               statsWorkId: '',
+              statsSort: 'problem',
+              statsRequestId: 0,
               lastLemmaRows: [],
               statsCache: new Map(),
               grammar: {pos: {}, features: {}},
@@ -629,13 +652,18 @@ final class StaticReaderAssets {
 
             async function flushEvents(useBeacon = false) {
               commitVisible(false);
-              if (!state.queue.length) return;
+              if (!state.queue.length || state.isFlushing) return;
+              state.isFlushing = true;
               const batch = state.queue.splice(0, 250);
               localStorage.setItem('uqureader.pendingEvents', JSON.stringify(state.queue));
               const payload = JSON.stringify({events: batch});
               if (useBeacon && navigator.sendBeacon) {
                 const blob = new Blob([payload], {type: 'application/json'});
-                if (navigator.sendBeacon('/api/reading/events', blob)) return;
+                if (navigator.sendBeacon('/api/reading/events', blob)) {
+                  state.isFlushing = false;
+                  state.statsCache.clear();
+                  return;
+                }
               }
               try {
                 await fetch('/api/reading/events', {
@@ -652,6 +680,8 @@ final class StaticReaderAssets {
               } catch (_) {
                 state.queue.unshift(...batch);
                 localStorage.setItem('uqureader.pendingEvents', JSON.stringify(state.queue.slice(-5000)));
+              } finally {
+                state.isFlushing = false;
               }
               if (state.queue.length) scheduleFlush(2000);
             }
@@ -731,7 +761,7 @@ final class StaticReaderAssets {
               stopSpeech(false);
               commitVisible(true);
               await new Promise(resolve => requestAnimationFrame(resolve));
-              await flushEvents();
+              flushEvents();
               try {
                 const data = await api(`/api/works/${encodeURIComponent(targetWork)}/tokens?page=${targetPage}&pageSize=${state.pageSize}`);
                 if (requestId !== state.pageRequestId || targetWork !== state.workId) return;
@@ -1385,17 +1415,20 @@ final class StaticReaderAssets {
             }
 
             async function loadStats() {
+              const requestId = ++state.statsRequestId;
               refreshStatsFilters();
               const mode = state.statsMode === 'features' ? 'features' : 'lemmas';
-              const cacheKey = `${mode}|${state.statsLanguage}|${state.statsWorkId}`;
+              const cacheKey = `${mode}|${state.statsLanguage}|${state.statsWorkId}|${state.statsSort}`;
               if (state.statsCache.has(cacheKey)) {
+                if (requestId !== state.statsRequestId) return;
                 renderStatsRows(state.statsCache.get(cacheKey));
                 return;
               }
-              const params = new URLSearchParams({limit: '200', mode});
+              const params = new URLSearchParams({limit: '200', mode, sort: state.statsSort});
               if (state.statsLanguage) params.set('language', state.statsLanguage);
               if (state.statsWorkId) params.set('workId', state.statsWorkId);
               const data = await api(`/api/reading/stats?${params.toString()}`);
+              if (requestId !== state.statsRequestId) return;
               const rows = mode === 'features' ? (data.features || []) : (data.lemmas || []);
               state.statsCache.set(cacheKey, rows);
               renderStatsRows(rows);
@@ -1413,7 +1446,8 @@ final class StaticReaderAssets {
             function refreshStatsFilters() {
               const languageSelect = $('statsLanguage');
               const workSelect = $('statsWork');
-              if (!languageSelect || !workSelect) return;
+              const sortSelect = $('statsSort');
+              if (!languageSelect || !workSelect || !sortSelect) return;
               const languages = [...new Set(state.works.map(work => work.language || '').filter(Boolean))].sort();
               if (state.statsLanguage && !languages.includes(state.statsLanguage)) state.statsLanguage = '';
               languageSelect.innerHTML = [
@@ -1428,6 +1462,7 @@ final class StaticReaderAssets {
                 ...visibleWorks.map(work => `<option value="${escapeHtml(work.id)}">${escapeHtml(work.title)}</option>`)
               ].join('');
               workSelect.value = state.statsWorkId;
+              sortSelect.value = state.statsSort;
             }
 
             function languageLabel(language) {
@@ -1447,8 +1482,9 @@ final class StaticReaderAssets {
                 const element = document.createElement('div');
                 element.className = 'stat-row clickable';
                 const posLabel = formatPos(row.pos);
+                const signal = memorySignal(row);
                 element.innerHTML = `
-                  <div class="stat-main">${escapeHtml(row.lemma)}<div class="stat-sub">${escapeHtml(posLabel)}</div></div>
+                  <div class="stat-main">${escapeHtml(row.lemma)}<div class="stat-sub"><span>${escapeHtml(posLabel)}</span><span class="memory-flag ${signal.className}">${escapeHtml(signal.label)}</span></div></div>
                   <div>${row.committedCount}</div>
                   <div>${row.lookupCount}</div>
                   <div class="wide-only">${row.ttsCount}</div>
@@ -1588,6 +1624,16 @@ final class StaticReaderAssets {
               }
             }
 
+            function memorySignal(row) {
+              const readCount = Number(row.committedCount || 0);
+              const lookupCount = Number(row.lookupCount || 0);
+              if (!lookupCount) return {className: 'good', label: 'усвоено'};
+              const ratio = lookupCount / Math.max(1, readCount);
+              if (ratio >= 0.5 || lookupCount >= 8) return {className: 'bad', label: 'часто открывается'};
+              if (ratio >= 0.2 || lookupCount >= 3) return {className: 'warn', label: 'повторить'};
+              return {className: 'good', label: 'редко открывается'};
+            }
+
             function escapeHtml(value) {
               return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
             }
@@ -1645,6 +1691,10 @@ final class StaticReaderAssets {
             });
             $('statsWork').addEventListener('change', async event => {
               state.statsWorkId = event.target.value;
+              await loadStats();
+            });
+            $('statsSort').addEventListener('change', async event => {
+              state.statsSort = event.target.value;
               await loadStats();
             });
             document.addEventListener('visibilitychange', () => {
