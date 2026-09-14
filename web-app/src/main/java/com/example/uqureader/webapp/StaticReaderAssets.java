@@ -1739,6 +1739,7 @@ final class StaticReaderAssets {
             $('statsButton').addEventListener('click', async () => {
               $('statsPanel').classList.remove('hidden');
               refreshStatsFilters();
+              await flushEvents();
               await loadStats();
             });
             $('closeStats').addEventListener('click', () => $('statsPanel').classList.add('hidden'));
