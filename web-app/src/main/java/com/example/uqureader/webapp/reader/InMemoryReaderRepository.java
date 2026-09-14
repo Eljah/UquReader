@@ -2,6 +2,7 @@ package com.example.uqureader.webapp.reader;
 
 import java.sql.SQLException;
 import java.time.Duration;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     private final Set<String> seenClientEvents = ConcurrentHashMap.newKeySet();
     private final List<StoredEvent> rawEvents = new ArrayList<>();
     private final Map<String, LemmaStats> lemmaStats = new HashMap<>();
+    private final Map<String, FeatureBucket> featureStats = new HashMap<>();
 
     @Override
     public synchronized UserSession register(String username, String password) throws SQLException {
@@ -96,20 +98,29 @@ public final class InMemoryReaderRepository implements ReaderRepository {
             }
             rawEvents.add(new StoredEvent(userId, event));
             upsertLemmaStats(userId, event);
+            upsertFeatureStats(userId, event);
             accepted++;
         }
         return accepted;
     }
 
     @Override
-    public synchronized List<LemmaStat> listLemmaStats(long userId, int limit) {
+    public synchronized List<LemmaStat> listLemmaStats(long userId, String language, String workId, int limit) {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
-        List<LemmaStat> result = new ArrayList<>();
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
+        Map<String, LemmaStats> buckets = new HashMap<>();
         for (LemmaStats stats : lemmaStats.values()) {
-            if (stats.userId != userId) {
+            if (stats.userId != userId || !matchesScope(stats.language, safeLanguage) || !matchesScope(stats.workId, safeWorkId)) {
                 continue;
             }
-            result.add(new LemmaStat(stats.lemma, stats.pos, stats.exposureCount, stats.committedCount,
+            String key = stats.lemma + ":" + stats.pos;
+            buckets.computeIfAbsent(key, ignored -> new LemmaStats(userId, safeLanguage, safeWorkId, stats.lemma, stats.pos))
+                    .merge(stats);
+        }
+        List<LemmaStat> result = new ArrayList<>();
+        for (LemmaStats stats : buckets.values()) {
+            result.add(new LemmaStat(stats.lemma, stats.pos, safeLanguage, safeWorkId, stats.exposureCount, stats.committedCount,
                     stats.lookupCount, stats.ttsCount, stats.totalVisibleMs, stats.lastSeenAtMs));
         }
         result.sort(Comparator.comparingLong((LemmaStat stat) -> stat.lookupCount).reversed()
@@ -119,29 +130,21 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public synchronized List<FeatureStat> listFeatureStats(long userId, int limit) {
+    public synchronized List<FeatureStat> listFeatureStats(long userId, String language, String workId, int limit) {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
         Map<String, FeatureBucket> buckets = new HashMap<>();
-        for (StoredEvent stored : rawEvents) {
-            ReadingEvent event = stored.event;
-            if (stored.userId != userId || event.featureKey.isBlank()) {
+        for (FeatureBucket stats : featureStats.values()) {
+            if (stats.userId != userId || !matchesScope(stats.language, safeLanguage) || !matchesScope(stats.workId, safeWorkId)) {
                 continue;
             }
-            FeatureBucket bucket = buckets.computeIfAbsent(event.featureKey, FeatureBucket::new);
-            if ("token_lookup".equals(event.eventType)) {
-                bucket.lookupCount++;
-            } else if ("token_committed".equals(event.eventType)) {
-                bucket.committedCount++;
-                bucket.exposureCount++;
-            } else if ("token_exposed".equals(event.eventType)) {
-                bucket.exposureCount++;
-            }
-            bucket.totalVisibleMs += event.visibleMs;
-            bucket.lastSeenAtMs = Math.max(bucket.lastSeenAtMs, event.occurredAtMs);
+            buckets.computeIfAbsent(stats.featureKey, ignored -> new FeatureBucket(userId, safeLanguage, safeWorkId, stats.featureKey))
+                    .merge(stats);
         }
         List<FeatureStat> result = new ArrayList<>();
         for (FeatureBucket bucket : buckets.values()) {
-            result.add(new FeatureStat(bucket.featureKey, bucket.exposureCount, bucket.committedCount,
+            result.add(new FeatureStat(bucket.featureKey, safeLanguage, safeWorkId, bucket.exposureCount, bucket.committedCount,
                     bucket.lookupCount, bucket.totalVisibleMs, bucket.lastSeenAtMs));
         }
         result.sort(Comparator.comparingLong((FeatureStat stat) -> stat.lookupCount).reversed()
@@ -151,18 +154,23 @@ public final class InMemoryReaderRepository implements ReaderRepository {
 
     @Override
     public synchronized List<ReadingEventRecord> listLemmaEvents(long userId, String lemma, String pos,
-                                                                 String eventType, int limit) {
+                                                                 String language, String workId, String eventType, int limit) {
         int safeLimit = limit <= 0 ? 500 : Math.min(5_000, limit);
         List<ReadingEventRecord> result = new ArrayList<>();
-        String safeLemma = lemma == null ? "" : lemma;
+        String safeLemma = normalizeLemma(lemma);
         String safePos = pos == null ? "" : pos;
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
         String safeType = eventType == null ? "" : eventType;
         for (StoredEvent stored : rawEvents) {
             ReadingEvent event = stored.event;
             if (stored.userId != userId) {
                 continue;
             }
-            if (!safeLemma.equals(event.lemma) || !safePos.equals(event.pos)) {
+            if (!safeLemma.equals(normalizeLemma(event.lemma)) || !safePos.equals(event.pos)) {
+                continue;
+            }
+            if (!matchesScope(eventLanguage(event), safeLanguage) || !matchesScope(event.workId, safeWorkId)) {
                 continue;
             }
             if (!safeType.isBlank() && !safeType.equals(event.eventType)) {
@@ -198,8 +206,10 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         if (event.lemma.isBlank() || event.pos.isBlank()) {
             return;
         }
-        String key = userId + ":" + event.lemma + ":" + event.pos;
-        LemmaStats stats = lemmaStats.computeIfAbsent(key, ignored -> new LemmaStats(userId, event.lemma, event.pos));
+        String language = eventLanguage(event);
+        String lemma = normalizeLemma(event.lemma);
+        String key = userId + ":" + language + ":" + event.workId + ":" + lemma + ":" + event.pos;
+        LemmaStats stats = lemmaStats.computeIfAbsent(key, ignored -> new LemmaStats(userId, language, event.workId, lemma, event.pos));
         if ("token_lookup".equals(event.eventType)) {
             stats.lookupCount++;
         } else if ("token_committed".equals(event.eventType)) {
@@ -217,8 +227,49 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         }
     }
 
+    private void upsertFeatureStats(long userId, ReadingEvent event) {
+        if (event.featureKey.isBlank()) {
+            return;
+        }
+        String language = eventLanguage(event);
+        String key = userId + ":" + language + ":" + event.workId + ":" + event.featureKey;
+        FeatureBucket stats = featureStats.computeIfAbsent(key,
+                ignored -> new FeatureBucket(userId, language, event.workId, event.featureKey));
+        if ("token_lookup".equals(event.eventType)) {
+            stats.lookupCount++;
+        } else if ("token_committed".equals(event.eventType)) {
+            stats.committedCount++;
+            stats.exposureCount++;
+        } else if ("token_exposed".equals(event.eventType)) {
+            stats.exposureCount++;
+        }
+        stats.totalVisibleMs += event.visibleMs;
+        stats.lastSeenAtMs = Math.max(stats.lastSeenAtMs, event.occurredAtMs);
+    }
+
     private static String normalizeUsername(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeLemma(String value) {
+        return value == null ? "" : Normalizer.normalize(value.trim(), Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeScope(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean matchesScope(String actual, String filter) {
+        return filter == null || filter.isBlank() || filter.equals(actual == null ? "" : actual);
+    }
+
+    private static String eventLanguage(ReadingEvent event) {
+        String language = normalizeScope(event.language);
+        if (!language.isBlank()) {
+            return language;
+        }
+        String value = event.workId == null ? "" : event.workId.toLowerCase(Locale.ROOT);
+        return value.contains("elnet") || value.contains("puncheryshte") ? "mhr" : "tt";
     }
 
     private static ReadingEventRecord toRecord(ReadingEvent event) {
@@ -234,19 +285,35 @@ public final class InMemoryReaderRepository implements ReaderRepository {
 
     private static final class FeatureBucket {
         final String featureKey;
+        final long userId;
+        final String language;
+        final String workId;
         long exposureCount;
         long committedCount;
         long lookupCount;
         long totalVisibleMs;
         long lastSeenAtMs;
 
-        FeatureBucket(String featureKey) {
+        FeatureBucket(long userId, String language, String workId, String featureKey) {
+            this.userId = userId;
+            this.language = language;
+            this.workId = workId;
             this.featureKey = featureKey;
+        }
+
+        void merge(FeatureBucket other) {
+            exposureCount += other.exposureCount;
+            committedCount += other.committedCount;
+            lookupCount += other.lookupCount;
+            totalVisibleMs += other.totalVisibleMs;
+            lastSeenAtMs = Math.max(lastSeenAtMs, other.lastSeenAtMs);
         }
     }
 
     private static final class LemmaStats {
         final long userId;
+        final String language;
+        final String workId;
         final String lemma;
         final String pos;
         long exposureCount;
@@ -257,10 +324,22 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         long firstSeenAtMs;
         long lastSeenAtMs;
 
-        LemmaStats(long userId, String lemma, String pos) {
+        LemmaStats(long userId, String language, String workId, String lemma, String pos) {
             this.userId = userId;
+            this.language = language;
+            this.workId = workId;
             this.lemma = lemma;
             this.pos = pos;
+        }
+
+        void merge(LemmaStats other) {
+            exposureCount += other.exposureCount;
+            committedCount += other.committedCount;
+            lookupCount += other.lookupCount;
+            ttsCount += other.ttsCount;
+            totalVisibleMs += other.totalVisibleMs;
+            lastSeenAtMs = Math.max(lastSeenAtMs, other.lastSeenAtMs);
+            firstSeenAtMs = firstSeenAtMs == 0 ? other.firstSeenAtMs : Math.min(firstSeenAtMs, other.firstSeenAtMs);
         }
     }
 }

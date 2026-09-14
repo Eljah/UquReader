@@ -10,6 +10,7 @@ const lexiconDir = process.argv[4] || path.join(root, '.codex', 'mari', 'unipars
 const hfstLookupPath = process.argv[5] || path.join(root, '.codex', 'mari', 'mhr-hfst-lookup.tsv');
 const ENABLE_OCR_NORMALIZATION = process.env.MARI_ENABLE_OCR_NORMALIZATION === '1';
 const ENABLE_LINE_SPLIT_REPAIR = process.env.MARI_ENABLE_LINE_SPLIT_REPAIR === '1';
+const ENABLE_PAGE_AWARE = process.env.MARI_DISABLE_PAGE_AWARE !== '1';
 
 const MARI_WORD = /[А-Яа-яЁёӒӓӦӧӰӱҤҥӸӹ]+(?:[-'][А-Яа-яЁёӒӓӦӧӰӱҤҥӸӹ]+)*/u;
 const TOKEN = /[А-Яа-яЁёӒӓӦӧӰӱҤҥӸӹ]+(?:[-'][А-Яа-яЁёӒӓӦӧӰӱҤҥӸӹ]+)*|[A-Za-z]+|\d+|[^\s]/gu;
@@ -42,8 +43,9 @@ function main() {
   const translations = loadTranslations(lexiconDir);
   const hfst = loadHfstLookup(hfstLookupPath);
   const raw = fs.readFileSync(input, 'utf8');
-  const clean = cleanOcr(raw);
-  const rawTokens = tokenize(clean);
+  const rawTokens = ENABLE_PAGE_AWARE
+    ? tokenizePageAwareBook(raw, hfst, translations)
+    : tokenize(cleanOcr(raw));
   const tokens = ENABLE_LINE_SPLIT_REPAIR ? repairLineSplitWords(rawTokens, hfst, translations) : rawTokens;
   const records = tokens.map((token) => toRecord(token, translations, hfst));
   fs.mkdirSync(path.dirname(output), { recursive: true });
@@ -52,6 +54,180 @@ function main() {
   const unique = new Set(records.filter((record) => MARI_WORD.test(record.surface)).map((record) => record.surface.toLowerCase())).size;
   const translated = records.filter((record) => record.translations && record.translations.length).length;
   console.log(`Wrote ${records.length} tokens, ${words} Mari-like words, ${unique} unique word forms, ${translated} translated tokens to ${output}`);
+}
+
+function tokenizePageAwareBook(raw, hfst, translations) {
+  const pages = raw.split('\f')
+    .map((text, index) => toBookPage(text, index + 1))
+    .filter((page) => page.lines.length > 0);
+  const titlePage = pages.findIndex((page) => page.lines.some((line) => /ЭЛНЕТ\s+ПӰНЧЕРЫШТЕ/.test(line)));
+  const storyPage = pages.findIndex((page) => page.lines.some((line) => /^\s*Шошо[.!]/.test(line)));
+  const start = titlePage >= 0 ? titlePage : Math.max(0, storyPage);
+  const bodyPages = pages.slice(start).map((page, index) => ({
+    ...page,
+    pageIndex: index,
+    mainLines: [],
+    footnotes: [],
+  }));
+
+  for (const page of bodyPages) {
+    splitPageLines(page);
+  }
+  repairPageBoundarySplits(bodyPages, hfst, translations);
+
+  const tokens = [];
+  for (const page of bodyPages) {
+    tokens.push(...tokenizePageText(linesToParagraphText(page.mainLines), page, 'body', ''));
+    for (const footnote of page.footnotes) {
+      tokens.push(...tokenizePageText(footnote.text, page, 'footnote', footnote.id));
+    }
+  }
+  return tokens;
+}
+
+function toBookPage(text, pdfPage) {
+  const rawLines = text.replace(/\r\n/g, '\n').split('\n');
+  const lines = rawLines
+    .map(cleanPdfLine)
+    .filter(Boolean)
+    .filter((line) => !/^Image too small/i.test(line) && !/^Line cannot/i.test(line))
+    .filter((line) => cyrillicRatio(line) >= 0.35 || /^[\d\s.,:;—-]+$/.test(line) || /[.!?…»"]$/.test(line));
+  return {
+    pdfPage,
+    sourcePage: printedPageNumber(lines) || pdfPage,
+    lines,
+  };
+}
+
+function cleanPdfLine(line) {
+  return String(line || '')
+    .replace(/[|`©®™•■□]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function printedPageNumber(lines) {
+  for (let i = lines.length - 1; i >= Math.max(0, lines.length - 4); i--) {
+    const match = String(lines[i] || '').match(/^\s*(\d{1,3})\s*$/);
+    if (match) return Number(match[1]);
+  }
+  return 0;
+}
+
+function splitPageLines(page) {
+  let footnoteNumber = 0;
+  for (const line of page.lines) {
+    if (/^\d{1,3}$/.test(line)) {
+      continue;
+    }
+    const footnote = line.match(/^\*+\s*(.+)$/);
+    if (footnote) {
+      footnoteNumber++;
+      page.footnotes.push({
+        id: `${page.sourcePage}.${footnoteNumber}`,
+        text: normalizeFootnoteText(footnote[1]),
+      });
+      continue;
+    }
+    page.mainLines.push(line);
+  }
+}
+
+function normalizeFootnoteText(text) {
+  return String(text || '')
+    .replace(/Л\s+ы\s+с\s+т\s+а\s+н\s+п\s+ӱ\s+н\s+ч\s+ӧ/gi, 'Лыстан пӱнчӧ')
+    .replace(/\s+([.,:;!?…])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function repairPageBoundarySplits(pages, hfst, translations) {
+  for (let i = 0; i < pages.length - 1; i++) {
+    const current = pages[i];
+    const next = pages[i + 1];
+    const leftIndex = lastMainLineIndex(current);
+    const rightIndex = firstMainLineIndex(next);
+    if (leftIndex < 0 || rightIndex < 0) continue;
+    const leftLine = current.mainLines[leftIndex];
+    const rightLine = next.mainLines[rightIndex];
+    const leftMatch = leftLine.match(new RegExp(`^(.*?)([А-Яа-яЁёӒӓӦӧӰӱҤҥӸӹ]{2,})([-‐‑‒–—]+)\\s*$`, 'u'));
+    const rightMatch = rightLine.match(new RegExp(`^\\s*([А-Яа-яЁёӒӓӦӧӰӱҤҥӸӹ]{2,})(.*)$`, 'u'));
+    if (!leftMatch || !rightMatch) continue;
+    const chosen = chooseJoinedWord(leftMatch[2], rightMatch[1], hfst, translations)
+      || chooseHyphenatedBoundaryWord(leftMatch[2], rightMatch[1], hfst, translations);
+    if (!chosen) continue;
+    current.mainLines[leftIndex] = `${leftMatch[1]}${matchCase(leftMatch[2], chosen.toLowerCase())}`;
+    let remainder = rightMatch[2].trimStart();
+    const punctuation = remainder.match(/^([.,:;!?…]+)(.*)$/u);
+    if (punctuation) {
+      current.mainLines[leftIndex] += punctuation[1];
+      remainder = punctuation[2].trimStart();
+    }
+    if (remainder) {
+      next.mainLines[rightIndex] = remainder;
+    } else {
+      next.mainLines.splice(rightIndex, 1);
+    }
+  }
+}
+
+function chooseHyphenatedBoundaryWord(left, right, hfst, translations) {
+  const leftKnown = hasAnalysisOrTranslation(left.toLowerCase(), hfst, translations);
+  const rightKnown = hasAnalysisOrTranslation(right.toLowerCase(), hfst, translations)
+    || analyze(right).includes('+');
+  if (!leftKnown || !rightKnown) {
+    return '';
+  }
+  return `${left}-${right}`.toLowerCase();
+}
+
+function lastMainLineIndex(page) {
+  for (let i = page.mainLines.length - 1; i >= 0; i--) {
+    if (page.mainLines[i]) return i;
+  }
+  return -1;
+}
+
+function firstMainLineIndex(page) {
+  for (let i = 0; i < page.mainLines.length; i++) {
+    if (page.mainLines[i]) return i;
+  }
+  return -1;
+}
+
+function linesToParagraphText(lines) {
+  const paragraphs = [];
+  let current = '';
+  for (const line of lines) {
+    if (!line) continue;
+    if (startsNewParagraph(line, current)) {
+      if (current) paragraphs.push(current);
+      current = line;
+    } else {
+      current = current ? `${current} ${line}` : line;
+    }
+  }
+  if (current) paragraphs.push(current);
+  return paragraphs.join('\n\n');
+}
+
+function startsNewParagraph(line, current) {
+  if (!current) return false;
+  if (/^[—–]/.test(line)) return true;
+  if (/^\d{1,2}$/.test(line)) return true;
+  if (/^[А-ЯЁӒӦӰҤӸ\s]+$/.test(line) && line.length < 48) return true;
+  return false;
+}
+
+function tokenizePageText(text, page, role, footnoteId) {
+  return tokenize(text).map((token, index) => ({
+    ...token,
+    prefix: index === 0 && role === 'footnote' ? '' : token.prefix,
+    pageIndex: page.pageIndex,
+    sourcePage: page.sourcePage,
+    role,
+    footnoteId,
+  }));
 }
 
 function cleanOcr(text) {
@@ -218,6 +394,10 @@ function toRecord(token, translations, hfst) {
     surface: restoredSurface,
     analysis,
     translations: lookupTranslations(translations, lemma, restoredSurface),
+    pageIndex: token.pageIndex,
+    sourcePage: token.sourcePage,
+    role: token.role,
+    footnoteId: token.footnoteId,
   };
 }
 

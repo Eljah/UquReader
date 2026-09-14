@@ -3,6 +3,8 @@ package com.example.uqureader.webapp.reader;
 public final class LemmaStat {
     public final String lemma;
     public final String pos;
+    public final String language;
+    public final String workId;
     public final long exposureCount;
     public final long committedCount;
     public final long lookupCount;
@@ -12,8 +14,15 @@ public final class LemmaStat {
 
     public LemmaStat(String lemma, String pos, long exposureCount, long committedCount,
                      long lookupCount, long ttsCount, long totalVisibleMs, long lastSeenAtMs) {
+        this(lemma, pos, "", "", exposureCount, committedCount, lookupCount, ttsCount, totalVisibleMs, lastSeenAtMs);
+    }
+
+    public LemmaStat(String lemma, String pos, String language, String workId, long exposureCount, long committedCount,
+                     long lookupCount, long ttsCount, long totalVisibleMs, long lastSeenAtMs) {
         this.lemma = lemma == null ? "" : lemma;
         this.pos = pos == null ? "" : pos;
+        this.language = language == null ? "" : language;
+        this.workId = workId == null ? "" : workId;
         this.exposureCount = exposureCount;
         this.committedCount = committedCount;
         this.lookupCount = lookupCount;

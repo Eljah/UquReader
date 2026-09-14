@@ -10,9 +10,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -145,9 +147,9 @@ public final class SqliteReaderRepository implements ReaderRepository {
         try (Connection connection = open()) {
             connection.setAutoCommit(false);
             try (PreparedStatement insertEvent = connection.prepareStatement(
-                    "INSERT OR IGNORE INTO reading_events(user_id, session_token, client_event_id, event_type, work_id, page_index, "
+                    "INSERT OR IGNORE INTO reading_events(user_id, session_token, client_event_id, event_type, work_id, language, page_index, "
                             + "token_index, lemma, pos, feature_key, char_index, visible_ms, occurred_at_ms) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                  PreparedStatement upsertStats = connection.prepareStatement(
                          "INSERT INTO user_lemma_stats(user_id, lemma, pos, exposure_count, committed_count, lookup_count, "
                                  + "tts_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, last_work_id, last_char_index) "
@@ -159,7 +161,29 @@ public final class SqliteReaderRepository implements ReaderRepository {
                                  + "tts_count=user_lemma_stats.tts_count + excluded.tts_count, "
                                  + "total_visible_ms=user_lemma_stats.total_visible_ms + excluded.total_visible_ms, "
                                  + "last_seen_at_ms=max(user_lemma_stats.last_seen_at_ms, excluded.last_seen_at_ms), "
-                                 + "last_work_id=excluded.last_work_id, last_char_index=excluded.last_char_index")) {
+                                 + "last_work_id=excluded.last_work_id, last_char_index=excluded.last_char_index");
+                 PreparedStatement upsertScopedLemmaStats = connection.prepareStatement(
+                         "INSERT INTO user_lemma_scope_stats(user_id, language, work_id, lemma, pos, exposure_count, committed_count, lookup_count, "
+                                 + "tts_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, last_char_index) "
+                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                 + "ON CONFLICT(user_id, language, work_id, lemma, pos) DO UPDATE SET "
+                                 + "exposure_count=user_lemma_scope_stats.exposure_count + excluded.exposure_count, "
+                                 + "committed_count=user_lemma_scope_stats.committed_count + excluded.committed_count, "
+                                 + "lookup_count=user_lemma_scope_stats.lookup_count + excluded.lookup_count, "
+                                 + "tts_count=user_lemma_scope_stats.tts_count + excluded.tts_count, "
+                                 + "total_visible_ms=user_lemma_scope_stats.total_visible_ms + excluded.total_visible_ms, "
+                                 + "last_seen_at_ms=max(user_lemma_scope_stats.last_seen_at_ms, excluded.last_seen_at_ms), "
+                                 + "last_char_index=excluded.last_char_index");
+                 PreparedStatement upsertScopedFeatureStats = connection.prepareStatement(
+                         "INSERT INTO user_feature_scope_stats(user_id, language, work_id, feature_key, exposure_count, committed_count, lookup_count, "
+                                 + "total_visible_ms, first_seen_at_ms, last_seen_at_ms) "
+                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                 + "ON CONFLICT(user_id, language, work_id, feature_key) DO UPDATE SET "
+                                 + "exposure_count=user_feature_scope_stats.exposure_count + excluded.exposure_count, "
+                                 + "committed_count=user_feature_scope_stats.committed_count + excluded.committed_count, "
+                                 + "lookup_count=user_feature_scope_stats.lookup_count + excluded.lookup_count, "
+                                 + "total_visible_ms=user_feature_scope_stats.total_visible_ms + excluded.total_visible_ms, "
+                                 + "last_seen_at_ms=max(user_feature_scope_stats.last_seen_at_ms, excluded.last_seen_at_ms)")) {
                 for (ReadingEvent event : events) {
                     bindEvent(insertEvent, userId, sessionToken, event);
                     int inserted = insertEvent.executeUpdate();
@@ -170,6 +194,12 @@ public final class SqliteReaderRepository implements ReaderRepository {
                     if (!event.lemma.isBlank() && !event.pos.isBlank()) {
                         bindStats(upsertStats, userId, event);
                         upsertStats.executeUpdate();
+                        bindScopedLemmaStats(upsertScopedLemmaStats, userId, event);
+                        upsertScopedLemmaStats.executeUpdate();
+                    }
+                    if (!event.featureKey.isBlank()) {
+                        bindScopedFeatureStats(upsertScopedFeatureStats, userId, event);
+                        upsertScopedFeatureStats.executeUpdate();
                     }
                 }
                 connection.commit();
@@ -182,19 +212,26 @@ public final class SqliteReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<LemmaStat> listLemmaStats(long userId, int limit) throws SQLException {
+    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
         List<LemmaStat> result = new ArrayList<>();
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
-                     "SELECT lemma, pos, exposure_count, committed_count, lookup_count, tts_count, "
-                             + "total_visible_ms, last_seen_at_ms FROM user_lemma_stats WHERE user_id=? "
-                             + "ORDER BY lookup_count DESC, committed_count ASC, lemma ASC LIMIT ?")) {
+                     "SELECT lemma, pos, SUM(exposure_count), SUM(committed_count), SUM(lookup_count), SUM(tts_count), "
+                             + "SUM(total_visible_ms), MAX(last_seen_at_ms) FROM user_lemma_scope_stats "
+                             + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
+                             + "GROUP BY lemma, pos ORDER BY SUM(lookup_count) DESC, SUM(committed_count) ASC, lemma ASC LIMIT ?")) {
             statement.setLong(1, userId);
-            statement.setInt(2, safeLimit);
+            statement.setString(2, safeLanguage);
+            statement.setString(3, safeLanguage);
+            statement.setString(4, safeWorkId);
+            statement.setString(5, safeWorkId);
+            statement.setInt(6, safeLimit);
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
-                    result.add(new LemmaStat(rs.getString(1), rs.getString(2), rs.getLong(3),
+                    result.add(new LemmaStat(rs.getString(1), rs.getString(2), safeLanguage, safeWorkId, rs.getLong(3),
                             rs.getLong(4), rs.getLong(5), rs.getLong(6), rs.getLong(7), rs.getLong(8)));
                 }
             }
@@ -203,23 +240,26 @@ public final class SqliteReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<FeatureStat> listFeatureStats(long userId, int limit) throws SQLException {
+    public List<FeatureStat> listFeatureStats(long userId, String language, String workId, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
         List<FeatureStat> result = new ArrayList<>();
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
-                     "SELECT feature_key, "
-                             + "SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END), "
-                             + "SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END), "
-                             + "SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END), "
-                             + "SUM(visible_ms), MAX(occurred_at_ms) "
-                             + "FROM reading_events WHERE user_id=? AND feature_key<>'' "
-                             + "GROUP BY feature_key ORDER BY 4 DESC, feature_key ASC LIMIT ?")) {
+                     "SELECT feature_key, SUM(exposure_count), SUM(committed_count), SUM(lookup_count), "
+                             + "SUM(total_visible_ms), MAX(last_seen_at_ms) FROM user_feature_scope_stats "
+                             + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
+                             + "GROUP BY feature_key ORDER BY SUM(lookup_count) DESC, feature_key ASC LIMIT ?")) {
             statement.setLong(1, userId);
-            statement.setInt(2, safeLimit);
+            statement.setString(2, safeLanguage);
+            statement.setString(3, safeLanguage);
+            statement.setString(4, safeWorkId);
+            statement.setString(5, safeWorkId);
+            statement.setInt(6, safeLimit);
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
-                    result.add(new FeatureStat(rs.getString(1), rs.getLong(2), rs.getLong(3),
+                    result.add(new FeatureStat(rs.getString(1), safeLanguage, safeWorkId, rs.getLong(2), rs.getLong(3),
                             rs.getLong(4), rs.getLong(5), rs.getLong(6)));
                 }
             }
@@ -229,25 +269,32 @@ public final class SqliteReaderRepository implements ReaderRepository {
 
     @Override
     public List<ReadingEventRecord> listLemmaEvents(long userId, String lemma, String pos,
-                                                    String eventType, int limit) throws SQLException {
+                                                    String language, String workId, String eventType, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 500 : Math.min(5_000, limit);
         List<ReadingEventRecord> result = new ArrayList<>();
         boolean filterType = eventType != null && !eventType.isBlank();
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
         String sql = "SELECT event_type, work_id, page_index, token_index, lemma, pos, feature_key, "
                 + "char_index, visible_ms, occurred_at_ms FROM reading_events "
                 + "WHERE user_id=? AND lemma=? AND pos=?"
+                + " AND (?='' OR language=?) AND (?='' OR work_id=?)"
                 + (filterType ? " AND event_type=?" : "")
                 + " ORDER BY occurred_at_ms ASC LIMIT ?";
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, userId);
-            statement.setString(2, lemma == null ? "" : lemma);
+            statement.setString(2, normalizeLemma(lemma));
             statement.setString(3, pos == null ? "" : pos);
+            statement.setString(4, safeLanguage);
+            statement.setString(5, safeLanguage);
+            statement.setString(6, safeWorkId);
+            statement.setString(7, safeWorkId);
             if (filterType) {
-                statement.setString(4, eventType);
-                statement.setInt(5, safeLimit);
+                statement.setString(8, eventType);
+                statement.setInt(9, safeLimit);
             } else {
-                statement.setInt(4, safeLimit);
+                statement.setInt(8, safeLimit);
             }
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
@@ -258,6 +305,53 @@ public final class SqliteReaderRepository implements ReaderRepository {
             }
         }
         return result;
+    }
+
+    @Override
+    public void refreshScopedStats(Map<String, String> workLanguages) throws SQLException {
+        try (Connection connection = open()) {
+            connection.setAutoCommit(false);
+            try {
+                if (workLanguages != null) {
+                    try (PreparedStatement statement = connection.prepareStatement(
+                            "UPDATE reading_events SET language=? WHERE work_id=? AND (language IS NULL OR language='')")) {
+                        for (Map.Entry<String, String> entry : workLanguages.entrySet()) {
+                            statement.setString(1, normalizeScope(entry.getValue()));
+                            statement.setString(2, entry.getKey());
+                            statement.addBatch();
+                        }
+                        statement.executeBatch();
+                    }
+                }
+                try (Statement statement = connection.createStatement()) {
+                    statement.executeUpdate("DELETE FROM user_lemma_scope_stats");
+                    statement.executeUpdate("INSERT INTO user_lemma_scope_stats(user_id, language, work_id, lemma, pos, "
+                            + "exposure_count, committed_count, lookup_count, tts_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, last_char_index) "
+                            + "SELECT user_id, COALESCE(NULLIF(language, ''), 'unknown'), work_id, lower(lemma), pos, "
+                            + "SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END), "
+                            + "SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END), "
+                            + "SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END), "
+                            + "SUM(CASE WHEN event_type='token_tts_played' THEN 1 ELSE 0 END), "
+                            + "SUM(visible_ms), MIN(occurred_at_ms), MAX(occurred_at_ms), MAX(char_index) "
+                            + "FROM reading_events WHERE lemma<>'' AND pos<>'' "
+                            + "GROUP BY user_id, COALESCE(NULLIF(language, ''), 'unknown'), work_id, lower(lemma), pos");
+                    statement.executeUpdate("DELETE FROM user_feature_scope_stats");
+                    statement.executeUpdate("INSERT INTO user_feature_scope_stats(user_id, language, work_id, feature_key, "
+                            + "exposure_count, committed_count, lookup_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms) "
+                            + "SELECT user_id, COALESCE(NULLIF(language, ''), 'unknown'), work_id, feature_key, "
+                            + "SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END), "
+                            + "SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END), "
+                            + "SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END), "
+                            + "SUM(visible_ms), MIN(occurred_at_ms), MAX(occurred_at_ms) "
+                            + "FROM reading_events WHERE feature_key<>'' "
+                            + "GROUP BY user_id, COALESCE(NULLIF(language, ''), 'unknown'), work_id, feature_key");
+                }
+                connection.commit();
+            } catch (SQLException ex) {
+                connection.rollback();
+                throw ex;
+            }
+        }
     }
 
     @Override
@@ -292,6 +386,7 @@ public final class SqliteReaderRepository implements ReaderRepository {
                     + "client_event_id TEXT NOT NULL,"
                     + "event_type TEXT NOT NULL,"
                     + "work_id TEXT NOT NULL,"
+                    + "language TEXT NOT NULL DEFAULT '',"
                     + "page_index INTEGER NOT NULL DEFAULT -1,"
                     + "token_index INTEGER NOT NULL DEFAULT -1,"
                     + "lemma TEXT NOT NULL DEFAULT '',"
@@ -301,8 +396,10 @@ public final class SqliteReaderRepository implements ReaderRepository {
                     + "visible_ms INTEGER NOT NULL DEFAULT 0,"
                     + "occurred_at_ms INTEGER NOT NULL,"
                     + "UNIQUE(user_id, client_event_id))");
+            addColumnIfMissing(statement, "ALTER TABLE reading_events ADD COLUMN language TEXT NOT NULL DEFAULT ''");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_user_time_idx ON reading_events(user_id, occurred_at_ms)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_lemma_time_idx ON reading_events(user_id, lemma, pos, event_type, occurred_at_ms)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_scope_time_idx ON reading_events(user_id, language, work_id, occurred_at_ms)");
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS user_lemma_stats("
                     + "user_id INTEGER NOT NULL,"
                     + "lemma TEXT NOT NULL,"
@@ -317,6 +414,35 @@ public final class SqliteReaderRepository implements ReaderRepository {
                     + "last_work_id TEXT NOT NULL DEFAULT '',"
                     + "last_char_index INTEGER NOT NULL DEFAULT -1,"
                     + "PRIMARY KEY(user_id, lemma, pos))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS user_lemma_scope_stats("
+                    + "user_id INTEGER NOT NULL,"
+                    + "language TEXT NOT NULL,"
+                    + "work_id TEXT NOT NULL,"
+                    + "lemma TEXT NOT NULL,"
+                    + "pos TEXT NOT NULL,"
+                    + "exposure_count INTEGER NOT NULL DEFAULT 0,"
+                    + "committed_count INTEGER NOT NULL DEFAULT 0,"
+                    + "lookup_count INTEGER NOT NULL DEFAULT 0,"
+                    + "tts_count INTEGER NOT NULL DEFAULT 0,"
+                    + "total_visible_ms INTEGER NOT NULL DEFAULT 0,"
+                    + "first_seen_at_ms INTEGER NOT NULL,"
+                    + "last_seen_at_ms INTEGER NOT NULL,"
+                    + "last_char_index INTEGER NOT NULL DEFAULT -1,"
+                    + "PRIMARY KEY(user_id, language, work_id, lemma, pos))");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_lemma_scope_problem_idx ON user_lemma_scope_stats(user_id, language, work_id, lookup_count DESC, committed_count ASC)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS user_feature_scope_stats("
+                    + "user_id INTEGER NOT NULL,"
+                    + "language TEXT NOT NULL,"
+                    + "work_id TEXT NOT NULL,"
+                    + "feature_key TEXT NOT NULL,"
+                    + "exposure_count INTEGER NOT NULL DEFAULT 0,"
+                    + "committed_count INTEGER NOT NULL DEFAULT 0,"
+                    + "lookup_count INTEGER NOT NULL DEFAULT 0,"
+                    + "total_visible_ms INTEGER NOT NULL DEFAULT 0,"
+                    + "first_seen_at_ms INTEGER NOT NULL,"
+                    + "last_seen_at_ms INTEGER NOT NULL,"
+                    + "PRIMARY KEY(user_id, language, work_id, feature_key))");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_feature_scope_problem_idx ON user_feature_scope_stats(user_id, language, work_id, lookup_count DESC, committed_count ASC)");
         }
     }
 
@@ -350,19 +476,20 @@ public final class SqliteReaderRepository implements ReaderRepository {
         statement.setString(3, event.clientEventId);
         statement.setString(4, event.eventType);
         statement.setString(5, event.workId);
-        statement.setInt(6, event.pageIndex);
-        statement.setInt(7, event.tokenIndex);
-        statement.setString(8, event.lemma);
-        statement.setString(9, event.pos);
-        statement.setString(10, event.featureKey);
-        statement.setInt(11, event.charIndex);
-        statement.setInt(12, event.visibleMs);
-        statement.setLong(13, event.occurredAtMs);
+        statement.setString(6, eventLanguage(event));
+        statement.setInt(7, event.pageIndex);
+        statement.setInt(8, event.tokenIndex);
+        statement.setString(9, normalizeLemma(event.lemma));
+        statement.setString(10, event.pos);
+        statement.setString(11, event.featureKey);
+        statement.setInt(12, event.charIndex);
+        statement.setInt(13, event.visibleMs);
+        statement.setLong(14, event.occurredAtMs);
     }
 
     private void bindStats(PreparedStatement statement, long userId, ReadingEvent event) throws SQLException {
         statement.setLong(1, userId);
-        statement.setString(2, event.lemma);
+        statement.setString(2, normalizeLemma(event.lemma));
         statement.setString(3, event.pos);
         statement.setLong(4, isExposure(event) ? 1 : 0);
         statement.setLong(5, "token_committed".equals(event.eventType) ? 1 : 0);
@@ -375,6 +502,35 @@ public final class SqliteReaderRepository implements ReaderRepository {
         statement.setInt(12, event.charIndex);
     }
 
+    private void bindScopedLemmaStats(PreparedStatement statement, long userId, ReadingEvent event) throws SQLException {
+        statement.setLong(1, userId);
+        statement.setString(2, eventLanguage(event));
+        statement.setString(3, event.workId);
+        statement.setString(4, normalizeLemma(event.lemma));
+        statement.setString(5, event.pos);
+        statement.setLong(6, isExposure(event) ? 1 : 0);
+        statement.setLong(7, "token_committed".equals(event.eventType) ? 1 : 0);
+        statement.setLong(8, "token_lookup".equals(event.eventType) ? 1 : 0);
+        statement.setLong(9, "token_tts_played".equals(event.eventType) ? 1 : 0);
+        statement.setLong(10, event.visibleMs);
+        statement.setLong(11, event.occurredAtMs);
+        statement.setLong(12, event.occurredAtMs);
+        statement.setInt(13, event.charIndex);
+    }
+
+    private void bindScopedFeatureStats(PreparedStatement statement, long userId, ReadingEvent event) throws SQLException {
+        statement.setLong(1, userId);
+        statement.setString(2, eventLanguage(event));
+        statement.setString(3, event.workId);
+        statement.setString(4, event.featureKey);
+        statement.setLong(5, isExposure(event) ? 1 : 0);
+        statement.setLong(6, "token_committed".equals(event.eventType) ? 1 : 0);
+        statement.setLong(7, "token_lookup".equals(event.eventType) ? 1 : 0);
+        statement.setLong(8, event.visibleMs);
+        statement.setLong(9, event.occurredAtMs);
+        statement.setLong(10, event.occurredAtMs);
+    }
+
     private boolean isExposure(ReadingEvent event) {
         return "token_exposed".equals(event.eventType) || "token_committed".equals(event.eventType);
     }
@@ -385,5 +541,39 @@ public final class SqliteReaderRepository implements ReaderRepository {
 
     private static String normalizeUsername(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeLemma(String value) {
+        return value == null ? "" : Normalizer.normalize(value.trim(), Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeScope(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String eventLanguage(ReadingEvent event) {
+        String language = normalizeScope(event.language);
+        if (!language.isBlank()) {
+            return language;
+        }
+        return inferLanguage(event.workId);
+    }
+
+    private static String inferLanguage(String workId) {
+        String value = workId == null ? "" : workId.toLowerCase(Locale.ROOT);
+        if (value.contains("elnet") || value.contains("puncheryshte")) {
+            return "mhr";
+        }
+        return "tt";
+    }
+
+    private static void addColumnIfMissing(Statement statement, String sql) throws SQLException {
+        try {
+            statement.executeUpdate(sql);
+        } catch (SQLException ex) {
+            if (!ex.getMessage().toLowerCase(Locale.ROOT).contains("duplicate column")) {
+                throw ex;
+            }
+        }
     }
 }

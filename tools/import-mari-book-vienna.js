@@ -78,36 +78,56 @@ function readJsonl(file) {
 
 function splitSentences(records) {
   const result = [];
-  let start = 0;
+  let current = [];
+  let footnote = [];
   for (let i = 0; i < records.length; i++) {
+    const role = String(records[i].role || 'body');
+    if (role === 'footnote') {
+      if (footnote.length && records[i].footnoteId !== records[footnote[0]].footnoteId) {
+        pushSentence(records, result, footnote);
+        footnote = [];
+      }
+      footnote.push(i);
+      continue;
+    }
+    if (footnote.length) {
+      pushSentence(records, result, footnote);
+      footnote = [];
+    }
     const surface = String(records[i].surface || '');
+    current.push(i);
     if (SENTENCE_END.test(surface)) {
-      pushSentence(records, result, start, i + 1);
-      start = i + 1;
-    } else if (String(records[i].prefix || '').includes('\n\n') && i > start) {
-      pushSentence(records, result, start, i);
-      start = i;
+      pushSentence(records, result, current);
+      current = [];
+    } else if (String(records[i].prefix || '').includes('\n\n') && current.length > 1) {
+      current.pop();
+      pushSentence(records, result, current);
+      current = [i];
     }
   }
-  if (start < records.length) pushSentence(records, result, start, records.length);
+  if (current.length) pushSentence(records, result, current);
+  if (footnote.length) pushSentence(records, result, footnote);
   return result;
 }
 
-function pushSentence(records, result, start, end) {
-  const slice = records.slice(start, end);
-  const text = slice.map((record) => `${record.prefix || ''}${record.surface || ''}`).join('').replace(/\s+/g, ' ').trim();
+function pushSentence(records, result, indexes) {
+  if (!indexes || indexes.length === 0) return;
+  const text = indexes.map((index) => {
+    const record = records[index];
+    return `${record.prefix || ''}${record.surface || ''}`;
+  }).join('').replace(/\s+/g, ' ').trim();
   const words = [];
-  for (let i = start; i < end; i++) {
+  for (const i of indexes) {
     if (MARI_WORD.test(String(records[i].surface || '').toLowerCase())) {
       words.push(i);
     }
   }
-  if (text) result.push({ start, end, text, words });
+  if (text) result.push({ start: indexes[0], end: indexes[indexes.length - 1] + 1, indexes, text, words });
 }
 
 function makeSentence(records, start, end) {
   const result = [];
-  pushSentence(records, result, start, end);
+  pushSentence(records, result, Array.from({ length: Math.max(0, end - start) }, (_, offset) => start + offset));
   return result[0] || null;
 }
 
@@ -226,11 +246,12 @@ async function analyseSentenceWithRecords(sentence, records, cache) {
 }
 
 function splitLongSentence(sentence, records) {
-  const mid = sentence.start + Math.floor((sentence.end - sentence.start) / 2);
-  return [
-    makeSentence(records, sentence.start, mid),
-    makeSentence(records, mid, sentence.end),
-  ].filter(Boolean);
+  const indexes = sentence.indexes || Array.from({ length: Math.max(0, sentence.end - sentence.start) }, (_, offset) => sentence.start + offset);
+  const mid = Math.floor(indexes.length / 2);
+  const result = [];
+  pushSentence(records, result, indexes.slice(0, mid));
+  pushSentence(records, result, indexes.slice(mid));
+  return result;
 }
 
 function postAnalyzer(input) {

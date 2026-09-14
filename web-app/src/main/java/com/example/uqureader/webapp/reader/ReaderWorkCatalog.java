@@ -60,10 +60,25 @@ public final class ReaderWorkCatalog {
         return Optional.ofNullable(works.get(id));
     }
 
+    public Map<String, String> workLanguages() {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (ReaderWork work : works.values()) {
+            result.put(work.id, work.language);
+        }
+        return Map.copyOf(result);
+    }
+
     public List<ReaderToken> page(String workId, int pageIndex, int pageSize) {
         ReaderWork work = works.get(workId);
         if (work == null) {
             return List.of();
+        }
+        if (work.sourcePaged) {
+            int safePage = Math.max(0, pageIndex);
+            if (safePage >= work.pages.size()) {
+                return List.of();
+            }
+            return work.pages.get(safePage);
         }
         int safeSize = pageSize <= 0 ? DEFAULT_PAGE_SIZE : Math.min(2_000, pageSize);
         int safePage = Math.max(0, pageIndex);
@@ -117,12 +132,16 @@ public final class ReaderWorkCatalog {
                 String analysis = getString(object, "analysis");
                 List<ReaderAnalysisVariant> analyses = getAnalyses(object, surface);
                 List<String> translations = getStringList(object, "translations");
+                int pageIndex = getInt(object, "pageIndex", -1);
+                int sourcePage = getInt(object, "sourcePage", -1);
+                String role = getString(object, "role");
+                String footnoteId = getString(object, "footnoteId");
                 cursor += prefix.length();
                 int start = cursor;
                 cursor += surface.length();
                 MorphologyData morphology = primaryMorphology(surface, analysis, analyses);
                 tokens.add(new ReaderToken(tokens.size(), start, cursor, prefix, surface, analysis,
-                        morphology, analyses, translations));
+                        morphology, analyses, translations, pageIndex, sourcePage, role, footnoteId));
             }
         }
         String fileName = path.getFileName().toString();
@@ -133,6 +152,18 @@ public final class ReaderWorkCatalog {
     private static String getString(JsonObject object, String key) {
         JsonElement value = object.get(key);
         return value == null || value.isJsonNull() ? "" : value.getAsString();
+    }
+
+    private static int getInt(JsonObject object, String key, int fallback) {
+        JsonElement value = object.get(key);
+        if (value == null || value.isJsonNull()) {
+            return fallback;
+        }
+        try {
+            return value.getAsInt();
+        } catch (RuntimeException ex) {
+            return fallback;
+        }
     }
 
     private static List<String> getStringList(JsonObject object, String key) {

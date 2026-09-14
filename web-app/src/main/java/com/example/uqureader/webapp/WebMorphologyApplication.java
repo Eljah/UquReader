@@ -71,6 +71,11 @@ public class WebMorphologyApplication {
         this.service = service;
         this.catalog = catalog;
         this.repository = repository;
+        try {
+            this.repository.refreshScopedStats(this.catalog.workLanguages());
+        } catch (SQLException ex) {
+            System.err.println("Unable to refresh reading statistics: " + ex.getMessage());
+        }
     }
 
     /**
@@ -276,8 +281,11 @@ public class WebMorphologyApplication {
                 item.addProperty("id", work.id);
                 item.addProperty("title", work.title);
                 item.addProperty("assetName", work.assetName);
+                item.addProperty("language", work.language);
                 item.addProperty("tokenCount", work.tokenCount);
                 item.addProperty("charCount", work.charCount);
+                item.addProperty("pageCount", work.sourcePaged ? work.pageCount : 0);
+                item.addProperty("sourcePaged", work.sourcePaged);
                 works.add(item);
             }
             JsonObject payload = new JsonObject();
@@ -328,7 +336,10 @@ public class WebMorphologyApplication {
             payload.addProperty("pageIndex", pageIndex);
             payload.addProperty("pageSize", pageSize);
             payload.addProperty("tokenCount", work.get().tokenCount);
-            payload.addProperty("hasNext", (pageIndex + 1) * pageSize < work.get().tokenCount);
+            payload.addProperty("pageCount", pageCount(work.get(), pageSize));
+            payload.addProperty("sourcePaged", work.get().sourcePaged);
+            payload.addProperty("sourcePage", sourcePage(tokens));
+            payload.addProperty("hasNext", hasNextPage(work.get(), pageIndex, pageSize));
             JsonArray array = new JsonArray();
             for (ReaderToken token : tokens) {
                 array.add(toPageTokenJson(token));
@@ -348,6 +359,10 @@ public class WebMorphologyApplication {
         item.addProperty("prefix", token.prefix);
         item.addProperty("surface", token.surface);
         item.addProperty("analysis", token.analysis);
+        item.addProperty("pageIndex", token.pageIndex);
+        item.addProperty("sourcePage", token.sourcePage);
+        item.addProperty("role", token.role);
+        item.addProperty("footnoteId", token.footnoteId);
         item.add("morphology", gson.toJsonTree(token.morphology));
         item.add("translations", gson.toJsonTree(token.translations));
         JsonArray analyses = new JsonArray();
@@ -360,6 +375,27 @@ public class WebMorphologyApplication {
         }
         item.add("analyses", analyses);
         return item;
+    }
+
+    private int pageCount(ReaderWork work, int pageSize) {
+        if (work.sourcePaged) {
+            return work.pageCount;
+        }
+        int safeSize = pageSize <= 0 ? 450 : Math.min(2_000, pageSize);
+        return Math.max(1, (int) Math.ceil(work.tokenCount / (double) safeSize));
+    }
+
+    private boolean hasNextPage(ReaderWork work, int pageIndex, int pageSize) {
+        return pageIndex + 1 < pageCount(work, pageSize);
+    }
+
+    private int sourcePage(List<ReaderToken> tokens) {
+        for (ReaderToken token : tokens) {
+            if (token.sourcePage >= 0) {
+                return token.sourcePage;
+            }
+        }
+        return -1;
     }
 
     private void handleGrammar(HttpExchange exchange) throws IOException {
@@ -390,6 +426,8 @@ public class WebMorphologyApplication {
                         session.get().userId,
                         query.getOrDefault("lemma", ""),
                         query.getOrDefault("pos", ""),
+                        query.getOrDefault("language", ""),
+                        query.getOrDefault("workId", ""),
                         query.getOrDefault("eventType", ""),
                         parseInt(query.get("limit"), 500));
                 JsonObject payload = new JsonObject();
@@ -463,10 +501,14 @@ public class WebMorphologyApplication {
                 return;
             }
             Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
-            List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, parseInt(query.get("limit"), 100));
+            String language = query.getOrDefault("language", "");
+            String workId = query.getOrDefault("workId", "");
+            List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, language, workId,
+                    parseInt(query.get("limit"), 100));
             JsonObject payload = new JsonObject();
             payload.add("lemmas", gson.toJsonTree(stats));
-            payload.add("features", gson.toJsonTree(repository.listFeatureStats(session.get().userId, parseInt(query.get("limit"), 100))));
+            payload.add("features", gson.toJsonTree(repository.listFeatureStats(session.get().userId, language, workId,
+                    parseInt(query.get("limit"), 100))));
             sendJson(exchange, 200, payload);
         } catch (SQLException ex) {
             sendServerError(exchange, ex.getMessage());
@@ -572,7 +614,7 @@ public class WebMorphologyApplication {
         Thread thread = new Thread(() -> {
             for (ReaderWork work : catalog.listWorks()) {
                 int pageSize = 450;
-                int pages = Math.max(1, (int) Math.ceil(work.tokenCount / (double) pageSize));
+                int pages = pageCount(work, pageSize);
                 for (int page = 0; page < pages; page++) {
                     warmupSentenceTts(catalog.page(work.id, page, pageSize));
                 }
@@ -586,7 +628,7 @@ public class WebMorphologyApplication {
         long count = 0;
         for (ReaderWork work : catalog.listWorks()) {
             int pageSize = 450;
-            int pages = Math.max(1, (int) Math.ceil(work.tokenCount / (double) pageSize));
+            int pages = pageCount(work, pageSize);
             for (int page = 0; page < pages; page++) {
                 count += buildSentenceTexts(catalog.page(work.id, page, pageSize)).size();
             }
@@ -624,7 +666,7 @@ public class WebMorphologyApplication {
         java.util.HashSet<String> keys = new java.util.HashSet<>();
         for (ReaderWork work : catalog.listWorks()) {
             int pageSize = 450;
-            int pages = Math.max(1, (int) Math.ceil(work.tokenCount / (double) pageSize));
+            int pages = pageCount(work, pageSize);
             for (int page = 0; page < pages; page++) {
                 for (String sentence : buildSentenceTexts(catalog.page(work.id, page, pageSize))) {
                     String key = ttsService.cacheKeyForStatus(sentence);
@@ -651,6 +693,9 @@ public class WebMorphologyApplication {
         StringBuilder current = new StringBuilder();
         boolean pendingEnd = false;
         for (ReaderToken token : tokens) {
+            if ("footnote".equals(token.role)) {
+                continue;
+            }
             if (pendingEnd && !isClosingPunctuation(token.surface)) {
                 addSentence(sentences, current);
                 pendingEnd = false;
@@ -777,10 +822,16 @@ public class WebMorphologyApplication {
             }
             JsonObject object = element.getAsJsonObject();
             String clientEventId = ensureUuid(getString(object, "clientEventId"));
+            String workId = getString(object, "workId");
+            String language = getString(object, "language");
+            if (language.isBlank()) {
+                language = catalog.find(workId).map(work -> work.language).orElse("");
+            }
             events.add(new ReadingEvent(
                     clientEventId,
                     getString(object, "eventType"),
-                    getString(object, "workId"),
+                    workId,
+                    language,
                     getInt(object, "pageIndex", -1),
                     getInt(object, "tokenIndex", -1),
                     getString(object, "lemma"),

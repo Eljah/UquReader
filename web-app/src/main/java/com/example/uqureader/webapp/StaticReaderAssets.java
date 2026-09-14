@@ -50,6 +50,10 @@ final class StaticReaderAssets {
                       <h2>Статистика чтения</h2>
                       <button id="closeStats">Закрыть</button>
                     </div>
+                    <div class="stats-filters">
+                      <select id="statsLanguage" aria-label="Язык статистики"></select>
+                      <select id="statsWork" aria-label="Книга для статистики"></select>
+                    </div>
                     <div class="stats-tabs">
                       <button id="lemmaStatsTab" class="active">Леммы</button>
                       <button id="featureStatsTab">Признаки</button>
@@ -236,6 +240,29 @@ final class StaticReaderAssets {
             .reader-paragraph .token[data-punctuation="true"] { margin-left: 0; }
             .reader-paragraph .token.dialogue-dash { margin-left: -.15em; }
             .reader-paragraph .token.dialogue-dash + .token { margin-left: .08em; }
+            .reader-footnotes {
+              margin-top: 28px;
+              padding-top: 12px;
+              border-top: 2px solid rgba(36, 50, 77, .45);
+              font-size: 16px;
+              line-height: 1.45;
+              text-align: left;
+            }
+            .reader-footnote {
+              margin: 0 0 6px;
+              text-indent: 0;
+            }
+            .reader-footnote .reader-paragraph {
+              display: inline;
+            }
+            .reader-footnote-mark {
+              color: var(--accent-red);
+              font-weight: 700;
+              margin-right: .45em;
+            }
+            .token.footnote-token {
+              font-size: inherit;
+            }
             .page::selection,
             .token::selection {
               background: var(--control-highlight);
@@ -364,6 +391,8 @@ final class StaticReaderAssets {
             }
             .stats-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
             .stats-head h2 { margin: 0; font-size: 24px; color: var(--primary); letter-spacing: .05em; }
+            .stats-filters { display: grid; grid-template-columns: minmax(130px, 180px) minmax(180px, 1fr); gap: 10px; padding: 12px 0 4px; }
+            .stats-filters select { width: 100%; min-height: 40px; }
             .stats-tabs { display: flex; gap: 8px; padding: 14px 0; }
             .stats-tabs button { background: var(--surface-muted); color: var(--primary); border-color: var(--primary); }
             .stats-tabs button.active { background: var(--primary); color: var(--toolbar-icon); }
@@ -430,6 +459,8 @@ final class StaticReaderAssets {
               workId: null,
               pageIndex: 0,
               pageSize: 450,
+              pageCount: 0,
+              sourcePage: -1,
               pageRequestId: 0,
               isLoadingPage: false,
               hasNext: false,
@@ -441,6 +472,8 @@ final class StaticReaderAssets {
               flushTimer: null,
               observer: null,
               statsMode: 'lemmas',
+              statsLanguage: '',
+              statsWorkId: '',
               lastLemmaRows: [],
               grammar: {pos: {}, features: {}},
               speech: {
@@ -485,9 +518,10 @@ final class StaticReaderAssets {
                 clientEventId: eventId(),
                 eventType,
                 workId: state.workId,
+                language: currentWork()?.language || '',
                 pageIndex: state.pageIndex,
                 tokenIndex: token.index,
-                lemma: morph.lemma || '',
+                lemma: normalizeLemma(morph.lemma || ''),
                 pos: morph.pos || '',
                 featureKey: morph.featureKey || '',
                 charIndex: token.charStart,
@@ -513,9 +547,10 @@ final class StaticReaderAssets {
                   clientEventId: eventId(),
                   eventType,
                   workId: state.workId,
+                  language: currentWork()?.language || '',
                   pageIndex: state.pageIndex,
                   tokenIndex: token.index,
-                  lemma,
+                  lemma: normalizeLemma(lemma),
                   pos,
                   featureKey,
                   charIndex: token.charStart,
@@ -531,6 +566,14 @@ final class StaticReaderAssets {
                 if (value) return value;
               }
               return '';
+            }
+
+            function normalizeLemma(value) {
+              return String(value || '').trim().normalize('NFC').toLocaleLowerCase('ru-RU');
+            }
+
+            function currentWork() {
+              return state.works.find(work => work.id === state.workId) || null;
             }
 
             function enqueue(events) {
@@ -631,10 +674,14 @@ final class StaticReaderAssets {
               await loadGrammar();
               const data = await api('/api/works');
               state.works = data.works || [];
-              $('workSelect').innerHTML = state.works.map(w => `<option value="${w.id}">${escapeHtml(w.title)} · ${w.tokenCount}</option>`).join('');
+              $('workSelect').innerHTML = state.works.map(w => {
+                const pageLabel = w.sourcePaged && w.pageCount ? `${w.pageCount} стр.` : `${w.tokenCount}`;
+                return `<option value="${w.id}">${escapeHtml(w.title)} · ${pageLabel}</option>`;
+              }).join('');
               if (state.works.length) {
                 state.workId = state.workId || state.works[0].id;
                 $('workSelect').value = state.workId;
+                refreshStatsFilters();
                 await loadPage(0);
               }
             }
@@ -661,6 +708,8 @@ final class StaticReaderAssets {
                 state.pageIndex = targetPage;
                 state.tokens = data.tokens || [];
                 state.hasNext = Boolean(data.hasNext);
+                state.pageCount = data.pageCount || 0;
+                state.sourcePage = Number.isInteger(data.sourcePage) ? data.sourcePage : -1;
                 renderPage();
                 await api('/api/reading/state', {
                   method: 'POST',
@@ -711,7 +760,8 @@ final class StaticReaderAssets {
               $('prevPage').disabled = state.isLoadingPage || state.pageIndex === 0;
               $('nextPage').disabled = state.isLoadingPage || !state.hasNext;
               $('speakPage').disabled = state.isLoadingPage || state.tokens.length === 0;
-              $('pageStatus').textContent = state.isLoadingPage ? 'Загрузка...' : `${state.pageIndex + 1}`;
+              const pageLabel = state.sourcePage >= 0 ? `${state.pageIndex + 1} / ${state.sourcePage}` : `${state.pageIndex + 1}`;
+              $('pageStatus').textContent = state.isLoadingPage ? 'Загрузка...' : pageLabel;
             }
 
             function renderPageError(error) {
@@ -731,24 +781,10 @@ final class StaticReaderAssets {
               const page = $('page');
               page.textContent = '';
               const fragment = document.createDocumentFragment();
-              let paragraph = createParagraph();
-              fragment.append(paragraph);
-              for (const token of state.tokens) {
-                paragraph = appendPrefix(paragraph, token.prefix || '', fragment);
-                const surface = token.surface || '';
-                if (/^[\\r\\n]+$/.test(surface)) {
-                  paragraph = appendPrefix(paragraph, surface, fragment);
-                  continue;
-                }
-                const span = document.createElement('span');
-                span.className = tokenClasses(token);
-                span.textContent = typographicSurface(surface);
-                span.dataset.index = token.index;
-                if (isPunctuation(surface)) span.dataset.punctuation = 'true';
-                span.tabIndex = 0;
-                span.addEventListener('click', () => openToken(token));
-                paragraph.append(span);
-              }
+              const bodyTokens = state.tokens.filter(token => (token.role || 'body') !== 'footnote');
+              const footnoteTokens = state.tokens.filter(token => (token.role || 'body') === 'footnote');
+              renderTokenFlow(fragment, bodyTokens);
+              renderFootnotes(fragment, footnoteTokens);
               page.append(fragment);
               page.classList.remove('loading');
               updateReaderControls();
@@ -771,6 +807,66 @@ final class StaticReaderAssets {
                 }
               }, {threshold: [0, .65, 1]});
               page.querySelectorAll('.token').forEach(node => state.observer.observe(node));
+            }
+
+            function renderTokenFlow(fragment, tokens) {
+              let paragraph = createParagraph();
+              fragment.append(paragraph);
+              for (const token of tokens) {
+                paragraph = appendPrefix(paragraph, token.prefix || '', fragment);
+                const surface = token.surface || '';
+                if (/^[\\r\\n]+$/.test(surface)) {
+                  paragraph = appendPrefix(paragraph, surface, fragment);
+                  continue;
+                }
+                const span = document.createElement('span');
+                span.className = tokenClasses(token);
+                span.textContent = typographicSurface(surface);
+                span.dataset.index = token.index;
+                if (isPunctuation(surface)) span.dataset.punctuation = 'true';
+                span.tabIndex = 0;
+                span.addEventListener('click', () => openToken(token));
+                paragraph.append(span);
+              }
+            }
+
+            function renderFootnotes(fragment, tokens) {
+              if (!tokens.length) return;
+              const section = document.createElement('section');
+              section.className = 'reader-footnotes';
+              const groups = new Map();
+              for (const token of tokens) {
+                const id = token.footnoteId || '*';
+                if (!groups.has(id)) groups.set(id, []);
+                groups.get(id).push(token);
+              }
+              for (const group of groups.values()) {
+                const note = document.createElement('div');
+                note.className = 'reader-footnote';
+                const mark = document.createElement('span');
+                mark.className = 'reader-footnote-mark';
+                mark.textContent = '*';
+                note.append(mark);
+                renderInlineTokens(note, group);
+                section.append(note);
+              }
+              fragment.append(section);
+            }
+
+            function renderInlineTokens(container, tokens) {
+              for (const token of tokens) {
+                const prefix = typographicPrefix(token.prefix || '');
+                if (prefix) container.append(document.createTextNode(prefix));
+                const surface = token.surface || '';
+                const span = document.createElement('span');
+                span.className = tokenClasses(token);
+                span.textContent = typographicSurface(surface);
+                span.dataset.index = token.index;
+                if (isPunctuation(surface)) span.dataset.punctuation = 'true';
+                span.tabIndex = 0;
+                span.addEventListener('click', () => openToken(token));
+                container.append(span);
+              }
             }
 
             function createParagraph() {
@@ -805,6 +901,7 @@ final class StaticReaderAssets {
             function tokenClasses(token) {
               const surface = token.surface || '';
               const classes = ['token'];
+              if ((token.role || 'body') === 'footnote') classes.push('footnote-token');
               if (/^[—–-]$/.test(surface)) classes.push('dialogue-dash');
               return classes.join(' ');
             }
@@ -977,6 +1074,7 @@ final class StaticReaderAssets {
               let pendingEnd = false;
               for (let i = 0; i < state.tokens.length; i++) {
                 const token = state.tokens[i];
+                if ((token.role || 'body') === 'footnote') continue;
                 if (pendingEnd && !isClosingPunctuation(token.surface)) {
                   pushSentence(ranges, current);
                   current = null;
@@ -1257,13 +1355,43 @@ final class StaticReaderAssets {
             }
 
             async function loadStats() {
-              const data = await api('/api/reading/stats?limit=200');
+              refreshStatsFilters();
+              const params = new URLSearchParams({limit: '200'});
+              if (state.statsLanguage) params.set('language', state.statsLanguage);
+              if (state.statsWorkId) params.set('workId', state.statsWorkId);
+              const data = await api(`/api/reading/stats?${params.toString()}`);
               if (state.statsMode === 'features') {
                 renderFeatureStats(data.features || []);
               } else {
                 state.lastLemmaRows = data.lemmas || [];
                 renderLemmaStats(state.lastLemmaRows);
               }
+            }
+
+            function refreshStatsFilters() {
+              const languageSelect = $('statsLanguage');
+              const workSelect = $('statsWork');
+              if (!languageSelect || !workSelect) return;
+              const languages = [...new Set(state.works.map(work => work.language || '').filter(Boolean))].sort();
+              if (state.statsLanguage && !languages.includes(state.statsLanguage)) state.statsLanguage = '';
+              languageSelect.innerHTML = [
+                '<option value="">Все языки</option>',
+                ...languages.map(language => `<option value="${escapeHtml(language)}">${escapeHtml(languageLabel(language))}</option>`)
+              ].join('');
+              languageSelect.value = state.statsLanguage;
+              const visibleWorks = state.works.filter(work => !state.statsLanguage || work.language === state.statsLanguage);
+              if (state.statsWorkId && !visibleWorks.some(work => work.id === state.statsWorkId)) state.statsWorkId = '';
+              workSelect.innerHTML = [
+                '<option value="">Все книги</option>',
+                ...visibleWorks.map(work => `<option value="${escapeHtml(work.id)}">${escapeHtml(work.title)}</option>`)
+              ].join('');
+              workSelect.value = state.statsWorkId;
+            }
+
+            function languageLabel(language) {
+              if (language === 'tt') return 'Татарский';
+              if (language === 'mhr') return 'Марийский';
+              return language || 'Без языка';
             }
 
             function renderLemmaStats(rows) {
@@ -1290,7 +1418,10 @@ final class StaticReaderAssets {
 
             async function loadLemmaTimeline(row) {
               const content = $('statsContent');
-              const url = `/api/reading/events?lemma=${encodeURIComponent(row.lemma)}&pos=${encodeURIComponent(row.pos)}&limit=5000`;
+              const params = new URLSearchParams({lemma: row.lemma, pos: row.pos, limit: '5000'});
+              if (state.statsLanguage) params.set('language', state.statsLanguage);
+              if (state.statsWorkId) params.set('workId', state.statsWorkId);
+              const url = `/api/reading/events?${params.toString()}`;
               const data = await api(url);
               renderLemmaTimeline(row, data.events || []);
               for (const existing of content.querySelectorAll('.stat-row.clickable.selected')) {
@@ -1395,6 +1526,7 @@ final class StaticReaderAssets {
             });
             $('statsButton').addEventListener('click', async () => {
               $('statsPanel').classList.remove('hidden');
+              refreshStatsFilters();
               await loadStats();
             });
             $('closeStats').addEventListener('click', () => $('statsPanel').classList.add('hidden'));
@@ -1408,6 +1540,15 @@ final class StaticReaderAssets {
               state.statsMode = 'features';
               $('featureStatsTab').classList.add('active');
               $('lemmaStatsTab').classList.remove('active');
+              await loadStats();
+            });
+            $('statsLanguage').addEventListener('change', async event => {
+              state.statsLanguage = event.target.value;
+              state.statsWorkId = '';
+              await loadStats();
+            });
+            $('statsWork').addEventListener('change', async event => {
+              state.statsWorkId = event.target.value;
               await loadStats();
             });
             document.addEventListener('visibilitychange', () => {
