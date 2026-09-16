@@ -123,7 +123,8 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         List<LemmaStat> result = new ArrayList<>();
         for (LemmaStats stats : buckets.values()) {
             result.add(new LemmaStat(stats.lemma, stats.pos, safeLanguage, safeWorkId, stats.exposureCount, stats.committedCount,
-                    stats.lookupCount, stats.ttsCount, stats.totalVisibleMs, stats.firstSeenAtMs, stats.lastSeenAtMs));
+                    stats.lookupCount, stats.ttsCount, stats.totalVisibleMs, stats.firstSeenAtMs, stats.lastSeenAtMs,
+                    stats.firstPageIndex, stats.firstTokenIndex, stats.firstCharIndex));
         }
         result.sort(lemmaStatComparator(sort, sortDir));
         return result.subList(0, Math.min(result.size(), safeLimit));
@@ -145,7 +146,8 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         List<FeatureStat> result = new ArrayList<>();
         for (FeatureBucket bucket : buckets.values()) {
             result.add(new FeatureStat(bucket.featureKey, safeLanguage, safeWorkId, bucket.exposureCount, bucket.committedCount,
-                    bucket.lookupCount, bucket.totalVisibleMs, bucket.firstSeenAtMs, bucket.lastSeenAtMs));
+                    bucket.lookupCount, bucket.totalVisibleMs, bucket.firstSeenAtMs, bucket.lastSeenAtMs,
+                    bucket.firstPageIndex, bucket.firstTokenIndex, bucket.firstCharIndex));
         }
         result.sort(featureStatComparator(sort, sortDir));
         return result.subList(0, Math.min(result.size(), safeLimit));
@@ -155,7 +157,9 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         boolean ascending = "asc".equalsIgnoreCase(sortDir);
         String safeSort = sort == null ? "" : sort;
         Comparator<LemmaStat> comparator = switch (safeSort) {
-            case "lemma" -> Comparator.comparingLong((LemmaStat stat) -> stat.firstSeenAtMs)
+            case "lemma" -> Comparator.comparingInt((LemmaStat stat) -> stat.firstPageIndex)
+                    .thenComparingInt(stat -> stat.firstTokenIndex)
+                    .thenComparingInt(stat -> stat.firstCharIndex)
                     .thenComparing(stat -> stat.lemma)
                     .thenComparing(stat -> stat.pos);
             case "frequent" -> Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount)
@@ -185,7 +189,9 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         boolean ascending = "asc".equalsIgnoreCase(sortDir);
         String safeSort = sort == null ? "" : sort;
         Comparator<FeatureStat> comparator = switch (safeSort) {
-            case "lemma" -> Comparator.comparingLong((FeatureStat stat) -> stat.firstSeenAtMs)
+            case "lemma" -> Comparator.comparingInt((FeatureStat stat) -> stat.firstPageIndex)
+                    .thenComparingInt(stat -> stat.firstTokenIndex)
+                    .thenComparingInt(stat -> stat.firstCharIndex)
                     .thenComparing(stat -> stat.featureKey);
             case "frequent" -> Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount)
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.committedCount).reversed())
@@ -327,6 +333,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         if (stats.firstSeenAtMs == 0) {
             stats.firstSeenAtMs = event.occurredAtMs;
         }
+        stats.observePosition(event);
     }
 
     private void upsertFeatureStats(long userId, ReadingEvent event) {
@@ -350,6 +357,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         if (stats.firstSeenAtMs == 0) {
             stats.firstSeenAtMs = event.occurredAtMs;
         }
+        stats.observePosition(event);
     }
 
     private List<TimelinePoint> timelineFromRaw(long userId, String lemma, String pos, String featureKey,
@@ -411,6 +419,10 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         return Math.floorDiv(occurredAtMs, hourMs) * hourMs;
     }
 
+    private static int safeOrderIndex(int value) {
+        return value < 0 ? Integer.MAX_VALUE : value;
+    }
+
     private static ReadingEventRecord toRecord(ReadingEvent event) {
         return new ReadingEventRecord(event.eventType, event.workId, event.pageIndex, event.tokenIndex,
                 event.lemma, event.pos, event.featureKey, event.charIndex, event.visibleMs, event.occurredAtMs);
@@ -433,6 +445,9 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         long totalVisibleMs;
         long firstSeenAtMs;
         long lastSeenAtMs;
+        int firstPageIndex = Integer.MAX_VALUE;
+        int firstTokenIndex = Integer.MAX_VALUE;
+        int firstCharIndex = Integer.MAX_VALUE;
 
         FeatureBucket(long userId, String language, String workId, String featureKey) {
             this.userId = userId;
@@ -448,6 +463,15 @@ public final class InMemoryReaderRepository implements ReaderRepository {
             totalVisibleMs += other.totalVisibleMs;
             lastSeenAtMs = Math.max(lastSeenAtMs, other.lastSeenAtMs);
             firstSeenAtMs = firstSeenAtMs == 0 ? other.firstSeenAtMs : Math.min(firstSeenAtMs, other.firstSeenAtMs);
+            firstPageIndex = Math.min(firstPageIndex, other.firstPageIndex);
+            firstTokenIndex = Math.min(firstTokenIndex, other.firstTokenIndex);
+            firstCharIndex = Math.min(firstCharIndex, other.firstCharIndex);
+        }
+
+        void observePosition(ReadingEvent event) {
+            firstPageIndex = Math.min(firstPageIndex, safeOrderIndex(event.pageIndex));
+            firstTokenIndex = Math.min(firstTokenIndex, safeOrderIndex(event.tokenIndex));
+            firstCharIndex = Math.min(firstCharIndex, safeOrderIndex(event.charIndex));
         }
     }
 
@@ -489,6 +513,9 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         long totalVisibleMs;
         long firstSeenAtMs;
         long lastSeenAtMs;
+        int firstPageIndex = Integer.MAX_VALUE;
+        int firstTokenIndex = Integer.MAX_VALUE;
+        int firstCharIndex = Integer.MAX_VALUE;
 
         LemmaStats(long userId, String language, String workId, String lemma, String pos) {
             this.userId = userId;
@@ -506,6 +533,15 @@ public final class InMemoryReaderRepository implements ReaderRepository {
             totalVisibleMs += other.totalVisibleMs;
             lastSeenAtMs = Math.max(lastSeenAtMs, other.lastSeenAtMs);
             firstSeenAtMs = firstSeenAtMs == 0 ? other.firstSeenAtMs : Math.min(firstSeenAtMs, other.firstSeenAtMs);
+            firstPageIndex = Math.min(firstPageIndex, other.firstPageIndex);
+            firstTokenIndex = Math.min(firstTokenIndex, other.firstTokenIndex);
+            firstCharIndex = Math.min(firstCharIndex, other.firstCharIndex);
+        }
+
+        void observePosition(ReadingEvent event) {
+            firstPageIndex = Math.min(firstPageIndex, safeOrderIndex(event.pageIndex));
+            firstTokenIndex = Math.min(firstTokenIndex, safeOrderIndex(event.tokenIndex));
+            firstCharIndex = Math.min(firstCharIndex, safeOrderIndex(event.charIndex));
         }
     }
 }

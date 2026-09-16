@@ -164,8 +164,8 @@ public final class SqliteReaderRepository implements ReaderRepository {
                                  + "last_work_id=excluded.last_work_id, last_char_index=excluded.last_char_index");
                  PreparedStatement upsertScopedLemmaStats = connection.prepareStatement(
                          "INSERT INTO user_lemma_scope_stats(user_id, language, work_id, lemma, pos, exposure_count, committed_count, lookup_count, "
-                                 + "tts_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, last_char_index) "
-                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                 + "tts_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, first_page_index, first_token_index, first_char_index, last_char_index) "
+                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                                  + "ON CONFLICT(user_id, language, work_id, lemma, pos) DO UPDATE SET "
                                  + "exposure_count=user_lemma_scope_stats.exposure_count + excluded.exposure_count, "
                                  + "committed_count=user_lemma_scope_stats.committed_count + excluded.committed_count, "
@@ -173,17 +173,23 @@ public final class SqliteReaderRepository implements ReaderRepository {
                                  + "tts_count=user_lemma_scope_stats.tts_count + excluded.tts_count, "
                                  + "total_visible_ms=user_lemma_scope_stats.total_visible_ms + excluded.total_visible_ms, "
                                  + "last_seen_at_ms=max(user_lemma_scope_stats.last_seen_at_ms, excluded.last_seen_at_ms), "
+                                 + "first_page_index=min(user_lemma_scope_stats.first_page_index, excluded.first_page_index), "
+                                 + "first_token_index=min(user_lemma_scope_stats.first_token_index, excluded.first_token_index), "
+                                 + "first_char_index=min(user_lemma_scope_stats.first_char_index, excluded.first_char_index), "
                                  + "last_char_index=excluded.last_char_index");
                  PreparedStatement upsertScopedFeatureStats = connection.prepareStatement(
                          "INSERT INTO user_feature_scope_stats(user_id, language, work_id, feature_key, exposure_count, committed_count, lookup_count, "
-                                 + "total_visible_ms, first_seen_at_ms, last_seen_at_ms) "
-                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                 + "total_visible_ms, first_seen_at_ms, last_seen_at_ms, first_page_index, first_token_index, first_char_index) "
+                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                                  + "ON CONFLICT(user_id, language, work_id, feature_key) DO UPDATE SET "
                                  + "exposure_count=user_feature_scope_stats.exposure_count + excluded.exposure_count, "
                                  + "committed_count=user_feature_scope_stats.committed_count + excluded.committed_count, "
                                  + "lookup_count=user_feature_scope_stats.lookup_count + excluded.lookup_count, "
                                  + "total_visible_ms=user_feature_scope_stats.total_visible_ms + excluded.total_visible_ms, "
-                                 + "last_seen_at_ms=max(user_feature_scope_stats.last_seen_at_ms, excluded.last_seen_at_ms)")) {
+                                 + "last_seen_at_ms=max(user_feature_scope_stats.last_seen_at_ms, excluded.last_seen_at_ms), "
+                                 + "first_page_index=min(user_feature_scope_stats.first_page_index, excluded.first_page_index), "
+                                 + "first_token_index=min(user_feature_scope_stats.first_token_index, excluded.first_token_index), "
+                                 + "first_char_index=min(user_feature_scope_stats.first_char_index, excluded.first_char_index)")) {
                 for (ReadingEvent event : events) {
                     bindEvent(insertEvent, userId, sessionToken, event);
                     int inserted = insertEvent.executeUpdate();
@@ -316,7 +322,8 @@ public final class SqliteReaderRepository implements ReaderRepository {
     private static String lemmaStatsOrderBy(String sort, String sortDir) {
         String direction = sortDirection(sortDir);
         return switch (sort == null ? "" : sort) {
-            case "lemma" -> "MIN(first_seen_at_ms) " + direction + ", lemma ASC, pos ASC";
+            case "lemma" -> "MIN(first_page_index) " + direction + ", MIN(first_token_index) " + direction
+                    + ", MIN(first_char_index) " + direction + ", lemma ASC, pos ASC";
             case "frequent" -> "SUM(exposure_count) " + direction + ", SUM(committed_count) DESC, lemma ASC";
             case "read" -> "SUM(committed_count) " + direction + ", SUM(exposure_count) DESC, lemma ASC";
             case "opened" -> "SUM(lookup_count) " + direction + ", SUM(exposure_count) DESC, lemma ASC";
@@ -330,7 +337,8 @@ public final class SqliteReaderRepository implements ReaderRepository {
     private static String featureStatsOrderBy(String sort, String sortDir) {
         String direction = sortDirection(sortDir);
         return switch (sort == null ? "" : sort) {
-            case "lemma" -> "MIN(first_seen_at_ms) " + direction + ", feature_key ASC";
+            case "lemma" -> "MIN(first_page_index) " + direction + ", MIN(first_token_index) " + direction
+                    + ", MIN(first_char_index) " + direction + ", feature_key ASC";
             case "frequent" -> "SUM(exposure_count) " + direction + ", SUM(committed_count) DESC, feature_key ASC";
             case "read" -> "SUM(committed_count) " + direction + ", SUM(exposure_count) DESC, feature_key ASC";
             case "opened" -> "SUM(lookup_count) " + direction + ", SUM(exposure_count) DESC, feature_key ASC";
@@ -444,23 +452,25 @@ public final class SqliteReaderRepository implements ReaderRepository {
                 try (Statement statement = connection.createStatement()) {
                     statement.executeUpdate("DELETE FROM user_lemma_scope_stats");
                     statement.executeUpdate("INSERT INTO user_lemma_scope_stats(user_id, language, work_id, lemma, pos, "
-                            + "exposure_count, committed_count, lookup_count, tts_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, last_char_index) "
+                            + "exposure_count, committed_count, lookup_count, tts_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, "
+                            + "first_page_index, first_token_index, first_char_index, last_char_index) "
                             + "SELECT user_id, CASE WHEN language<>'' THEN language WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr' ELSE 'tt' END, work_id, lower(lemma), pos, "
                             + "SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_tts_played' THEN 1 ELSE 0 END), "
-                            + "SUM(visible_ms), MIN(occurred_at_ms), MAX(occurred_at_ms), MAX(char_index) "
+                            + "SUM(visible_ms), MIN(occurred_at_ms), MAX(occurred_at_ms), MIN(page_index), MIN(token_index), MIN(char_index), MAX(char_index) "
                             + "FROM reading_events WHERE lemma<>'' AND pos<>'' "
                             + "GROUP BY user_id, CASE WHEN language<>'' THEN language WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr' ELSE 'tt' END, work_id, lower(lemma), pos");
                     statement.executeUpdate("DELETE FROM user_feature_scope_stats");
                     statement.executeUpdate("INSERT INTO user_feature_scope_stats(user_id, language, work_id, feature_key, "
-                            + "exposure_count, committed_count, lookup_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms) "
+                            + "exposure_count, committed_count, lookup_count, total_visible_ms, first_seen_at_ms, last_seen_at_ms, "
+                            + "first_page_index, first_token_index, first_char_index) "
                             + "SELECT user_id, CASE WHEN language<>'' THEN language WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr' ELSE 'tt' END, work_id, feature_key, "
                             + "SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END), "
                             + "SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END), "
-                            + "SUM(visible_ms), MIN(occurred_at_ms), MAX(occurred_at_ms) "
+                            + "SUM(visible_ms), MIN(occurred_at_ms), MAX(occurred_at_ms), MIN(page_index), MIN(token_index), MIN(char_index) "
                             + "FROM reading_events WHERE feature_key<>'' "
                             + "GROUP BY user_id, CASE WHEN language<>'' THEN language WHEN work_id LIKE '%elnet%' OR work_id LIKE '%puncheryshte%' THEN 'mhr' ELSE 'tt' END, work_id, feature_key");
                 }
@@ -545,9 +555,15 @@ public final class SqliteReaderRepository implements ReaderRepository {
                     + "total_visible_ms INTEGER NOT NULL DEFAULT 0,"
                     + "first_seen_at_ms INTEGER NOT NULL,"
                     + "last_seen_at_ms INTEGER NOT NULL,"
+                    + "first_page_index INTEGER NOT NULL DEFAULT 2147483647,"
+                    + "first_token_index INTEGER NOT NULL DEFAULT 2147483647,"
+                    + "first_char_index INTEGER NOT NULL DEFAULT 2147483647,"
                     + "last_char_index INTEGER NOT NULL DEFAULT -1,"
                     + "PRIMARY KEY(user_id, language, work_id, lemma, pos))");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_lemma_scope_problem_idx ON user_lemma_scope_stats(user_id, language, work_id, lookup_count DESC, committed_count ASC)");
+            addColumnIfMissing(statement, "ALTER TABLE user_lemma_scope_stats ADD COLUMN first_page_index INTEGER NOT NULL DEFAULT 2147483647");
+            addColumnIfMissing(statement, "ALTER TABLE user_lemma_scope_stats ADD COLUMN first_token_index INTEGER NOT NULL DEFAULT 2147483647");
+            addColumnIfMissing(statement, "ALTER TABLE user_lemma_scope_stats ADD COLUMN first_char_index INTEGER NOT NULL DEFAULT 2147483647");
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS user_feature_scope_stats("
                     + "user_id INTEGER NOT NULL,"
                     + "language TEXT NOT NULL,"
@@ -559,8 +575,14 @@ public final class SqliteReaderRepository implements ReaderRepository {
                     + "total_visible_ms INTEGER NOT NULL DEFAULT 0,"
                     + "first_seen_at_ms INTEGER NOT NULL,"
                     + "last_seen_at_ms INTEGER NOT NULL,"
+                    + "first_page_index INTEGER NOT NULL DEFAULT 2147483647,"
+                    + "first_token_index INTEGER NOT NULL DEFAULT 2147483647,"
+                    + "first_char_index INTEGER NOT NULL DEFAULT 2147483647,"
                     + "PRIMARY KEY(user_id, language, work_id, feature_key))");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_feature_scope_problem_idx ON user_feature_scope_stats(user_id, language, work_id, lookup_count DESC, committed_count ASC)");
+            addColumnIfMissing(statement, "ALTER TABLE user_feature_scope_stats ADD COLUMN first_page_index INTEGER NOT NULL DEFAULT 2147483647");
+            addColumnIfMissing(statement, "ALTER TABLE user_feature_scope_stats ADD COLUMN first_token_index INTEGER NOT NULL DEFAULT 2147483647");
+            addColumnIfMissing(statement, "ALTER TABLE user_feature_scope_stats ADD COLUMN first_char_index INTEGER NOT NULL DEFAULT 2147483647");
         }
     }
 
@@ -633,7 +655,10 @@ public final class SqliteReaderRepository implements ReaderRepository {
         statement.setLong(10, event.visibleMs);
         statement.setLong(11, event.occurredAtMs);
         statement.setLong(12, event.occurredAtMs);
-        statement.setInt(13, event.charIndex);
+        statement.setInt(13, safeOrderIndex(event.pageIndex));
+        statement.setInt(14, safeOrderIndex(event.tokenIndex));
+        statement.setInt(15, safeOrderIndex(event.charIndex));
+        statement.setInt(16, event.charIndex);
     }
 
     private void bindScopedFeatureStats(PreparedStatement statement, long userId, ReadingEvent event) throws SQLException {
@@ -647,6 +672,9 @@ public final class SqliteReaderRepository implements ReaderRepository {
         statement.setLong(8, event.visibleMs);
         statement.setLong(9, event.occurredAtMs);
         statement.setLong(10, event.occurredAtMs);
+        statement.setInt(11, safeOrderIndex(event.pageIndex));
+        statement.setInt(12, safeOrderIndex(event.tokenIndex));
+        statement.setInt(13, safeOrderIndex(event.charIndex));
     }
 
     private boolean isExposure(ReadingEvent event) {
@@ -683,6 +711,10 @@ public final class SqliteReaderRepository implements ReaderRepository {
             return "mhr";
         }
         return "tt";
+    }
+
+    private static int safeOrderIndex(int value) {
+        return value < 0 ? Integer.MAX_VALUE : value;
     }
 
     private static void addColumnIfMissing(Statement statement, String sql) throws SQLException {

@@ -157,8 +157,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
                                  + "last_work_id=excluded.last_work_id, last_char_index=excluded.last_char_index");
                  PreparedStatement upsertScopedLemmaStats = connection.prepareStatement(
                          "INSERT INTO user_lemma_scope_stats(user_id, language, work_id, lemma, pos, exposure_count, committed_count, lookup_count, "
-                                 + "tts_count, total_visible_ms, first_seen_at, last_seen_at, last_char_index) "
-                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, to_timestamp(? / 1000.0), to_timestamp(? / 1000.0), ?) "
+                                 + "tts_count, total_visible_ms, first_seen_at, last_seen_at, first_page_index, first_token_index, first_char_index, last_char_index) "
+                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, to_timestamp(? / 1000.0), to_timestamp(? / 1000.0), ?, ?, ?, ?) "
                                  + "ON CONFLICT(user_id, language, work_id, lemma, pos) DO UPDATE SET "
                                  + "exposure_count=user_lemma_scope_stats.exposure_count + excluded.exposure_count, "
                                  + "committed_count=user_lemma_scope_stats.committed_count + excluded.committed_count, "
@@ -166,17 +166,23 @@ public final class PostgresReaderRepository implements ReaderRepository {
                                  + "tts_count=user_lemma_scope_stats.tts_count + excluded.tts_count, "
                                  + "total_visible_ms=user_lemma_scope_stats.total_visible_ms + excluded.total_visible_ms, "
                                  + "last_seen_at=GREATEST(user_lemma_scope_stats.last_seen_at, excluded.last_seen_at), "
+                                 + "first_page_index=LEAST(user_lemma_scope_stats.first_page_index, excluded.first_page_index), "
+                                 + "first_token_index=LEAST(user_lemma_scope_stats.first_token_index, excluded.first_token_index), "
+                                 + "first_char_index=LEAST(user_lemma_scope_stats.first_char_index, excluded.first_char_index), "
                                  + "last_char_index=excluded.last_char_index");
                  PreparedStatement upsertScopedFeatureStats = connection.prepareStatement(
                          "INSERT INTO user_feature_scope_stats(user_id, language, work_id, feature_key, exposure_count, committed_count, lookup_count, "
-                                 + "total_visible_ms, first_seen_at, last_seen_at) "
-                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, to_timestamp(? / 1000.0), to_timestamp(? / 1000.0)) "
+                                 + "total_visible_ms, first_seen_at, last_seen_at, first_page_index, first_token_index, first_char_index) "
+                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, to_timestamp(? / 1000.0), to_timestamp(? / 1000.0), ?, ?, ?) "
                                  + "ON CONFLICT(user_id, language, work_id, feature_key) DO UPDATE SET "
                                  + "exposure_count=user_feature_scope_stats.exposure_count + excluded.exposure_count, "
                                  + "committed_count=user_feature_scope_stats.committed_count + excluded.committed_count, "
                                  + "lookup_count=user_feature_scope_stats.lookup_count + excluded.lookup_count, "
                                  + "total_visible_ms=user_feature_scope_stats.total_visible_ms + excluded.total_visible_ms, "
-                                 + "last_seen_at=GREATEST(user_feature_scope_stats.last_seen_at, excluded.last_seen_at)");
+                                 + "last_seen_at=GREATEST(user_feature_scope_stats.last_seen_at, excluded.last_seen_at), "
+                                 + "first_page_index=LEAST(user_feature_scope_stats.first_page_index, excluded.first_page_index), "
+                                 + "first_token_index=LEAST(user_feature_scope_stats.first_token_index, excluded.first_token_index), "
+                                 + "first_char_index=LEAST(user_feature_scope_stats.first_char_index, excluded.first_char_index)");
                  PreparedStatement upsertLemmaTimeline = connection.prepareStatement(
                          "INSERT INTO user_lemma_timeline_stats(user_id, language, work_id, lemma, pos, event_type, bucket_start, "
                                  + "event_count, total_visible_ms, first_seen_at, last_seen_at) "
@@ -334,7 +340,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
     private static String lemmaStatsOrderBy(String sort, String sortDir) {
         String direction = sortDirection(sortDir);
         return switch (sort == null ? "" : sort) {
-            case "lemma" -> "MIN(first_seen_at) " + direction + ", lemma ASC, pos ASC";
+            case "lemma" -> "MIN(first_page_index) " + direction + ", MIN(first_token_index) " + direction
+                    + ", MIN(first_char_index) " + direction + ", lemma ASC, pos ASC";
             case "frequent" -> "SUM(exposure_count) " + direction + ", SUM(committed_count) DESC, lemma ASC";
             case "read" -> "SUM(committed_count) " + direction + ", SUM(exposure_count) DESC, lemma ASC";
             case "opened" -> "SUM(lookup_count) " + direction + ", SUM(exposure_count) DESC, lemma ASC";
@@ -348,7 +355,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
     private static String featureStatsOrderBy(String sort, String sortDir) {
         String direction = sortDirection(sortDir);
         return switch (sort == null ? "" : sort) {
-            case "lemma" -> "MIN(first_seen_at) " + direction + ", feature_key ASC";
+            case "lemma" -> "MIN(first_page_index) " + direction + ", MIN(first_token_index) " + direction
+                    + ", MIN(first_char_index) " + direction + ", feature_key ASC";
             case "frequent" -> "SUM(exposure_count) " + direction + ", SUM(committed_count) DESC, feature_key ASC";
             case "read" -> "SUM(committed_count) " + direction + ", SUM(exposure_count) DESC, feature_key ASC";
             case "opened" -> "SUM(lookup_count) " + direction + ", SUM(exposure_count) DESC, feature_key ASC";
@@ -466,7 +474,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
                     statement.executeUpdate("""
                             INSERT INTO user_lemma_scope_stats(user_id, language, work_id, lemma, pos,
                               exposure_count, committed_count, lookup_count, tts_count, total_visible_ms,
-                              first_seen_at, last_seen_at, last_char_index)
+                              first_seen_at, last_seen_at, first_page_index, first_token_index, first_char_index, last_char_index)
                             SELECT user_id,
                               CASE
                                 WHEN language<>'' THEN language
@@ -478,7 +486,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
                               SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END),
                               SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END),
                               SUM(CASE WHEN event_type='token_tts_played' THEN 1 ELSE 0 END),
-                              SUM(LEAST(visible_ms, 120000)), MIN(occurred_at), MAX(occurred_at), MAX(char_index)
+                              SUM(LEAST(visible_ms, 120000)), MIN(occurred_at), MAX(occurred_at),
+                              MIN(page_index), MIN(token_index), MIN(char_index), MAX(char_index)
                             FROM reading_events
                             WHERE lemma<>'' AND pos<>''
                             GROUP BY user_id,
@@ -492,7 +501,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
                     statement.executeUpdate("TRUNCATE user_feature_scope_stats");
                     statement.executeUpdate("""
                             INSERT INTO user_feature_scope_stats(user_id, language, work_id, feature_key,
-                              exposure_count, committed_count, lookup_count, total_visible_ms, first_seen_at, last_seen_at)
+                              exposure_count, committed_count, lookup_count, total_visible_ms, first_seen_at, last_seen_at,
+                              first_page_index, first_token_index, first_char_index)
                             SELECT user_id,
                               CASE
                                 WHEN language<>'' THEN language
@@ -503,7 +513,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
                               SUM(CASE WHEN event_type IN ('token_exposed','token_committed') THEN 1 ELSE 0 END),
                               SUM(CASE WHEN event_type='token_committed' THEN 1 ELSE 0 END),
                               SUM(CASE WHEN event_type='token_lookup' THEN 1 ELSE 0 END),
-                              SUM(LEAST(visible_ms, 120000)), MIN(occurred_at), MAX(occurred_at)
+                              SUM(LEAST(visible_ms, 120000)), MIN(occurred_at), MAX(occurred_at),
+                              MIN(page_index), MIN(token_index), MIN(char_index)
                             FROM reading_events
                             WHERE feature_key<>''
                             GROUP BY user_id,
@@ -656,11 +667,17 @@ public final class PostgresReaderRepository implements ReaderRepository {
                       total_visible_ms BIGINT NOT NULL DEFAULT 0,
                       first_seen_at TIMESTAMPTZ NOT NULL,
                       last_seen_at TIMESTAMPTZ NOT NULL,
+                      first_page_index INTEGER NOT NULL DEFAULT 2147483647,
+                      first_token_index INTEGER NOT NULL DEFAULT 2147483647,
+                      first_char_index INTEGER NOT NULL DEFAULT 2147483647,
                       last_char_index INTEGER NOT NULL DEFAULT -1,
                       PRIMARY KEY(user_id, language, work_id, lemma, pos)
                     )
                     """);
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_lemma_scope_problem_idx ON user_lemma_scope_stats(user_id, language, work_id, lookup_count DESC, committed_count ASC)");
+            statement.executeUpdate("ALTER TABLE user_lemma_scope_stats ADD COLUMN IF NOT EXISTS first_page_index INTEGER NOT NULL DEFAULT 2147483647");
+            statement.executeUpdate("ALTER TABLE user_lemma_scope_stats ADD COLUMN IF NOT EXISTS first_token_index INTEGER NOT NULL DEFAULT 2147483647");
+            statement.executeUpdate("ALTER TABLE user_lemma_scope_stats ADD COLUMN IF NOT EXISTS first_char_index INTEGER NOT NULL DEFAULT 2147483647");
             statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS user_feature_scope_stats(
                       user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -673,10 +690,16 @@ public final class PostgresReaderRepository implements ReaderRepository {
                       total_visible_ms BIGINT NOT NULL DEFAULT 0,
                       first_seen_at TIMESTAMPTZ NOT NULL,
                       last_seen_at TIMESTAMPTZ NOT NULL,
+                      first_page_index INTEGER NOT NULL DEFAULT 2147483647,
+                      first_token_index INTEGER NOT NULL DEFAULT 2147483647,
+                      first_char_index INTEGER NOT NULL DEFAULT 2147483647,
                       PRIMARY KEY(user_id, language, work_id, feature_key)
                     )
                     """);
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS user_feature_scope_problem_idx ON user_feature_scope_stats(user_id, language, work_id, lookup_count DESC, committed_count ASC)");
+            statement.executeUpdate("ALTER TABLE user_feature_scope_stats ADD COLUMN IF NOT EXISTS first_page_index INTEGER NOT NULL DEFAULT 2147483647");
+            statement.executeUpdate("ALTER TABLE user_feature_scope_stats ADD COLUMN IF NOT EXISTS first_token_index INTEGER NOT NULL DEFAULT 2147483647");
+            statement.executeUpdate("ALTER TABLE user_feature_scope_stats ADD COLUMN IF NOT EXISTS first_char_index INTEGER NOT NULL DEFAULT 2147483647");
             statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS user_lemma_timeline_stats(
                       user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -780,7 +803,10 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setLong(10, eventVisibleMs(event));
         statement.setLong(11, event.occurredAtMs);
         statement.setLong(12, event.occurredAtMs);
-        statement.setInt(13, event.charIndex);
+        statement.setInt(13, safeOrderIndex(event.pageIndex));
+        statement.setInt(14, safeOrderIndex(event.tokenIndex));
+        statement.setInt(15, safeOrderIndex(event.charIndex));
+        statement.setInt(16, event.charIndex);
     }
 
     private void bindScopedFeatureStats(PreparedStatement statement, long userId, ReadingEvent event) throws SQLException {
@@ -794,6 +820,9 @@ public final class PostgresReaderRepository implements ReaderRepository {
         statement.setLong(8, eventVisibleMs(event));
         statement.setLong(9, event.occurredAtMs);
         statement.setLong(10, event.occurredAtMs);
+        statement.setInt(11, safeOrderIndex(event.pageIndex));
+        statement.setInt(12, safeOrderIndex(event.tokenIndex));
+        statement.setInt(13, safeOrderIndex(event.charIndex));
     }
 
     private void bindLemmaTimeline(PreparedStatement statement, long userId, ReadingEvent event) throws SQLException {
@@ -866,6 +895,10 @@ public final class PostgresReaderRepository implements ReaderRepository {
             return "mhr";
         }
         return "tt";
+    }
+
+    private static int safeOrderIndex(int value) {
+        return value < 0 ? Integer.MAX_VALUE : value;
     }
 
     private static String toJdbcUrl(String databaseUrl) {
