@@ -298,6 +298,64 @@ public final class PostgresReaderRepository implements ReaderRepository {
     }
 
     @Override
+    public TimelineBounds timelineBounds(long userId, String kind, String lemma, String pos, String featureKey,
+                                         String language, String workId, long nowMs) throws SQLException {
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
+        String itemTable;
+        String itemWhere;
+        if ("feature".equals(kind)) {
+            itemTable = "user_feature_timeline_stats";
+            itemWhere = "feature_key=?";
+        } else {
+            itemTable = "user_lemma_timeline_stats";
+            itemWhere = "lemma=? AND pos=?";
+        }
+        try (Connection connection = open()) {
+            long languageStart = scalarTime(connection,
+                    "SELECT MIN(occurred_at) FROM reading_events WHERE user_id=? AND (?='' OR language=?)",
+                    ps -> {
+                        ps.setLong(1, userId);
+                        ps.setString(2, safeLanguage);
+                        ps.setString(3, safeLanguage);
+                    });
+            long workStart = scalarTime(connection,
+                    "SELECT MIN(occurred_at) FROM reading_events WHERE user_id=? AND (?='' OR work_id=?)",
+                    ps -> {
+                        ps.setLong(1, userId);
+                        ps.setString(2, safeWorkId);
+                        ps.setString(3, safeWorkId);
+                    });
+            long workEnd = scalarTime(connection,
+                    "SELECT COALESCE(MAX(CASE WHEN event_type='page_visible' THEN occurred_at END), MAX(occurred_at)) "
+                            + "FROM reading_events WHERE user_id=? AND (?='' OR work_id=?)",
+                    ps -> {
+                        ps.setLong(1, userId);
+                        ps.setString(2, safeWorkId);
+                        ps.setString(3, safeWorkId);
+                    });
+            long itemLanguageStart = scalarTime(connection,
+                    "SELECT MIN(first_seen_at) FROM " + itemTable + " WHERE user_id=? AND " + itemWhere
+                            + " AND (?='' OR language=?)",
+                    ps -> bindTimelineBoundItem(ps, userId, kind, lemma, pos, featureKey, safeLanguage, "", false));
+            long itemLanguageEnd = scalarTime(connection,
+                    "SELECT MAX(last_seen_at) FROM " + itemTable + " WHERE user_id=? AND " + itemWhere
+                            + " AND (?='' OR language=?)",
+                    ps -> bindTimelineBoundItem(ps, userId, kind, lemma, pos, featureKey, safeLanguage, "", false));
+            long itemWorkStart = scalarTime(connection,
+                    "SELECT MIN(first_seen_at) FROM " + itemTable + " WHERE user_id=? AND " + itemWhere
+                            + " AND (?='' OR language=?) AND (?='' OR work_id=?)",
+                    ps -> bindTimelineBoundItem(ps, userId, kind, lemma, pos, featureKey, safeLanguage, safeWorkId, true));
+            long itemWorkEnd = scalarTime(connection,
+                    "SELECT MAX(last_seen_at) FROM " + itemTable + " WHERE user_id=? AND " + itemWhere
+                            + " AND (?='' OR language=?) AND (?='' OR work_id=?)",
+                    ps -> bindTimelineBoundItem(ps, userId, kind, lemma, pos, featureKey, safeLanguage, safeWorkId, true));
+            return new TimelineBounds(languageStart, nowMs, workStart, workEnd,
+                    itemLanguageStart, itemLanguageEnd, itemWorkStart, itemWorkEnd);
+        }
+    }
+
+    @Override
     public List<ReadingEventRecord> listLemmaEvents(long userId, String lemma, String pos,
                                                     String language, String workId, String eventType, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 500 : Math.min(5_000, limit);
@@ -899,6 +957,44 @@ public final class PostgresReaderRepository implements ReaderRepository {
 
     private static int safeOrderIndex(int value) {
         return value < 0 ? Integer.MAX_VALUE : value;
+    }
+
+    private static long scalarTime(Connection connection, String sql, SqlBinder binder) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            binder.bind(statement);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next()) {
+                    Timestamp timestamp = rs.getTimestamp(1);
+                    return timestamp == null ? 0 : timestamp.toInstant().toEpochMilli();
+                }
+            }
+        }
+        return 0;
+    }
+
+    private static void bindTimelineBoundItem(PreparedStatement statement, long userId, String kind,
+                                              String lemma, String pos, String featureKey,
+                                              String language, String workId, boolean includeWork) throws SQLException {
+        statement.setLong(1, userId);
+        int index;
+        if ("feature".equals(kind)) {
+            statement.setString(2, featureKey == null ? "" : featureKey);
+            index = 3;
+        } else {
+            statement.setString(2, normalizeLemma(lemma));
+            statement.setString(3, pos == null ? "" : pos);
+            index = 4;
+        }
+        statement.setString(index++, language);
+        statement.setString(index++, language);
+        if (includeWork) {
+            statement.setString(index++, workId);
+            statement.setString(index, workId);
+        }
+    }
+
+    private interface SqlBinder {
+        void bind(PreparedStatement statement) throws SQLException;
     }
 
     private static String toJdbcUrl(String databaseUrl) {

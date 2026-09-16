@@ -487,6 +487,8 @@ final class StaticReaderAssets {
             }
             .timeline-title strong { font-size: 17px; }
             .timeline-title button { background: var(--surface-muted); color: var(--primary); border-color: var(--primary); }
+            .timeline-controls { display: flex; justify-content: flex-end; margin: 8px 0; }
+            .timeline-controls select { min-height: 36px; max-width: min(100%, 320px); }
             .timeline-axis {
               display: flex;
               justify-content: space-between;
@@ -534,6 +536,7 @@ final class StaticReaderAssets {
               exposedTokens: new Set(),
               queue: [],
               isFlushing: false,
+              flushPromise: null,
               selectedToken: null,
               flushTimer: null,
               observer: null,
@@ -547,6 +550,7 @@ final class StaticReaderAssets {
               statsRequestId: 0,
               lastLemmaRows: [],
               statsCache: new Map(),
+              timelineScale: 'itemWork',
               grammar: {pos: {}, features: {}},
               speech: {
                 mode: 'idle',
@@ -687,36 +691,44 @@ final class StaticReaderAssets {
 
             async function flushEvents(useBeacon = false) {
               commitVisible(false);
-              if (!state.queue.length || state.isFlushing) return;
-              state.isFlushing = true;
-              const batch = state.queue.splice(0, 250);
-              localStorage.setItem('uqureader.pendingEvents', JSON.stringify(state.queue));
-              const payload = JSON.stringify({events: batch});
-              if (useBeacon && navigator.sendBeacon) {
-                const blob = new Blob([payload], {type: 'application/json'});
-                if (navigator.sendBeacon('/api/reading/events', blob)) {
-                  state.isFlushing = false;
-                  state.statsCache.clear();
-                  return;
-                }
+              if (state.isFlushing) {
+                await (state.flushPromise || Promise.resolve());
               }
+              if (!state.queue.length) return;
+              state.isFlushing = true;
+              state.flushPromise = (async () => {
+                const batch = state.queue.splice(0, 250);
+                localStorage.setItem('uqureader.pendingEvents', JSON.stringify(state.queue));
+                const payload = JSON.stringify({events: batch});
+                if (useBeacon && navigator.sendBeacon) {
+                  const blob = new Blob([payload], {type: 'application/json'});
+                  if (navigator.sendBeacon('/api/reading/events', blob)) {
+                    state.statsCache.clear();
+                    return;
+                  }
+                }
+                try {
+                  await fetch('/api/reading/events', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    keepalive: useBeacon,
+                    headers: {'Content-Type': 'application/json'},
+                    body: payload
+                  }).then(r => {
+                    if (!r.ok) throw new Error('flush failed');
+                    return r.json();
+                  });
+                  state.statsCache.clear();
+                } catch (_) {
+                  state.queue.unshift(...batch);
+                  localStorage.setItem('uqureader.pendingEvents', JSON.stringify(state.queue.slice(-5000)));
+                }
+              })();
               try {
-                await fetch('/api/reading/events', {
-                  method: 'POST',
-                  credentials: 'same-origin',
-                  keepalive: useBeacon,
-                  headers: {'Content-Type': 'application/json'},
-                  body: payload
-                }).then(r => {
-                  if (!r.ok) throw new Error('flush failed');
-                  return r.json();
-                });
-                state.statsCache.clear();
-              } catch (_) {
-                state.queue.unshift(...batch);
-                localStorage.setItem('uqureader.pendingEvents', JSON.stringify(state.queue.slice(-5000)));
+                await state.flushPromise;
               } finally {
                 state.isFlushing = false;
+                state.flushPromise = null;
               }
               if (state.queue.length) scheduleFlush(2000);
             }
@@ -1558,17 +1570,20 @@ final class StaticReaderAssets {
               if (state.statsLanguage) params.set('language', state.statsLanguage);
               if (state.statsWorkId) params.set('workId', state.statsWorkId);
               const data = await api(`/api/reading/timeline?${params.toString()}`);
-              renderTimelineModal(kind, row, data.points || []);
+              renderTimelineModal(kind, row, data.points || [], data.bounds || {});
             }
 
-            function renderTimelineModal(kind, row, points) {
+            function renderTimelineModal(kind, row, points, bounds = {}) {
               const modal = $('timelineModal');
               const body = $('timelineBody');
               $('timelineTitle').textContent = kind === 'feature'
                 ? `${formatFeatureKey(row.featureKey)} · ${row.featureKey}`
                 : `${row.lemma} · ${formatPos(row.pos)}`;
-              const min = points.reduce((value, point) => Math.min(value, point.bucketStartMs || value), points[0]?.bucketStartMs || Date.now());
-              const max = points.reduce((value, point) => Math.max(value, point.bucketStartMs || value), min);
+              const pointMin = points.reduce((value, point) => Math.min(value, point.bucketStartMs || value), points[0]?.bucketStartMs || Date.now());
+              const pointMax = points.reduce((value, point) => Math.max(value, point.bucketStartMs || value), pointMin);
+              const range = timelineRange(bounds, pointMin, pointMax);
+              const min = range.min;
+              const max = range.max;
               const span = Math.max(1, max - min);
               const series = aggregateTimelineSeries(points);
               const dots = timelineDots(series, min, span);
@@ -1577,6 +1592,14 @@ final class StaticReaderAssets {
                 .map(([key, meta]) => `<span><i class="legend-dot" style="background:${meta.color}"></i>${escapeHtml(meta.label)}: ${series[key].total}</span>`)
                 .join('');
               body.innerHTML = `
+                <div class="timeline-controls">
+                  <select id="timelineScale" aria-label="Масштаб графика">
+                    ${timelineScaleOption('language', 'с начала изучения языка')}
+                    ${timelineScaleOption('work', 'с начала чтения книги')}
+                    ${timelineScaleOption('itemLanguage', 'с первого контакта слова в языке')}
+                    ${timelineScaleOption('itemWork', 'с первого контакта слова в книге')}
+                  </select>
+                </div>
                 <svg class="timeline-svg" viewBox="0 0 780 72" preserveAspectRatio="none" role="img" aria-label="Timeline">
                   <line x1="24" y1="22" x2="756" y2="22" stroke="#ccd6d0" stroke-width="1.5" stroke-linecap="round"></line>
                   <line x1="24" y1="42" x2="756" y2="42" stroke="#ccd6d0" stroke-width="1.5" stroke-linecap="round"></line>
@@ -1585,7 +1608,27 @@ final class StaticReaderAssets {
                 </svg>
                 <div class="timeline-axis">${axis}</div>
                 <div class="timeline-legend">${legend}</div>`;
+              $('timelineScale').addEventListener('change', event => {
+                state.timelineScale = event.target.value;
+                renderTimelineModal(kind, row, points, bounds);
+              });
               modal.classList.remove('hidden');
+            }
+
+            function timelineScaleOption(value, label) {
+              const selected = state.timelineScale === value ? ' selected' : '';
+              return `<option value="${value}"${selected}>${label}</option>`;
+            }
+
+            function timelineRange(bounds, pointMin, pointMax) {
+              const pick = (start, end) => ({
+                min: Number(start || 0) || pointMin,
+                max: Number(end || 0) || pointMax
+              });
+              if (state.timelineScale === 'language') return pick(bounds.languageStartMs, bounds.languageEndMs);
+              if (state.timelineScale === 'work') return pick(bounds.workStartMs, bounds.workEndMs);
+              if (state.timelineScale === 'itemLanguage') return pick(bounds.itemLanguageStartMs, bounds.itemLanguageEndMs);
+              return pick(bounds.itemWorkStartMs, bounds.itemWorkEndMs);
             }
 
             function aggregateTimelineSeries(points) {

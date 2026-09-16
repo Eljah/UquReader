@@ -520,6 +520,14 @@ public class WebMorphologyApplication {
             }
             JsonObject payload = new JsonObject();
             payload.add("points", gson.toJsonTree(points));
+            payload.add("bounds", gson.toJsonTree(repository.timelineBounds(session.get().userId,
+                    kind,
+                    query.getOrDefault("lemma", ""),
+                    query.getOrDefault("pos", ""),
+                    query.getOrDefault("featureKey", ""),
+                    query.getOrDefault("language", ""),
+                    query.getOrDefault("workId", ""),
+                    System.currentTimeMillis())));
             sendJson(exchange, 200, payload);
         } catch (SQLException ex) {
             sendServerError(exchange, ex.getMessage());

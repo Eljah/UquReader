@@ -34,6 +34,11 @@ public interface ReaderRepository extends Closeable {
     List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language, String workId,
                                             String eventType, int limit) throws SQLException;
 
+    default TimelineBounds timelineBounds(long userId, String kind, String lemma, String pos, String featureKey,
+                                          String language, String workId, long nowMs) throws SQLException {
+        return new TimelineBounds(0, nowMs, 0, 0, 0, 0, 0, 0);
+    }
+
     default void refreshScopedStats(Map<String, String> workLanguages) throws SQLException {
     }
 }
