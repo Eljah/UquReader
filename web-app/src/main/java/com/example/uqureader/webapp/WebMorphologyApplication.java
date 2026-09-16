@@ -544,15 +544,16 @@ public class WebMorphologyApplication {
             String workId = query.getOrDefault("workId", "");
             String mode = query.getOrDefault("mode", "all");
             String sort = query.getOrDefault("sort", "problem");
+            String sortDir = query.getOrDefault("dir", "desc");
             String lemmaQuery = query.getOrDefault("q", "");
             int limit = parseInt(query.get("limit"), 100);
             JsonObject payload = new JsonObject();
             if (!"features".equals(mode)) {
-                List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, language, workId, sort, lemmaQuery, limit);
+                List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, language, workId, sort, sortDir, lemmaQuery, limit);
                 payload.add("lemmas", gson.toJsonTree(stats));
             }
             if (!"lemmas".equals(mode)) {
-                payload.add("features", gson.toJsonTree(repository.listFeatureStats(session.get().userId, language, workId, sort, limit)));
+                payload.add("features", gson.toJsonTree(repository.listFeatureStats(session.get().userId, language, workId, sort, sortDir, limit)));
             }
             sendJson(exchange, 200, payload);
         } catch (SQLException ex) {

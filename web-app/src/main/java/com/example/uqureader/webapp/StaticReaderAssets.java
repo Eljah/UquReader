@@ -410,8 +410,9 @@ final class StaticReaderAssets {
             }
             .stats-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
             .stats-head h2 { margin: 0; font-size: 24px; color: var(--primary); letter-spacing: .05em; }
-            .stats-filters { display: grid; grid-template-columns: minmax(130px, 170px) minmax(180px, 1fr) minmax(150px, 190px) minmax(170px, 220px); gap: 10px; padding: 12px 0 4px; }
+            .stats-filters { display: grid; grid-template-columns: minmax(130px, 170px) minmax(180px, 1fr) minmax(170px, 240px); gap: 10px; padding: 12px 0 4px; }
             .stats-filters select, .stats-filters input { width: 100%; min-height: 40px; }
+            #statsSort { display: none; }
             .stats-tabs { display: flex; gap: 8px; padding: 14px 0; }
             .stats-tabs button { background: var(--surface-muted); color: var(--primary); border-color: var(--primary); }
             .stats-tabs button.active { background: var(--primary); color: var(--toolbar-icon); }
@@ -539,7 +540,8 @@ final class StaticReaderAssets {
               statsMode: 'lemmas',
               statsLanguage: '',
               statsWorkId: '',
-              statsSort: 'problem',
+              statsSort: 'lemma',
+              statsSortDir: 'asc',
               statsSearch: '',
               statsSearchTimer: null,
               statsRequestId: 0,
@@ -560,9 +562,14 @@ final class StaticReaderAssets {
             const EVENT_COLORS = {
               token_committed: '#176d3b',
               token_exposed: '#6ea56f',
-              token_lookup: '#1d66b2',
-              token_tts_played: '#9b3d2e',
+              token_lookup: '#c24432',
+              token_tts_played: '#d7a80f',
               page_visible: '#7a8790'
+            };
+            const TIMELINE_SERIES = {
+              seen: {label: 'Встретилось', color: '#176d3b', y: 22},
+              lookup: {label: 'Открыто', color: '#c24432', y: 42},
+              tts: {label: 'Озвучено', color: '#d7a80f', y: 62}
             };
             const MAX_VISIBLE_INTERVAL_MS = 60000;
             const MAX_TOKEN_VISIBLE_MS = 120000;
@@ -1455,13 +1462,13 @@ final class StaticReaderAssets {
               const requestId = ++state.statsRequestId;
               refreshStatsFilters();
               const mode = state.statsMode === 'features' ? 'features' : 'lemmas';
-              const cacheKey = `${mode}|${state.statsLanguage}|${state.statsWorkId}|${state.statsSort}|${state.statsSearch}`;
+              const cacheKey = `${mode}|${state.statsLanguage}|${state.statsWorkId}|${state.statsSort}|${state.statsSortDir}|${state.statsSearch}`;
               if (state.statsCache.has(cacheKey)) {
                 if (requestId !== state.statsRequestId) return;
                 renderStatsRows(state.statsCache.get(cacheKey));
                 return;
               }
-              const params = new URLSearchParams({limit: '200', mode, sort: state.statsSort});
+              const params = new URLSearchParams({limit: '200', mode, sort: state.statsSort, dir: state.statsSortDir});
               if (state.statsLanguage) params.set('language', state.statsLanguage);
               if (state.statsWorkId) params.set('workId', state.statsWorkId);
               if (mode === 'lemmas' && state.statsSearch) params.set('q', state.statsSearch);
@@ -1484,9 +1491,8 @@ final class StaticReaderAssets {
             function refreshStatsFilters() {
               const languageSelect = $('statsLanguage');
               const workSelect = $('statsWork');
-              const sortSelect = $('statsSort');
               const searchInput = $('statsSearch');
-              if (!languageSelect || !workSelect || !sortSelect || !searchInput) return;
+              if (!languageSelect || !workSelect || !searchInput) return;
               const languages = [...new Set(state.works.map(work => work.language || '').filter(Boolean))].sort();
               if (state.statsLanguage && !languages.includes(state.statsLanguage)) state.statsLanguage = '';
               languageSelect.innerHTML = [
@@ -1501,7 +1507,6 @@ final class StaticReaderAssets {
                 ...visibleWorks.map(work => `<option value="${escapeHtml(work.id)}">${escapeHtml(work.title)}</option>`)
               ].join('');
               workSelect.value = state.statsWorkId;
-              sortSelect.value = state.statsSort;
               searchInput.value = state.statsSearch;
             }
 
@@ -1565,27 +1570,83 @@ final class StaticReaderAssets {
               const min = points.reduce((value, point) => Math.min(value, point.bucketStartMs || value), points[0]?.bucketStartMs || Date.now());
               const max = points.reduce((value, point) => Math.max(value, point.bucketStartMs || value), min);
               const span = Math.max(1, max - min);
-              const dots = points.map((point, index) => {
-                const x = 24 + Math.round(((point.bucketStartMs - min) / span) * 732);
-                const y = 36 + ((index % 3) - 1) * 10;
-                const color = EVENT_COLORS[point.eventType] || '#7a8790';
-                const radius = Math.min(11, 4 + Math.log2((point.eventCount || 1) + 1));
-                const title = `${labelEvent(point.eventType)} · ${formatDate(point.bucketStartMs)} · ${point.eventCount}`;
-                return `<circle cx="${x}" cy="${y}" r="${radius}" fill="${color}"><title>${escapeHtml(title)}</title></circle>`;
-              }).join('');
-              const legend = Object.entries(EVENT_COLORS)
-                .filter(([type]) => points.some(point => point.eventType === type))
-                .map(([type, color]) => `<span><i class="legend-dot" style="background:${color}"></i>${escapeHtml(labelEvent(type))}</span>`)
+              const series = aggregateTimelineSeries(points);
+              const dots = timelineDots(series, min, span);
+              const axis = timelineAxis(min, max);
+              const legend = Object.entries(TIMELINE_SERIES)
+                .map(([key, meta]) => `<span><i class="legend-dot" style="background:${meta.color}"></i>${escapeHtml(meta.label)}: ${series[key].total}</span>`)
                 .join('');
-              const total = points.reduce((sum, point) => sum + (point.eventCount || 0), 0);
               body.innerHTML = `
                 <svg class="timeline-svg" viewBox="0 0 780 72" preserveAspectRatio="none" role="img" aria-label="Timeline">
-                  <line x1="24" y1="36" x2="756" y2="36" stroke="#ccd6d0" stroke-width="2" stroke-linecap="round"></line>
+                  <line x1="24" y1="22" x2="756" y2="22" stroke="#ccd6d0" stroke-width="1.5" stroke-linecap="round"></line>
+                  <line x1="24" y1="42" x2="756" y2="42" stroke="#ccd6d0" stroke-width="1.5" stroke-linecap="round"></line>
+                  <line x1="24" y1="62" x2="756" y2="62" stroke="#ccd6d0" stroke-width="1.5" stroke-linecap="round"></line>
                   ${dots}
                 </svg>
-                <div class="timeline-axis"><span>${formatDate(min)}</span><span>${formatDate(max)}</span></div>
-                <div class="timeline-legend">${legend || 'Нет событий для временного ряда'}<span>Всего: ${total}</span></div>`;
+                <div class="timeline-axis">${axis}</div>
+                <div class="timeline-legend">${legend}</div>`;
               modal.classList.remove('hidden');
+            }
+
+            function aggregateTimelineSeries(points) {
+              const series = {};
+              for (const key of Object.keys(TIMELINE_SERIES)) {
+                series[key] = {total: 0, buckets: new Map()};
+              }
+              const seenBuckets = new Map();
+              for (const point of points || []) {
+                const count = Number(point.eventCount || 0);
+                if (!count) continue;
+                const bucket = Number(point.bucketStartMs || 0);
+                if (point.eventType === 'token_committed' || point.eventType === 'token_exposed') {
+                  const seen = seenBuckets.get(bucket) || {committed: 0, exposed: 0};
+                  if (point.eventType === 'token_committed') seen.committed += count;
+                  if (point.eventType === 'token_exposed') seen.exposed += count;
+                  seenBuckets.set(bucket, seen);
+                  continue;
+                }
+                const key = timelineSeriesKey(point.eventType);
+                if (!key) continue;
+                series[key].total += count;
+                series[key].buckets.set(bucket, (series[key].buckets.get(bucket) || 0) + count);
+              }
+              for (const [bucket, seen] of seenBuckets.entries()) {
+                const count = Math.max(seen.committed, seen.exposed);
+                if (!count) continue;
+                series.seen.total += count;
+                series.seen.buckets.set(bucket, count);
+              }
+              return series;
+            }
+
+            function timelineSeriesKey(type) {
+              if (type === 'token_lookup') return 'lookup';
+              if (type === 'token_tts_played') return 'tts';
+              return '';
+            }
+
+            function timelineDots(series, min, span) {
+              const dots = [];
+              for (const [key, data] of Object.entries(series)) {
+                const meta = TIMELINE_SERIES[key];
+                for (const [bucket, count] of data.buckets.entries()) {
+                  const x = 24 + Math.round(((bucket - min) / span) * 732);
+                  const radius = Math.min(11, 4 + Math.log2(count + 1));
+                  const title = `${meta.label} · ${formatDate(bucket)} · ${count}`;
+                  dots.push(`<circle cx="${x}" cy="${meta.y}" r="${radius}" fill="${meta.color}"><title>${escapeHtml(title)}</title></circle>`);
+                }
+              }
+              return dots.join('');
+            }
+
+            function timelineAxis(min, max) {
+              const count = min === max ? 1 : 5;
+              const labels = [];
+              for (let index = 0; index < count; index++) {
+                const value = count === 1 ? min : min + Math.round(((max - min) * index) / (count - 1));
+                labels.push(`<span>${formatDate(value)}</span>`);
+              }
+              return labels.join('');
             }
 
             async function loadLemmaTimeline(row) {
@@ -1609,6 +1670,7 @@ final class StaticReaderAssets {
               const min = events.reduce((value, event) => Math.min(value, event.occurredAtMs || value), events[0]?.occurredAtMs || Date.now());
               const max = events.reduce((value, event) => Math.max(value, event.occurredAtMs || value), min);
               const span = Math.max(1, max - min);
+              const axis = timelineAxis(min, max);
               const dots = events.map((event, index) => {
                 const x = 24 + Math.round(((event.occurredAtMs - min) / span) * 732);
                 const y = 36 + ((index % 3) - 1) * 10;
@@ -1629,7 +1691,7 @@ final class StaticReaderAssets {
                   <line x1="24" y1="36" x2="756" y2="36" stroke="#ccd6d0" stroke-width="2" stroke-linecap="round"></line>
                   ${dots}
                 </svg>
-                <div class="timeline-axis"><span>${formatDate(min)}</span><span>${formatDate(max)}</span></div>
+                <div class="timeline-axis">${axis}</div>
                 <div class="timeline-legend">${legend || 'Нет событий для временного ряда'}</div>`;
               content.prepend(panel);
               $('timelineBack').addEventListener('click', () => panel.remove());
@@ -1682,14 +1744,21 @@ final class StaticReaderAssets {
 
             function sortButton(label, sort) {
               const active = state.statsSort === sort ? ' active' : '';
-              return `<button type="button" class="stat-sort${active}" data-sort="${escapeHtml(sort)}">${escapeHtml(label)}</button>`;
+              const arrow = active ? (state.statsSortDir === 'asc' ? ' ↑' : ' ↓') : '';
+              return `<button type="button" class="stat-sort${active}" data-sort="${escapeHtml(sort)}">${escapeHtml(label)}${arrow}</button>`;
             }
 
             function bindStatSortButtons(root) {
               for (const button of root.querySelectorAll('.stat-sort')) {
                 button.addEventListener('click', async event => {
                   event.stopPropagation();
-                  state.statsSort = button.dataset.sort || 'problem';
+                  const nextSort = button.dataset.sort || 'lemma';
+                  if (state.statsSort === nextSort) {
+                    state.statsSortDir = state.statsSortDir === 'desc' ? 'asc' : 'desc';
+                  } else {
+                    state.statsSort = nextSort;
+                    state.statsSortDir = nextSort === 'lemma' ? 'asc' : 'desc';
+                  }
                   await loadStats();
                 });
               }

@@ -227,17 +227,17 @@ public final class PostgresReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String lemmaQuery, int limit) throws SQLException {
+    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String sortDir, String lemmaQuery, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
         String searchPattern = searchPattern(lemmaQuery);
-        String orderBy = lemmaStatsOrderBy(sort);
+        String orderBy = lemmaStatsOrderBy(sort, sortDir);
         List<LemmaStat> result = new ArrayList<>();
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
                      "SELECT lemma, pos, SUM(exposure_count), SUM(committed_count), SUM(lookup_count), SUM(tts_count), "
-                             + "SUM(total_visible_ms), MAX(last_seen_at) FROM user_lemma_scope_stats "
+                             + "SUM(total_visible_ms), MIN(first_seen_at), MAX(last_seen_at) FROM user_lemma_scope_stats "
                              + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
                              + "AND (?='' OR lemma ILIKE ? ESCAPE '\\') "
                              + "GROUP BY lemma, pos ORDER BY " + orderBy + " LIMIT ?")) {
@@ -253,7 +253,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
                 while (rs.next()) {
                     result.add(new LemmaStat(rs.getString(1), rs.getString(2), safeLanguage, safeWorkId, rs.getLong(3),
                             rs.getLong(4), rs.getLong(5), rs.getLong(6), rs.getLong(7),
-                            rs.getTimestamp(8).toInstant().toEpochMilli()));
+                            rs.getTimestamp(8).toInstant().toEpochMilli(),
+                            rs.getTimestamp(9).toInstant().toEpochMilli()));
                 }
             }
         }
@@ -261,16 +262,16 @@ public final class PostgresReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, int limit) throws SQLException {
+    public List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, String sortDir, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
-        String orderBy = featureStatsOrderBy(sort);
+        String orderBy = featureStatsOrderBy(sort, sortDir);
         List<FeatureStat> result = new ArrayList<>();
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
                      "SELECT feature_key, SUM(exposure_count), SUM(committed_count), SUM(lookup_count), "
-                             + "SUM(total_visible_ms), MAX(last_seen_at) FROM user_feature_scope_stats "
+                             + "SUM(total_visible_ms), MIN(first_seen_at), MAX(last_seen_at) FROM user_feature_scope_stats "
                              + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
                              + "GROUP BY feature_key ORDER BY " + orderBy + " LIMIT ?")) {
             statement.setLong(1, userId);
@@ -282,7 +283,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
                     result.add(new FeatureStat(rs.getString(1), safeLanguage, safeWorkId, rs.getLong(2), rs.getLong(3),
-                            rs.getLong(4), rs.getLong(5), rs.getTimestamp(6).toInstant().toEpochMilli()));
+                            rs.getLong(4), rs.getLong(5), rs.getTimestamp(6).toInstant().toEpochMilli(),
+                            rs.getTimestamp(7).toInstant().toEpochMilli()));
                 }
             }
         }
@@ -329,30 +331,36 @@ public final class PostgresReaderRepository implements ReaderRepository {
         return result;
     }
 
-    private static String lemmaStatsOrderBy(String sort) {
+    private static String lemmaStatsOrderBy(String sort, String sortDir) {
+        String direction = sortDirection(sortDir);
         return switch (sort == null ? "" : sort) {
-            case "lemma" -> "lemma ASC, pos ASC";
-            case "frequent" -> "SUM(exposure_count) DESC, SUM(committed_count) DESC, lemma ASC";
-            case "read" -> "SUM(committed_count) DESC, SUM(exposure_count) DESC, lemma ASC";
-            case "opened" -> "SUM(lookup_count) DESC, SUM(exposure_count) DESC, lemma ASC";
-            case "tts" -> "SUM(tts_count) DESC, SUM(exposure_count) DESC, lemma ASC";
-            case "visible" -> "SUM(total_visible_ms) DESC, SUM(exposure_count) DESC, lemma ASC";
+            case "lemma" -> "MIN(first_seen_at) " + direction + ", lemma ASC, pos ASC";
+            case "frequent" -> "SUM(exposure_count) " + direction + ", SUM(committed_count) DESC, lemma ASC";
+            case "read" -> "SUM(committed_count) " + direction + ", SUM(exposure_count) DESC, lemma ASC";
+            case "opened" -> "SUM(lookup_count) " + direction + ", SUM(exposure_count) DESC, lemma ASC";
+            case "tts" -> "SUM(tts_count) " + direction + ", SUM(exposure_count) DESC, lemma ASC";
+            case "visible" -> "SUM(total_visible_ms) " + direction + ", SUM(exposure_count) DESC, lemma ASC";
             default -> "CASE WHEN SUM(committed_count) > 0 THEN SUM(lookup_count)::numeric / SUM(committed_count) "
                     + "ELSE SUM(lookup_count)::numeric END DESC, SUM(lookup_count) DESC, SUM(exposure_count) DESC, lemma ASC";
         };
     }
 
-    private static String featureStatsOrderBy(String sort) {
+    private static String featureStatsOrderBy(String sort, String sortDir) {
+        String direction = sortDirection(sortDir);
         return switch (sort == null ? "" : sort) {
-            case "lemma" -> "feature_key ASC";
-            case "frequent" -> "SUM(exposure_count) DESC, SUM(committed_count) DESC, feature_key ASC";
-            case "read" -> "SUM(committed_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
-            case "opened" -> "SUM(lookup_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
-            case "tts" -> "SUM(exposure_count) DESC, SUM(committed_count) DESC, feature_key ASC";
-            case "visible" -> "SUM(total_visible_ms) DESC, SUM(exposure_count) DESC, feature_key ASC";
+            case "lemma" -> "MIN(first_seen_at) " + direction + ", feature_key ASC";
+            case "frequent" -> "SUM(exposure_count) " + direction + ", SUM(committed_count) DESC, feature_key ASC";
+            case "read" -> "SUM(committed_count) " + direction + ", SUM(exposure_count) DESC, feature_key ASC";
+            case "opened" -> "SUM(lookup_count) " + direction + ", SUM(exposure_count) DESC, feature_key ASC";
+            case "tts" -> "SUM(exposure_count) " + direction + ", SUM(committed_count) DESC, feature_key ASC";
+            case "visible" -> "SUM(total_visible_ms) " + direction + ", SUM(exposure_count) DESC, feature_key ASC";
             default -> "CASE WHEN SUM(committed_count) > 0 THEN SUM(lookup_count)::numeric / SUM(committed_count) "
                     + "ELSE SUM(lookup_count)::numeric END DESC, SUM(lookup_count) DESC, SUM(exposure_count) DESC, feature_key ASC";
         };
+    }
+
+    private static String sortDirection(String sortDir) {
+        return "asc".equalsIgnoreCase(sortDir) ? "ASC" : "DESC";
     }
 
     private static String searchPattern(String query) {

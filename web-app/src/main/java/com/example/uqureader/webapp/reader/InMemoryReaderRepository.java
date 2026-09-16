@@ -105,7 +105,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public synchronized List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String lemmaQuery, int limit) {
+    public synchronized List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String sortDir, String lemmaQuery, int limit) {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
@@ -123,14 +123,14 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         List<LemmaStat> result = new ArrayList<>();
         for (LemmaStats stats : buckets.values()) {
             result.add(new LemmaStat(stats.lemma, stats.pos, safeLanguage, safeWorkId, stats.exposureCount, stats.committedCount,
-                    stats.lookupCount, stats.ttsCount, stats.totalVisibleMs, stats.lastSeenAtMs));
+                    stats.lookupCount, stats.ttsCount, stats.totalVisibleMs, stats.firstSeenAtMs, stats.lastSeenAtMs));
         }
-        result.sort(lemmaStatComparator(sort));
+        result.sort(lemmaStatComparator(sort, sortDir));
         return result.subList(0, Math.min(result.size(), safeLimit));
     }
 
     @Override
-    public synchronized List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, int limit) {
+    public synchronized List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, String sortDir, int limit) {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
@@ -145,29 +145,32 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         List<FeatureStat> result = new ArrayList<>();
         for (FeatureBucket bucket : buckets.values()) {
             result.add(new FeatureStat(bucket.featureKey, safeLanguage, safeWorkId, bucket.exposureCount, bucket.committedCount,
-                    bucket.lookupCount, bucket.totalVisibleMs, bucket.lastSeenAtMs));
+                    bucket.lookupCount, bucket.totalVisibleMs, bucket.firstSeenAtMs, bucket.lastSeenAtMs));
         }
-        result.sort(featureStatComparator(sort));
+        result.sort(featureStatComparator(sort, sortDir));
         return result.subList(0, Math.min(result.size(), safeLimit));
     }
 
-    private static Comparator<LemmaStat> lemmaStatComparator(String sort) {
-        return switch (sort == null ? "" : sort) {
-            case "lemma" -> Comparator.comparing((LemmaStat stat) -> stat.lemma)
+    private static Comparator<LemmaStat> lemmaStatComparator(String sort, String sortDir) {
+        boolean ascending = "asc".equalsIgnoreCase(sortDir);
+        String safeSort = sort == null ? "" : sort;
+        Comparator<LemmaStat> comparator = switch (safeSort) {
+            case "lemma" -> Comparator.comparingLong((LemmaStat stat) -> stat.firstSeenAtMs)
+                    .thenComparing(stat -> stat.lemma)
                     .thenComparing(stat -> stat.pos);
-            case "frequent" -> Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed()
+            case "frequent" -> Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount)
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.committedCount).reversed())
                     .thenComparing(stat -> stat.lemma);
-            case "read" -> Comparator.comparingLong((LemmaStat stat) -> stat.committedCount).reversed()
+            case "read" -> Comparator.comparingLong((LemmaStat stat) -> stat.committedCount)
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.lemma);
-            case "opened" -> Comparator.comparingLong((LemmaStat stat) -> stat.lookupCount).reversed()
+            case "opened" -> Comparator.comparingLong((LemmaStat stat) -> stat.lookupCount)
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.lemma);
-            case "tts" -> Comparator.comparingLong((LemmaStat stat) -> stat.ttsCount).reversed()
+            case "tts" -> Comparator.comparingLong((LemmaStat stat) -> stat.ttsCount)
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.lemma);
-            case "visible" -> Comparator.comparingLong((LemmaStat stat) -> stat.totalVisibleMs).reversed()
+            case "visible" -> Comparator.comparingLong((LemmaStat stat) -> stat.totalVisibleMs)
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.lemma);
             default -> Comparator.comparingDouble((LemmaStat stat) -> lookupToReadRatio(stat)).reversed()
@@ -175,24 +178,28 @@ public final class InMemoryReaderRepository implements ReaderRepository {
                     .thenComparing(Comparator.comparingLong((LemmaStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.lemma);
         };
+        return safeSort.isBlank() || "problem".equals(safeSort) || ascending ? comparator : comparator.reversed();
     }
 
-    private static Comparator<FeatureStat> featureStatComparator(String sort) {
-        return switch (sort == null ? "" : sort) {
-            case "lemma" -> Comparator.comparing((FeatureStat stat) -> stat.featureKey);
-            case "frequent" -> Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed()
+    private static Comparator<FeatureStat> featureStatComparator(String sort, String sortDir) {
+        boolean ascending = "asc".equalsIgnoreCase(sortDir);
+        String safeSort = sort == null ? "" : sort;
+        Comparator<FeatureStat> comparator = switch (safeSort) {
+            case "lemma" -> Comparator.comparingLong((FeatureStat stat) -> stat.firstSeenAtMs)
+                    .thenComparing(stat -> stat.featureKey);
+            case "frequent" -> Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount)
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.committedCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
-            case "read" -> Comparator.comparingLong((FeatureStat stat) -> stat.committedCount).reversed()
+            case "read" -> Comparator.comparingLong((FeatureStat stat) -> stat.committedCount)
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
-            case "opened" -> Comparator.comparingLong((FeatureStat stat) -> stat.lookupCount).reversed()
+            case "opened" -> Comparator.comparingLong((FeatureStat stat) -> stat.lookupCount)
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
-            case "tts" -> Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed()
+            case "tts" -> Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount)
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.committedCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
-            case "visible" -> Comparator.comparingLong((FeatureStat stat) -> stat.totalVisibleMs).reversed()
+            case "visible" -> Comparator.comparingLong((FeatureStat stat) -> stat.totalVisibleMs)
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
             default -> Comparator.comparingDouble((FeatureStat stat) -> lookupToReadRatio(stat)).reversed()
@@ -200,6 +207,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
                     .thenComparing(Comparator.comparingLong((FeatureStat stat) -> stat.exposureCount).reversed())
                     .thenComparing(stat -> stat.featureKey);
         };
+        return safeSort.isBlank() || "problem".equals(safeSort) || ascending ? comparator : comparator.reversed();
     }
 
     private static double lookupToReadRatio(LemmaStat stat) {
@@ -339,6 +347,9 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         }
         stats.totalVisibleMs += event.visibleMs;
         stats.lastSeenAtMs = Math.max(stats.lastSeenAtMs, event.occurredAtMs);
+        if (stats.firstSeenAtMs == 0) {
+            stats.firstSeenAtMs = event.occurredAtMs;
+        }
     }
 
     private List<TimelinePoint> timelineFromRaw(long userId, String lemma, String pos, String featureKey,
@@ -420,6 +431,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         long committedCount;
         long lookupCount;
         long totalVisibleMs;
+        long firstSeenAtMs;
         long lastSeenAtMs;
 
         FeatureBucket(long userId, String language, String workId, String featureKey) {
@@ -435,6 +447,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
             lookupCount += other.lookupCount;
             totalVisibleMs += other.totalVisibleMs;
             lastSeenAtMs = Math.max(lastSeenAtMs, other.lastSeenAtMs);
+            firstSeenAtMs = firstSeenAtMs == 0 ? other.firstSeenAtMs : Math.min(firstSeenAtMs, other.firstSeenAtMs);
         }
     }
 
