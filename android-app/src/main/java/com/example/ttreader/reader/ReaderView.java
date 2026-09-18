@@ -234,6 +234,9 @@ public class ReaderView extends TextView {
         super.setText(text, type);
         int length = text == null ? 0 : text.length();
         logTextEvent("setText length=" + length);
+        // Переустанавливаем режим выравнивания — на некоторых прошивках он может слетать
+        // после очередного setText() или смены стиля.
+        applyJustificationMode();
     }
 
     private void init() {
@@ -260,9 +263,7 @@ public class ReaderView extends TextView {
             setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY);
             setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
-        }
+        applyJustificationMode();
     }
 
     // ===== Helpers for whitespace/punctuation handling =====
@@ -288,6 +289,7 @@ public class ReaderView extends TextView {
     private static final Set<Character> BREAKABLE_WS_CHARS = new HashSet<>(Arrays.asList(
             ' ', '\u00A0', '\u202F', '\u2009', '\u200A', '\u200B', '\u2060'
     ));
+    private static final char NBSP = '\u00A0';
     private static final char NARROW_NBSP = '\u202F';
     private static final char WORD_JOINER = '\u2060';
     private static final char ZERO_WIDTH_NBSP = '\uFEFF';
@@ -322,6 +324,59 @@ public class ReaderView extends TextView {
             plain.append(WORD_JOINER);
             plain.append(ZERO_WIDTH_NBSP);
         }
+    }
+
+    private static boolean endsWithClosingPunctuationOrDash(StringBuilder plain) {
+        if (plain == null || plain.length() == 0) {
+            return false;
+        }
+        char last = plain.charAt(plain.length() - 1);
+        if (CLOSING_PUNCT_CHARS.contains(last)) {
+            return true;
+        }
+        return last == '—' || last == '–' || last == '-';
+    }
+
+    private static String protectLeadingSpaceAfterPunctuation(String prefix, StringBuilder plain) {
+        if (prefix == null || prefix.isEmpty()) {
+            return prefix;
+        }
+        if (!endsWithClosingPunctuationOrDash(plain)) {
+            return prefix;
+        }
+        return prefix.replaceFirst("^[ \\\t\\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+",
+                String.valueOf(NARROW_NBSP));
+    }
+
+    /** предотвращаем появление пробела в начале новой строки: переносим ведущие пробелы в хвост предыдущего токена */
+    private static String pinLeadingWhitespaceToPreviousToken(String prefix, StringBuilder plain) {
+        if (prefix == null || prefix.isEmpty()) {
+            return prefix;
+        }
+        if (plain == null || plain.length() == 0) {
+            return prefix;
+        }
+        if (!isLeadingWhitespaceChar(prefix.charAt(0))) {
+            return prefix;
+        }
+
+        int last = plain.length() - 1;
+        if (last >= 0) {
+            char c = plain.charAt(last);
+            if (BREAKABLE_WS_CHARS.contains(c)) {
+                if (c != NBSP) {
+                    plain.setCharAt(last, NBSP);
+                }
+            } else {
+                plain.append(NBSP);
+            }
+        }
+
+        return prefix.replaceFirst("^[ \t\u00A0\u202F\u2009\u200A\u200B\u2060]+", "");
+    }
+
+    private static boolean isLeadingWhitespaceChar(char c) {
+        return Character.isWhitespace(c) || BREAKABLE_WS_CHARS.contains(c);
     }
 
     /** открывающая кавычка/скобка — её не склеиваем с предыдущей строкой */
@@ -1065,15 +1120,39 @@ public class ReaderView extends TextView {
                     .setBreakStrategy(Layout.BREAK_STRATEGY_HIGH_QUALITY)
                     .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE);
             // На новых SDK обернём и явным justification у самого layout
-            try {
-                b.getClass().getMethod("setJustificationMode", int.class)
-                        .invoke(b, Layout.JUSTIFICATION_MODE_INTER_WORD);
-            } catch (Throwable ignore) { /* метод может отсутствовать */ }
+            setBuilderJustificationMode(b);
             return b.build();
         } else {
             //noinspection deprecation
             return new StaticLayout(text, paint, effectiveWidth, Layout.Alignment.ALIGN_NORMAL,
                     getLineSpacingMultiplier(), getLineSpacingExtra(), false);
+        }
+    }
+
+    private void applyJustificationMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+            return;
+        }
+        // До O метода нет в API, но на некоторых сборках он появляется как скрытый — попробуем вызвать.
+        try {
+            getClass().getMethod("setJustificationMode", int.class)
+                    .invoke(this, Layout.JUSTIFICATION_MODE_INTER_WORD);
+        } catch (Throwable ignore) {
+            // Оставляем режим переноса как есть, выравнивание недоступно.
+        }
+    }
+
+    private static void setBuilderJustificationMode(StaticLayout.Builder builder) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
+            return;
+        }
+        try {
+            builder.getClass().getMethod("setJustificationMode", int.class)
+                    .invoke(builder, Layout.JUSTIFICATION_MODE_INTER_WORD);
+        } catch (Throwable ignore) {
+            // метод отсутствует на старых SDK
         }
     }
 
@@ -1764,6 +1843,8 @@ public class ReaderView extends TextView {
                     pfx = pfx.replaceAll("[ \\u00A0\\u202F\\u2009\\u200A\\u200B\\u2060]+$", "");
                 }
                 if (!pfx.isEmpty()) {
+                    pfx = protectLeadingSpaceAfterPunctuation(pfx, plain);
+                    pfx = pinLeadingWhitespaceToPreviousToken(pfx, plain);
                     plain.append(pfx);
                 }
                 if (isClosingPunctuationOrDash(surfacePreview)) {
