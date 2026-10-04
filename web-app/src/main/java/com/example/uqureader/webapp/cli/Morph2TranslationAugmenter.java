@@ -38,6 +38,7 @@ import java.util.Set;
 public final class Morph2TranslationAugmenter {
 
     private static final String DEFAULT_DICTIONARY = "data/tat_rus_dictionary.db";
+    private static final String SQLITE_DRIVER = "org.sqlite.JDBC";
 
     private final PrintStream out;
     private final PrintStream err;
@@ -93,6 +94,13 @@ public final class Morph2TranslationAugmenter {
         if (!Files.exists(dictionary)) {
             err.printf("Файл словаря не найден: %s%n", dictionary);
             return 2;
+        }
+
+        try {
+            Class.forName(SQLITE_DRIVER);
+        } catch (ClassNotFoundException ex) {
+            err.printf("Драйвер SQLite не найден в classpath: %s%n", SQLITE_DRIVER);
+            return 4;
         }
 
         String jdbcUrl = "jdbc:sqlite:" + dictionary.toAbsolutePath();
