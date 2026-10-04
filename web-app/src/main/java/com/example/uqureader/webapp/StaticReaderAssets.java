@@ -533,10 +533,16 @@ final class StaticReaderAssets {
               background: var(--surface-muted);
               font-size: 13px;
             }
-            .timeline-feature-details div {
+            .timeline-feature-details > div {
               display: grid;
               grid-template-columns: minmax(58px, max-content) 1fr;
               gap: 10px;
+            }
+            .timeline-feature-details .timeline-feature-source {
+              display: block;
+              color: var(--muted);
+              font-size: 12px;
+              margin-top: 4px;
             }
             .timeline-feature-details b { color: var(--accent-red); }
             .timeline-legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
@@ -1654,7 +1660,7 @@ final class StaticReaderAssets {
               const dots = timelineDots(series, min, max, span, axisMode, timelineTargets);
               const axis = timelineAxis(min, max, axisMode);
               const pageAxis = timelinePageAxis(meta.pageTicks || [], min, max, span, axisMode);
-              const featureDetails = kind === 'feature' ? renderFeatureKeyDetails(row.featureKey) : '';
+              const featureDetails = kind === 'feature' ? renderFeatureKeyDetails(row.featureKey, meta.featureExplanations || []) : '';
               const legend = Object.entries(TIMELINE_SERIES)
                 .map(([key, meta]) => `<span><i class="legend-dot" style="background:${meta.color}"></i>${escapeHtml(meta.label)}: ${series[key].total}</span>`)
                 .join('');
@@ -1713,7 +1719,9 @@ final class StaticReaderAssets {
               return `<option value="${value}"${selected}>${label}</option>`;
             }
 
-            function renderFeatureKeyDetails(featureKey) {
+            function renderFeatureKeyDetails(featureKey, explanations = []) {
+              const rowsFromAnalyses = renderFeatureExplanationRows(explanations);
+              if (rowsFromAnalyses) return rowsFromAnalyses;
               const parts = String(featureKey || '').split('+').filter(Boolean);
               if (!parts.length) return '';
               const [posCode, ...featureCodes] = parts;
@@ -1723,6 +1731,34 @@ final class StaticReaderAssets {
                 rows.push(`<div><b>${escapeHtml(code)}</b><span>${escapeHtml(formatFeature(code))}</span></div>`);
               }
               return `<div class="timeline-feature-details">${rows.join('')}</div>`;
+            }
+
+            function renderFeatureExplanationRows(explanations) {
+              const rows = [];
+              const seen = new Set();
+              for (const explanation of explanations || []) {
+                for (const row of explanation.featureRows || []) {
+                  const descriptions = (row.descriptions || []).filter(Boolean);
+                  const codes = [row.pos, isGrammarGloss(row.gloss) ? row.gloss : ''].filter(Boolean).join(' · ');
+                  const text = descriptions.join('; ') || codes;
+                  if (!text) continue;
+                  const label = formatViennaSegmentLabel(row.segment) || row.pos || row.gloss || '—';
+                  const key = `${label}\u0000${text}`;
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+                  rows.push(`<div><b>${escapeHtml(label)}</b><span>${escapeHtml(text)}</span></div>`);
+                }
+                if (explanation.surface || explanation.analysis) {
+                  const source = [explanation.surface, explanation.analysis].filter(Boolean).join(' · ');
+                  const key = `source\u0000${source}`;
+                  if (source && !seen.has(key)) {
+                    seen.add(key);
+                    rows.push(`<span class="timeline-feature-source">${escapeHtml(source)}</span>`);
+                  }
+                }
+                if (rows.length >= 14) break;
+              }
+              return rows.length ? `<div class="timeline-feature-details">${rows.join('')}</div>` : '';
             }
 
             function timelineRange(bounds, pointMin, pointMax) {

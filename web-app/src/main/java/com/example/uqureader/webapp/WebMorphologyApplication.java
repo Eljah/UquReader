@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.example.uqureader.webapp.reader.GrammarCatalog;
 import com.example.uqureader.webapp.reader.InMemoryReaderRepository;
 import com.example.uqureader.webapp.reader.LemmaStat;
+import com.example.uqureader.webapp.reader.ReaderAnalysisVariant;
 import com.example.uqureader.webapp.reader.ReaderRepository;
 import com.example.uqureader.webapp.reader.ReaderRepositoryFactory;
 import com.example.uqureader.webapp.reader.ReaderToken;
@@ -32,10 +33,12 @@ import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -535,6 +538,10 @@ public class WebMorphologyApplication {
             JsonObject payload = new JsonObject();
             payload.add("points", gson.toJsonTree(points));
             String workId = query.getOrDefault("workId", "");
+            if ("feature".equals(kind)) {
+                payload.add("featureExplanations", featureExplanations(query.getOrDefault("featureKey", ""),
+                        query.getOrDefault("language", ""), workId));
+            }
             if (!workId.isBlank()) {
                 catalog.find(workId).ifPresent(work -> {
                     payload.addProperty("workCharCount", work.charCount);
@@ -555,6 +562,44 @@ public class WebMorphologyApplication {
         } finally {
             exchange.close();
         }
+    }
+
+    private JsonArray featureExplanations(String featureKey, String language, String workId) {
+        JsonArray result = new JsonArray();
+        if (featureKey == null || featureKey.isBlank()) {
+            return result;
+        }
+        String safeLanguage = language == null ? "" : language.trim().toLowerCase(Locale.ROOT);
+        String safeWorkId = workId == null ? "" : workId.trim();
+        Set<String> seen = new HashSet<>();
+        for (ReaderWork work : catalog.listWorks()) {
+            if (!safeWorkId.isBlank() && !safeWorkId.equals(work.id)) {
+                continue;
+            }
+            if (!safeLanguage.isBlank() && !safeLanguage.equals(work.language)) {
+                continue;
+            }
+            for (ReaderToken token : work.tokens) {
+                for (ReaderAnalysisVariant variant : token.analyses) {
+                    if (variant.morphology == null || !featureKey.equals(variant.morphology.featureKey)) {
+                        continue;
+                    }
+                    String key = String.join("\u0000", variant.pos) + "\u0001" + String.join("\u0000", variant.gloss);
+                    if (!seen.add(key)) {
+                        continue;
+                    }
+                    JsonObject item = new JsonObject();
+                    item.addProperty("surface", token.surface);
+                    item.addProperty("analysis", variant.analysis);
+                    item.add("featureRows", gson.toJsonTree(variant.featureRows));
+                    result.add(item);
+                    if (result.size() >= 6) {
+                        return result;
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     private JsonArray timelinePageTicks(ReaderWork work) {
