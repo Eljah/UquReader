@@ -460,7 +460,10 @@ public class WebMorphologyApplication {
             }
             if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
                 Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
-                Optional<ReadingState> state = repository.findReadingState(session.get().userId, query.getOrDefault("workId", ""));
+                String workId = query.getOrDefault("workId", "");
+                Optional<ReadingState> state = workId.isBlank()
+                        ? repository.findLatestReadingState(session.get().userId)
+                        : repository.findReadingState(session.get().userId, workId);
                 JsonObject payload = new JsonObject();
                 if (state.isPresent()) {
                     payload.add("state", gson.toJsonTree(state.get()));
@@ -501,6 +504,9 @@ public class WebMorphologyApplication {
             }
             Map<String, String> query = parseQuery(exchange.getRequestURI().getRawQuery());
             String kind = query.getOrDefault("kind", "lemma");
+            String axis = query.getOrDefault("axis", "time");
+            String window = query.getOrDefault("window", "all");
+            long todayStartMs = parseLong(query.get("todayStartMs"), 0);
             List<TimelinePoint> points;
             if ("feature".equals(kind)) {
                 points = repository.listFeatureTimeline(session.get().userId,
@@ -508,6 +514,10 @@ public class WebMorphologyApplication {
                         query.getOrDefault("language", ""),
                         query.getOrDefault("workId", ""),
                         query.getOrDefault("eventType", ""),
+                        axis,
+                        window,
+                        session.get().sessionToken,
+                        todayStartMs,
                         parseInt(query.get("limit"), 2_000));
             } else {
                 points = repository.listLemmaTimeline(session.get().userId,
@@ -516,6 +526,10 @@ public class WebMorphologyApplication {
                         query.getOrDefault("language", ""),
                         query.getOrDefault("workId", ""),
                         query.getOrDefault("eventType", ""),
+                        axis,
+                        window,
+                        session.get().sessionToken,
+                        todayStartMs,
                         parseInt(query.get("limit"), 2_000));
             }
             JsonObject payload = new JsonObject();
@@ -1014,6 +1028,17 @@ public class WebMorphologyApplication {
         }
         try {
             return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            return fallback;
+        }
+    }
+
+    private long parseLong(String value, long fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Long.parseLong(value);
         } catch (NumberFormatException ex) {
             return fallback;
         }

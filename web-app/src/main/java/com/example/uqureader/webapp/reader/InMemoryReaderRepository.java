@@ -83,6 +83,14 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     }
 
     @Override
+    public Optional<ReadingState> findLatestReadingState(long userId) {
+        return readingStates.entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith(userId + ":"))
+                .map(Map.Entry::getValue)
+                .max(Comparator.comparingLong(state -> state.updatedAtMs));
+    }
+
+    @Override
     public synchronized int recordEvents(long userId, String sessionToken, List<ReadingEvent> events) {
         int accepted = 0;
         if (events == null) {
@@ -96,7 +104,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
             if (!seenClientEvents.add(dedupeKey)) {
                 continue;
             }
-            rawEvents.add(new StoredEvent(userId, event));
+            rawEvents.add(new StoredEvent(userId, sessionToken == null ? "" : sessionToken, event));
             upsertLemmaStats(userId, event);
             upsertFeatureStats(userId, event);
             accepted++;
@@ -279,15 +287,31 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     @Override
     public synchronized List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language,
                                                               String workId, String eventType, int limit) {
+        return listLemmaTimeline(userId, lemma, pos, language, workId, eventType, "time", "all", "", 0, limit);
+    }
+
+    @Override
+    public synchronized List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language,
+                                                              String workId, String eventType, String axis, String window,
+                                                              String sessionToken, long todayStartMs, int limit) {
         return timelineFromRaw(userId, normalizeLemma(lemma), pos == null ? "" : pos, "", normalizeScope(language),
-                normalizeScope(workId), eventType == null ? "" : eventType, Math.min(10_000, limit <= 0 ? 2_000 : limit));
+                normalizeScope(workId), eventType == null ? "" : eventType, axis, window, sessionToken, todayStartMs,
+                Math.min(10_000, limit <= 0 ? 2_000 : limit));
     }
 
     @Override
     public synchronized List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language,
                                                                 String workId, String eventType, int limit) {
+        return listFeatureTimeline(userId, featureKey, language, workId, eventType, "time", "all", "", 0, limit);
+    }
+
+    @Override
+    public synchronized List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language,
+                                                                String workId, String eventType, String axis, String window,
+                                                                String sessionToken, long todayStartMs, int limit) {
         return timelineFromRaw(userId, "", "", featureKey == null ? "" : featureKey, normalizeScope(language),
-                normalizeScope(workId), eventType == null ? "" : eventType, Math.min(10_000, limit <= 0 ? 2_000 : limit));
+                normalizeScope(workId), eventType == null ? "" : eventType, axis, window, sessionToken, todayStartMs,
+                Math.min(10_000, limit <= 0 ? 2_000 : limit));
     }
 
     public synchronized int rawEventCount() {
@@ -361,11 +385,21 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     }
 
     private List<TimelinePoint> timelineFromRaw(long userId, String lemma, String pos, String featureKey,
-                                                String language, String workId, String eventType, int limit) {
+                                                String language, String workId, String eventType, String axis,
+                                                String window, String sessionToken, long todayStartMs, int limit) {
+        boolean textAxis = "text".equalsIgnoreCase(axis);
+        String safeWindow = normalizeScope(window);
         Map<String, TimelineBucket> buckets = new HashMap<>();
         for (StoredEvent stored : rawEvents) {
             ReadingEvent event = stored.event;
             if (stored.userId != userId || !matchesScope(eventLanguage(event), language) || !matchesScope(event.workId, workId)) {
+                continue;
+            }
+            if ("today".equals(safeWindow) && event.occurredAtMs < todayStartMs) {
+                continue;
+            }
+            if ("session".equals(safeWindow) && !(stored.sessionToken.equals(sessionToken == null ? "" : sessionToken)
+                    && matchesScope(event.workId, workId))) {
                 continue;
             }
             if (!featureKey.isBlank()) {
@@ -378,13 +412,14 @@ public final class InMemoryReaderRepository implements ReaderRepository {
             if (!eventType.isBlank() && !eventType.equals(event.eventType)) {
                 continue;
             }
-            long bucketStart = timelineBucketStartMs(event.occurredAtMs);
+            long bucketStart = textAxis ? Math.max(0, event.charIndex) : timelineBucketStartMs(event.occurredAtMs);
             String key = event.eventType + ":" + bucketStart;
-            buckets.computeIfAbsent(key, ignored -> new TimelineBucket(event.eventType, bucketStart)).add(event);
+            buckets.computeIfAbsent(key, ignored -> new TimelineBucket(event.eventType, bucketStart, textAxis)).add(event);
         }
         List<TimelinePoint> result = buckets.values().stream()
                 .map(TimelineBucket::toPoint)
-                .sorted(Comparator.comparingLong((TimelinePoint point) -> point.bucketStartMs).thenComparing(point -> point.eventType))
+                .sorted(Comparator.comparingLong((TimelinePoint point) -> textAxis ? point.position : point.bucketStartMs)
+                        .thenComparing(point -> point.eventType))
                 .toList();
         return result.subList(0, Math.min(result.size(), limit));
     }
@@ -431,7 +466,7 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     private record UserRecord(long id, String username, String passwordHash) {
     }
 
-    private record StoredEvent(long userId, ReadingEvent event) {
+    private record StoredEvent(long userId, String sessionToken, ReadingEvent event) {
     }
 
     private static final class FeatureBucket {
@@ -478,14 +513,18 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     private static final class TimelineBucket {
         final String eventType;
         final long bucketStartMs;
+        final boolean textAxis;
         long eventCount;
         long totalVisibleMs;
         long firstSeenAtMs;
         long lastSeenAtMs;
+        int position = -1;
 
-        TimelineBucket(String eventType, long bucketStartMs) {
+        TimelineBucket(String eventType, long bucketStartMs, boolean textAxis) {
             this.eventType = eventType;
             this.bucketStartMs = bucketStartMs;
+            this.textAxis = textAxis;
+            this.position = textAxis ? Math.max(0, (int) bucketStartMs) : -1;
         }
 
         void add(ReadingEvent event) {
@@ -496,7 +535,8 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         }
 
         TimelinePoint toPoint() {
-            return new TimelinePoint(eventType, bucketStartMs, eventCount, totalVisibleMs, firstSeenAtMs, lastSeenAtMs);
+            return new TimelinePoint(eventType, textAxis ? 0 : bucketStartMs, eventCount, totalVisibleMs,
+                    firstSeenAtMs, lastSeenAtMs, position);
         }
     }
 

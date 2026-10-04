@@ -550,7 +550,9 @@ final class StaticReaderAssets {
               statsRequestId: 0,
               lastLemmaRows: [],
               statsCache: new Map(),
-              timelineScale: 'itemWork',
+              timelineAxisMode: 'time',
+              timelineWindow: 'all',
+              timelineScaleKind: 'linear',
               grammar: {pos: {}, features: {}},
               speech: {
                 mode: 'idle',
@@ -793,10 +795,18 @@ final class StaticReaderAssets {
                 return `<option value="${w.id}">${escapeHtml(w.title)} · ${pageLabel}</option>`;
               }).join('');
               if (state.works.length) {
-                state.workId = state.workId || state.works[0].id;
+                let savedState = null;
+                try {
+                  savedState = (await api('/api/reading/state')).state || null;
+                } catch (error) {
+                  savedState = null;
+                }
+                const savedWorkId = savedState && state.works.some(work => work.id === savedState.workId) ? savedState.workId : '';
+                state.workId = state.workId || savedWorkId || state.works[0].id;
                 $('workSelect').value = state.workId;
                 refreshStatsFilters();
-                await loadPage(0);
+                const initialPage = savedState && savedState.workId === state.workId ? savedState.pageIndex || 0 : 0;
+                await loadPage(initialPage);
               }
             }
 
@@ -1567,8 +1577,20 @@ final class StaticReaderAssets {
                 params.set('lemma', row.lemma);
                 params.set('pos', row.pos);
               }
-              if (state.statsLanguage) params.set('language', state.statsLanguage);
-              if (state.statsWorkId) params.set('workId', state.statsWorkId);
+              const work = currentWork();
+              const language = state.statsLanguage || work?.language || '';
+              let workId = state.statsWorkId || '';
+              if (state.timelineAxisMode === 'textWork' || state.timelineWindow === 'session') {
+                workId = workId || state.workId || '';
+              }
+              if (state.timelineAxisMode === 'textLanguage' && state.timelineWindow !== 'session') {
+                workId = '';
+              }
+              if (language) params.set('language', language);
+              if (workId) params.set('workId', workId);
+              params.set('axis', state.timelineAxisMode === 'time' ? 'time' : 'text');
+              params.set('window', state.timelineWindow);
+              params.set('todayStartMs', String(startOfTodayMs()));
               const data = await api(`/api/reading/timeline?${params.toString()}`);
               renderTimelineModal(kind, row, data.points || [], data.bounds || {});
             }
@@ -1579,25 +1601,36 @@ final class StaticReaderAssets {
               $('timelineTitle').textContent = kind === 'feature'
                 ? `${formatFeatureKey(row.featureKey)} · ${row.featureKey}`
                 : `${row.lemma} · ${formatPos(row.pos)}`;
-              const pointMin = points.reduce((value, point) => Math.min(value, point.bucketStartMs || value), points[0]?.bucketStartMs || Date.now());
-              const pointMax = points.reduce((value, point) => Math.max(value, point.bucketStartMs || value), pointMin);
+              const axisMode = state.timelineAxisMode === 'time' ? 'time' : 'text';
+              const pointValues = (points || []).map(point => timelinePointValue(point, axisMode)).filter(value => Number.isFinite(value));
+              const fallbackMin = axisMode === 'time' ? Date.now() : 0;
+              const pointMin = pointValues.length ? Math.min(...pointValues) : fallbackMin;
+              const pointMax = pointValues.length ? Math.max(...pointValues) : pointMin;
               const range = timelineRange(bounds, pointMin, pointMax);
               const min = range.min;
               const max = range.max;
               const span = Math.max(1, max - min);
-              const series = aggregateTimelineSeries(points);
-              const dots = timelineDots(series, min, span);
-              const axis = timelineAxis(min, max);
+              const series = aggregateTimelineSeries(points, axisMode);
+              const dots = timelineDots(series, min, max, span, axisMode);
+              const axis = timelineAxis(min, max, axisMode);
               const legend = Object.entries(TIMELINE_SERIES)
                 .map(([key, meta]) => `<span><i class="legend-dot" style="background:${meta.color}"></i>${escapeHtml(meta.label)}: ${series[key].total}</span>`)
                 .join('');
               body.innerHTML = `
                 <div class="timeline-controls">
-                  <select id="timelineScale" aria-label="Масштаб графика">
-                    ${timelineScaleOption('language', 'с начала изучения языка')}
-                    ${timelineScaleOption('work', 'с начала чтения книги')}
-                    ${timelineScaleOption('itemLanguage', 'с первого контакта слова в языке')}
-                    ${timelineScaleOption('itemWork', 'с первого контакта слова в книге')}
+                  <select id="timelineAxisMode" aria-label="Ось графика">
+                    ${timelineOption(state.timelineAxisMode, 'time', 'временная ось')}
+                    ${timelineOption(state.timelineAxisMode, 'textWork', 'символы текущего произведения')}
+                    ${timelineOption(state.timelineAxisMode, 'textLanguage', 'символы текущего языка')}
+                  </select>
+                  <select id="timelineWindow" aria-label="Период графика">
+                    ${timelineOption(state.timelineWindow, 'all', 'за все время')}
+                    ${timelineOption(state.timelineWindow, 'today', 'за сегодня')}
+                    ${timelineOption(state.timelineWindow, 'session', 'за сессию чтения')}
+                  </select>
+                  <select id="timelineScaleKind" aria-label="Шкала графика">
+                    ${timelineOption(state.timelineScaleKind, 'linear', 'линейная шкала')}
+                    ${timelineOption(state.timelineScaleKind, 'log', 'логарифмическая шкала')}
                   </select>
                 </div>
                 <svg class="timeline-svg" viewBox="0 0 780 72" preserveAspectRatio="none" role="img" aria-label="Timeline">
@@ -1608,30 +1641,40 @@ final class StaticReaderAssets {
                 </svg>
                 <div class="timeline-axis">${axis}</div>
                 <div class="timeline-legend">${legend}</div>`;
-              $('timelineScale').addEventListener('change', event => {
-                state.timelineScale = event.target.value;
+              $('timelineAxisMode').addEventListener('change', async event => {
+                state.timelineAxisMode = event.target.value;
+                await loadTimeline(kind, row);
+              });
+              $('timelineWindow').addEventListener('change', async event => {
+                state.timelineWindow = event.target.value;
+                await loadTimeline(kind, row);
+              });
+              $('timelineScaleKind').addEventListener('change', event => {
+                state.timelineScaleKind = event.target.value;
                 renderTimelineModal(kind, row, points, bounds);
               });
               modal.classList.remove('hidden');
             }
 
-            function timelineScaleOption(value, label) {
-              const selected = state.timelineScale === value ? ' selected' : '';
+            function timelineOption(current, value, label) {
+              const selected = current === value ? ' selected' : '';
               return `<option value="${value}"${selected}>${label}</option>`;
             }
 
             function timelineRange(bounds, pointMin, pointMax) {
-              const pick = (start, end) => ({
-                min: Number(start || 0) || pointMin,
-                max: Number(end || 0) || pointMax
-              });
-              if (state.timelineScale === 'language') return pick(bounds.languageStartMs, bounds.languageEndMs);
-              if (state.timelineScale === 'work') return pick(bounds.workStartMs, bounds.workEndMs);
-              if (state.timelineScale === 'itemLanguage') return pick(bounds.itemLanguageStartMs, bounds.itemLanguageEndMs);
-              return pick(bounds.itemWorkStartMs, bounds.itemWorkEndMs);
+              if (state.timelineAxisMode !== 'time') {
+                return {min: Math.max(0, pointMin), max: Math.max(pointMax, pointMin + 1)};
+              }
+              if (state.timelineWindow === 'today') {
+                return {min: startOfTodayMs(), max: Math.max(Date.now(), pointMax)};
+              }
+              if (state.timelineWindow === 'session') {
+                return {min: pointMin, max: Math.max(pointMax, pointMin + 1)};
+              }
+              return {min: pointMin, max: Math.max(pointMax, pointMin + 1)};
             }
 
-            function aggregateTimelineSeries(points) {
+            function aggregateTimelineSeries(points, axisMode) {
               const series = {};
               for (const key of Object.keys(TIMELINE_SERIES)) {
                 series[key] = {total: 0, buckets: new Map()};
@@ -1640,7 +1683,7 @@ final class StaticReaderAssets {
               for (const point of points || []) {
                 const count = Number(point.eventCount || 0);
                 if (!count) continue;
-                const bucket = Number(point.bucketStartMs || 0);
+                const bucket = timelinePointValue(point, axisMode);
                 if (point.eventType === 'token_committed' || point.eventType === 'token_exposed') {
                   const seen = seenBuckets.get(bucket) || {committed: 0, exposed: 0};
                   if (point.eventType === 'token_committed') seen.committed += count;
@@ -1668,28 +1711,51 @@ final class StaticReaderAssets {
               return '';
             }
 
-            function timelineDots(series, min, span) {
+            function timelineDots(series, min, max, span, axisMode) {
               const dots = [];
               for (const [key, data] of Object.entries(series)) {
                 const meta = TIMELINE_SERIES[key];
                 for (const [bucket, count] of data.buckets.entries()) {
-                  const x = 24 + Math.round(((bucket - min) / span) * 732);
+                  const x = timelineX(bucket, min, max, span);
                   const radius = Math.min(11, 4 + Math.log2(count + 1));
-                  const title = `${meta.label} · ${formatDate(bucket)} · ${count}`;
+                  const valueLabel = axisMode === 'time' ? formatDate(bucket) : `символ ${bucket}`;
+                  const title = `${meta.label} · ${valueLabel} · ${count}`;
                   dots.push(`<circle cx="${x}" cy="${meta.y}" r="${radius}" fill="${meta.color}"><title>${escapeHtml(title)}</title></circle>`);
                 }
               }
               return dots.join('');
             }
 
-            function timelineAxis(min, max) {
+            function timelineX(value, min, max, span) {
+              const bounded = Math.max(min, Math.min(max, Number(value || 0)));
+              if (state.timelineScaleKind === 'log') {
+                const age = Math.max(0, max - bounded);
+                const totalAge = Math.max(1, max - min);
+                return 756 - Math.round((Math.log1p(age) / Math.log1p(totalAge)) * 732);
+              }
+              return 24 + Math.round(((bounded - min) / span) * 732);
+            }
+
+            function timelineAxis(min, max, axisMode = 'time') {
               const count = min === max ? 1 : 5;
               const labels = [];
               for (let index = 0; index < count; index++) {
                 const value = count === 1 ? min : min + Math.round(((max - min) * index) / (count - 1));
-                labels.push(`<span>${formatDate(value)}</span>`);
+                labels.push(`<span>${axisMode === 'time' ? formatDate(value) : value}</span>`);
               }
               return labels.join('');
+            }
+
+            function timelinePointValue(point, axisMode) {
+              if (axisMode === 'text') {
+                return Number(point.position ?? point.charIndex ?? 0);
+              }
+              return Number(point.bucketStartMs || point.firstSeenAtMs || 0);
+            }
+
+            function startOfTodayMs() {
+              const now = new Date();
+              return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
             }
 
             async function loadLemmaTimeline(row) {

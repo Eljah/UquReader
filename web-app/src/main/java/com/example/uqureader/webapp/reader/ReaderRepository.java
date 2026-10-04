@@ -19,6 +19,8 @@ public interface ReaderRepository extends Closeable {
 
     Optional<ReadingState> findReadingState(long userId, String workId) throws SQLException;
 
+    Optional<ReadingState> findLatestReadingState(long userId) throws SQLException;
+
     int recordEvents(long userId, String sessionToken, List<ReadingEvent> events) throws SQLException;
 
     List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String sortDir, String lemmaQuery, int limit) throws SQLException;
@@ -31,8 +33,16 @@ public interface ReaderRepository extends Closeable {
     List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language, String workId,
                                           String eventType, int limit) throws SQLException;
 
+    List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language, String workId,
+                                          String eventType, String axis, String window, String sessionToken,
+                                          long todayStartMs, int limit) throws SQLException;
+
     List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language, String workId,
                                             String eventType, int limit) throws SQLException;
+
+    List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language, String workId,
+                                            String eventType, String axis, String window, String sessionToken,
+                                            long todayStartMs, int limit) throws SQLException;
 
     default TimelineBounds timelineBounds(long userId, String kind, String lemma, String pos, String featureKey,
                                           String language, String workId, long nowMs) throws SQLException {

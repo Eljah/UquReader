@@ -131,6 +131,23 @@ public final class PostgresReaderRepository implements ReaderRepository {
     }
 
     @Override
+    public Optional<ReadingState> findLatestReadingState(long userId) throws SQLException {
+        try (Connection connection = open();
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT work_id, page_index, char_index, updated_at FROM reading_state "
+                             + "WHERE user_id=? ORDER BY updated_at DESC LIMIT 1")) {
+            statement.setLong(1, userId);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(new ReadingState(rs.getString(1), rs.getInt(2), rs.getInt(3),
+                        rs.getTimestamp(4).toInstant().toEpochMilli()));
+            }
+        }
+    }
+
+    @Override
     public int recordEvents(long userId, String sessionToken, List<ReadingEvent> events) throws SQLException {
         if (events == null || events.isEmpty()) {
             return 0;
@@ -454,6 +471,17 @@ public final class PostgresReaderRepository implements ReaderRepository {
     @Override
     public List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language,
                                                  String workId, String eventType, int limit) throws SQLException {
+        return listLemmaTimeline(userId, lemma, pos, language, workId, eventType, "time", "all", "", 0, limit);
+    }
+
+    @Override
+    public List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language,
+                                                 String workId, String eventType, String axis, String window,
+                                                 String sessionToken, long todayStartMs, int limit) throws SQLException {
+        if (usesRawTimeline(axis, window)) {
+            return listRawTimeline(userId, normalizeLemma(lemma), pos == null ? "" : pos, "", language, workId,
+                    eventType, axis, window, sessionToken, todayStartMs, limit);
+        }
         int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
@@ -490,6 +518,17 @@ public final class PostgresReaderRepository implements ReaderRepository {
     @Override
     public List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language,
                                                    String workId, String eventType, int limit) throws SQLException {
+        return listFeatureTimeline(userId, featureKey, language, workId, eventType, "time", "all", "", 0, limit);
+    }
+
+    @Override
+    public List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language,
+                                                   String workId, String eventType, String axis, String window,
+                                                   String sessionToken, long todayStartMs, int limit) throws SQLException {
+        if (usesRawTimeline(axis, window)) {
+            return listRawTimeline(userId, "", "", featureKey == null ? "" : featureKey, language, workId,
+                    eventType, axis, window, sessionToken, todayStartMs, limit);
+        }
         int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
@@ -520,6 +559,68 @@ public final class PostgresReaderRepository implements ReaderRepository {
             }
         }
         return result;
+    }
+
+    private List<TimelinePoint> listRawTimeline(long userId, String lemma, String pos, String featureKey,
+                                                String language, String workId, String eventType, String axis,
+                                                String window, String sessionToken, long todayStartMs, int limit) throws SQLException {
+        int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
+        String safeLanguage = normalizeScope(language);
+        String safeWorkId = normalizeScope(workId);
+        String safeType = eventType == null ? "" : eventType;
+        String safeWindow = normalizeScope(window);
+        boolean textAxis = "text".equalsIgnoreCase(axis);
+        boolean feature = featureKey != null && !featureKey.isBlank();
+        String bucketExpr = textAxis ? "GREATEST(char_index, 0)" : "floor(extract(epoch from occurred_at) / 3600) * 3600000";
+        String itemWhere = feature ? "feature_key=?" : "lemma=? AND pos=?";
+        String sql = "SELECT event_type, " + bucketExpr + " AS bucket_value, COUNT(*), SUM(visible_ms), "
+                + "MIN(occurred_at), MAX(occurred_at), MIN(char_index) FROM reading_events "
+                + "WHERE user_id=? AND " + itemWhere
+                + " AND (?='' OR language=?) AND (?='' OR work_id=?) AND (?='' OR event_type=?) "
+                + ("today".equals(safeWindow) ? "AND occurred_at >= to_timestamp(? / 1000.0) " : "")
+                + ("session".equals(safeWindow) ? "AND session_token=? AND (?='' OR work_id=?) " : "")
+                + "GROUP BY event_type, bucket_value ORDER BY bucket_value ASC, event_type ASC LIMIT ?";
+        List<TimelinePoint> result = new ArrayList<>();
+        try (Connection connection = open();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            int index = 1;
+            statement.setLong(index++, userId);
+            if (feature) {
+                statement.setString(index++, featureKey);
+            } else {
+                statement.setString(index++, lemma);
+                statement.setString(index++, pos);
+            }
+            statement.setString(index++, safeLanguage);
+            statement.setString(index++, safeLanguage);
+            statement.setString(index++, safeWorkId);
+            statement.setString(index++, safeWorkId);
+            statement.setString(index++, safeType);
+            statement.setString(index++, safeType);
+            if ("today".equals(safeWindow)) {
+                statement.setLong(index++, todayStartMs);
+            }
+            if ("session".equals(safeWindow)) {
+                statement.setString(index++, sessionToken == null ? "" : sessionToken);
+                statement.setString(index++, safeWorkId);
+                statement.setString(index++, safeWorkId);
+            }
+            statement.setInt(index, safeLimit);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    long bucket = rs.getLong(2);
+                    int position = textAxis ? Math.max(0, rs.getInt(7)) : -1;
+                    result.add(new TimelinePoint(rs.getString(1), textAxis ? 0 : bucket,
+                            rs.getLong(3), rs.getLong(4), rs.getTimestamp(5).toInstant().toEpochMilli(),
+                            rs.getTimestamp(6).toInstant().toEpochMilli(), position));
+                }
+            }
+        }
+        return result;
+    }
+
+    private static boolean usesRawTimeline(String axis, String window) {
+        return "text".equalsIgnoreCase(axis) || !"all".equalsIgnoreCase(window == null ? "" : window);
     }
 
     @Override
@@ -693,6 +794,8 @@ public final class PostgresReaderRepository implements ReaderRepository {
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_user_time_idx ON reading_events(user_id, occurred_at)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_work_token_idx ON reading_events(work_id, token_index)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_lemma_time_idx ON reading_events(user_id, lemma, pos, event_type, occurred_at)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_feature_time_idx ON reading_events(user_id, feature_key, event_type, occurred_at)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS reading_events_session_work_time_idx ON reading_events(user_id, session_token, work_id, occurred_at)");
             statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS user_lemma_stats(
                       user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
