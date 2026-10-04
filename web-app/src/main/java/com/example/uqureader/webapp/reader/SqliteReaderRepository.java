@@ -412,7 +412,8 @@ public final class SqliteReaderRepository implements ReaderRepository {
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
                      "SELECT event_type, " + bucketExpr + " AS bucket_start, COUNT(*), SUM(visible_ms), "
-                             + "MIN(occurred_at_ms), MAX(occurred_at_ms) FROM reading_events "
+                             + "MIN(occurred_at_ms), MAX(occurred_at_ms), MIN(char_index), "
+                             + "work_id, page_index, token_index, char_index FROM reading_events "
                              + "WHERE user_id=? AND lemma=? AND pos=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
                              + "AND (?='' OR event_type=?) "
                              + ("today".equals(safeWindow) ? "AND occurred_at_ms >= ? " : "")
@@ -441,7 +442,8 @@ public final class SqliteReaderRepository implements ReaderRepository {
                 while (rs.next()) {
                     long bucket = rs.getLong(2);
                     result.add(new TimelinePoint(rs.getString(1), textAxis ? 0 : bucket, rs.getLong(3),
-                            rs.getLong(4), rs.getLong(5), rs.getLong(6), textAxis ? Math.max(0, (int) bucket) : -1));
+                            rs.getLong(4), rs.getLong(5), rs.getLong(6), textAxis ? Math.max(0, (int) bucket) : -1,
+                            rs.getString(8), rs.getInt(9), rs.getInt(10), rs.getInt(11)));
                 }
             }
         }
@@ -469,7 +471,8 @@ public final class SqliteReaderRepository implements ReaderRepository {
         try (Connection connection = open();
              PreparedStatement statement = connection.prepareStatement(
                      "SELECT event_type, " + bucketExpr + " AS bucket_start, COUNT(*), SUM(visible_ms), "
-                             + "MIN(occurred_at_ms), MAX(occurred_at_ms) FROM reading_events "
+                             + "MIN(occurred_at_ms), MAX(occurred_at_ms), MIN(char_index), "
+                             + "work_id, page_index, token_index, char_index FROM reading_events "
                              + "WHERE user_id=? AND feature_key=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
                              + "AND (?='' OR event_type=?) "
                              + ("today".equals(safeWindow) ? "AND occurred_at_ms >= ? " : "")
@@ -497,7 +500,8 @@ public final class SqliteReaderRepository implements ReaderRepository {
                 while (rs.next()) {
                     long bucket = rs.getLong(2);
                     result.add(new TimelinePoint(rs.getString(1), textAxis ? 0 : bucket, rs.getLong(3),
-                            rs.getLong(4), rs.getLong(5), rs.getLong(6), textAxis ? Math.max(0, (int) bucket) : -1));
+                            rs.getLong(4), rs.getLong(5), rs.getLong(6), textAxis ? Math.max(0, (int) bucket) : -1,
+                            rs.getString(8), rs.getInt(9), rs.getInt(10), rs.getInt(11)));
                 }
             }
         }

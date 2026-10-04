@@ -293,6 +293,11 @@ final class StaticReaderAssets {
             }
             .token:hover { background: var(--lookup); }
             .token.visible { background: var(--seen); }
+            .token.timeline-target {
+              background: var(--lookup);
+              color: var(--accent-red);
+              box-shadow: inset 0 0 0 2px var(--accent-red);
+            }
             .token.speech-sentence { background: var(--speech); }
             .token.speech-focus {
               background: var(--speech-token);
@@ -504,6 +509,8 @@ final class StaticReaderAssets {
               border: 2px solid var(--primary);
               border-radius: 12px;
             }
+            .timeline-point { cursor: pointer; }
+            .timeline-point:hover { stroke: var(--text); stroke-width: 1.5px; }
             .timeline-legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
             .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 99px; margin-right: 5px; vertical-align: baseline; }
             @media (max-width: 760px) {
@@ -1048,11 +1055,13 @@ final class StaticReaderAssets {
                 .replace(/--/g, '—');
             }
 
-            async function openToken(token) {
+            async function openToken(token, options = {}) {
               state.selectedToken = token;
               renderTokenSheet(token);
               $('tokenSheet').classList.remove('hidden');
-              enqueue(tokenPayloads(token, 'token_lookup'));
+              if (options.recordLookup !== false) {
+                enqueue(tokenPayloads(token, 'token_lookup'));
+              }
               if (token.fullAnalysesLoaded || token.loadingAnalyses) return;
               token.loadingAnalyses = true;
               try {
@@ -1611,7 +1620,8 @@ final class StaticReaderAssets {
               const max = range.max;
               const span = Math.max(1, max - min);
               const series = aggregateTimelineSeries(points, axisMode);
-              const dots = timelineDots(series, min, max, span, axisMode);
+              const timelineTargets = [];
+              const dots = timelineDots(series, min, max, span, axisMode, timelineTargets);
               const axis = timelineAxis(min, max, axisMode);
               const legend = Object.entries(TIMELINE_SERIES)
                 .map(([key, meta]) => `<span><i class="legend-dot" style="background:${meta.color}"></i>${escapeHtml(meta.label)}: ${series[key].total}</span>`)
@@ -1653,6 +1663,13 @@ final class StaticReaderAssets {
                 state.timelineScaleKind = event.target.value;
                 renderTimelineModal(kind, row, points, bounds);
               });
+              body.querySelectorAll('.timeline-point').forEach(node => {
+                node.addEventListener('click', async event => {
+                  event.stopPropagation();
+                  const point = timelineTargets[Number(node.dataset.pointIndex)];
+                  if (point) await navigateToTimelinePoint(point);
+                });
+              });
               modal.classList.remove('hidden');
             }
 
@@ -1685,22 +1702,30 @@ final class StaticReaderAssets {
                 if (!count) continue;
                 const bucket = timelinePointValue(point, axisMode);
                 if (point.eventType === 'token_committed' || point.eventType === 'token_exposed') {
-                  const seen = seenBuckets.get(bucket) || {committed: 0, exposed: 0};
+                  const seen = seenBuckets.get(bucket) || {committed: 0, exposed: 0, point};
                   if (point.eventType === 'token_committed') seen.committed += count;
                   if (point.eventType === 'token_exposed') seen.exposed += count;
+                  if (!seen.point || (point.firstSeenAtMs || 0) < (seen.point.firstSeenAtMs || Number.MAX_SAFE_INTEGER)) {
+                    seen.point = point;
+                  }
                   seenBuckets.set(bucket, seen);
                   continue;
                 }
                 const key = timelineSeriesKey(point.eventType);
                 if (!key) continue;
                 series[key].total += count;
-                series[key].buckets.set(bucket, (series[key].buckets.get(bucket) || 0) + count);
+                const existing = series[key].buckets.get(bucket) || {count: 0, point};
+                existing.count += count;
+                if (!existing.point || (point.firstSeenAtMs || 0) < (existing.point.firstSeenAtMs || Number.MAX_SAFE_INTEGER)) {
+                  existing.point = point;
+                }
+                series[key].buckets.set(bucket, existing);
               }
               for (const [bucket, seen] of seenBuckets.entries()) {
                 const count = Math.max(seen.committed, seen.exposed);
                 if (!count) continue;
                 series.seen.total += count;
-                series.seen.buckets.set(bucket, count);
+                series.seen.buckets.set(bucket, {count, point: seen.point});
               }
               return series;
             }
@@ -1711,19 +1736,60 @@ final class StaticReaderAssets {
               return '';
             }
 
-            function timelineDots(series, min, max, span, axisMode) {
+            function timelineDots(series, min, max, span, axisMode, targets) {
               const dots = [];
               for (const [key, data] of Object.entries(series)) {
                 const meta = TIMELINE_SERIES[key];
-                for (const [bucket, count] of data.buckets.entries()) {
+                for (const [bucket, bucketData] of data.buckets.entries()) {
+                  const count = bucketData.count || 0;
                   const x = timelineX(bucket, min, max, span);
                   const radius = Math.min(11, 4 + Math.log2(count + 1));
                   const valueLabel = axisMode === 'time' ? formatDate(bucket) : `символ ${bucket}`;
                   const title = `${meta.label} · ${valueLabel} · ${count}`;
-                  dots.push(`<circle cx="${x}" cy="${meta.y}" r="${radius}" fill="${meta.color}"><title>${escapeHtml(title)}</title></circle>`);
+                  const pointIndex = targets.push(bucketData.point) - 1;
+                  dots.push(`<circle class="timeline-point" data-point-index="${pointIndex}" cx="${x}" cy="${meta.y}" r="${radius}" fill="${meta.color}" tabindex="0"><title>${escapeHtml(title)}</title></circle>`);
                 }
               }
               return dots.join('');
+            }
+
+            async function navigateToTimelinePoint(point) {
+              const workId = point.workId || state.statsWorkId || state.workId;
+              if (!workId) return;
+              const pageIndex = Number.isInteger(point.pageIndex) && point.pageIndex >= 0 ? point.pageIndex : 0;
+              $('timelineModal').classList.add('hidden');
+              $('statsPanel').classList.add('hidden');
+              if (state.workId !== workId) {
+                state.workId = workId;
+                $('workSelect').value = workId;
+              }
+              await loadPage(pageIndex);
+              const token = findTimelineToken(point);
+              if (!token) return;
+              document.querySelectorAll('.token.timeline-target').forEach(node => node.classList.remove('timeline-target'));
+              const node = document.querySelector(`.token[data-index="${token.index}"]`);
+              if (node) {
+                node.classList.add('timeline-target');
+                node.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'nearest'});
+              }
+              await openToken(token, {recordLookup: false});
+            }
+
+            function findTimelineToken(point) {
+              const tokenIndex = Number(point.tokenIndex);
+              if (Number.isInteger(tokenIndex) && tokenIndex >= 0) {
+                const byIndex = state.tokens.find(token => token.index === tokenIndex);
+                if (byIndex) return byIndex;
+              }
+              const charIndex = Number(point.charIndex ?? point.position);
+              if (Number.isFinite(charIndex) && charIndex >= 0) {
+                return state.tokens.find(token => token.charStart <= charIndex && token.charEnd >= charIndex)
+                  || state.tokens.reduce((best, token) => {
+                    const distance = Math.abs((token.charStart || 0) - charIndex);
+                    return !best || distance < best.distance ? {token, distance} : best;
+                  }, null)?.token;
+              }
+              return null;
             }
 
             function timelineX(value, min, max, span) {

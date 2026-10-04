@@ -478,10 +478,12 @@ public final class PostgresReaderRepository implements ReaderRepository {
     public List<TimelinePoint> listLemmaTimeline(long userId, String lemma, String pos, String language,
                                                  String workId, String eventType, String axis, String window,
                                                  String sessionToken, long todayStartMs, int limit) throws SQLException {
-        if (usesRawTimeline(axis, window)) {
-            return listRawTimeline(userId, normalizeLemma(lemma), pos == null ? "" : pos, "", language, workId,
-                    eventType, axis, window, sessionToken, todayStartMs, limit);
-        }
+        return listRawTimeline(userId, normalizeLemma(lemma), pos == null ? "" : pos, "", language, workId,
+                eventType, axis, window, sessionToken, todayStartMs, limit);
+    }
+
+    private List<TimelinePoint> listLemmaTimelineAggregate(long userId, String lemma, String pos, String language,
+                                                           String workId, String eventType, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
@@ -525,10 +527,12 @@ public final class PostgresReaderRepository implements ReaderRepository {
     public List<TimelinePoint> listFeatureTimeline(long userId, String featureKey, String language,
                                                    String workId, String eventType, String axis, String window,
                                                    String sessionToken, long todayStartMs, int limit) throws SQLException {
-        if (usesRawTimeline(axis, window)) {
-            return listRawTimeline(userId, "", "", featureKey == null ? "" : featureKey, language, workId,
-                    eventType, axis, window, sessionToken, todayStartMs, limit);
-        }
+        return listRawTimeline(userId, "", "", featureKey == null ? "" : featureKey, language, workId,
+                eventType, axis, window, sessionToken, todayStartMs, limit);
+    }
+
+    private List<TimelinePoint> listFeatureTimelineAggregate(long userId, String featureKey, String language,
+                                                             String workId, String eventType, int limit) throws SQLException {
         int safeLimit = limit <= 0 ? 2_000 : Math.min(10_000, limit);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
@@ -574,7 +578,11 @@ public final class PostgresReaderRepository implements ReaderRepository {
         String bucketExpr = textAxis ? "GREATEST(char_index, 0)" : "floor(extract(epoch from occurred_at) / 3600) * 3600000";
         String itemWhere = feature ? "feature_key=?" : "lemma=? AND pos=?";
         String sql = "SELECT event_type, " + bucketExpr + " AS bucket_value, COUNT(*), SUM(visible_ms), "
-                + "MIN(occurred_at), MAX(occurred_at), MIN(char_index) FROM reading_events "
+                + "MIN(occurred_at), MAX(occurred_at), MIN(char_index), "
+                + "(array_agg(work_id ORDER BY occurred_at ASC, token_index ASC))[1], "
+                + "(array_agg(page_index ORDER BY occurred_at ASC, token_index ASC))[1], "
+                + "(array_agg(token_index ORDER BY occurred_at ASC, token_index ASC))[1], "
+                + "(array_agg(char_index ORDER BY occurred_at ASC, token_index ASC))[1] FROM reading_events "
                 + "WHERE user_id=? AND " + itemWhere
                 + " AND (?='' OR language=?) AND (?='' OR work_id=?) AND (?='' OR event_type=?) "
                 + ("today".equals(safeWindow) ? "AND occurred_at >= to_timestamp(? / 1000.0) " : "")
@@ -612,15 +620,12 @@ public final class PostgresReaderRepository implements ReaderRepository {
                     int position = textAxis ? Math.max(0, rs.getInt(7)) : -1;
                     result.add(new TimelinePoint(rs.getString(1), textAxis ? 0 : bucket,
                             rs.getLong(3), rs.getLong(4), rs.getTimestamp(5).toInstant().toEpochMilli(),
-                            rs.getTimestamp(6).toInstant().toEpochMilli(), position));
+                            rs.getTimestamp(6).toInstant().toEpochMilli(), position,
+                            rs.getString(8), rs.getInt(9), rs.getInt(10), rs.getInt(11)));
                 }
             }
         }
         return result;
-    }
-
-    private static boolean usesRawTimeline(String axis, String window) {
-        return "text".equalsIgnoreCase(axis) || !"all".equalsIgnoreCase(window == null ? "" : window);
     }
 
     @Override

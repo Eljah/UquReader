@@ -519,6 +519,10 @@ public final class InMemoryReaderRepository implements ReaderRepository {
         long firstSeenAtMs;
         long lastSeenAtMs;
         int position = -1;
+        String workId = "";
+        int pageIndex = -1;
+        int tokenIndex = -1;
+        int charIndex = -1;
 
         TimelineBucket(String eventType, long bucketStartMs, boolean textAxis) {
             this.eventType = eventType;
@@ -532,11 +536,17 @@ public final class InMemoryReaderRepository implements ReaderRepository {
             totalVisibleMs += event.visibleMs;
             firstSeenAtMs = firstSeenAtMs == 0 ? event.occurredAtMs : Math.min(firstSeenAtMs, event.occurredAtMs);
             lastSeenAtMs = Math.max(lastSeenAtMs, event.occurredAtMs);
+            if (workId.isBlank() || event.occurredAtMs <= firstSeenAtMs) {
+                workId = event.workId;
+                pageIndex = event.pageIndex;
+                tokenIndex = event.tokenIndex;
+                charIndex = event.charIndex;
+            }
         }
 
         TimelinePoint toPoint() {
             return new TimelinePoint(eventType, textAxis ? 0 : bucketStartMs, eventCount, totalVisibleMs,
-                    firstSeenAtMs, lastSeenAtMs, position);
+                    firstSeenAtMs, lastSeenAtMs, position, workId, pageIndex, tokenIndex, charIndex);
         }
     }
 
