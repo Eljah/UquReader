@@ -511,6 +511,34 @@ final class StaticReaderAssets {
             }
             .timeline-point { cursor: pointer; }
             .timeline-point:hover { stroke: var(--text); stroke-width: 1.5px; }
+            .timeline-grid-line { stroke: rgba(74, 82, 68, .28); stroke-width: 1; }
+            .timeline-grid-tick { stroke: var(--primary); stroke-width: 1.25; }
+            .timeline-page-axis {
+              position: relative;
+              height: 20px;
+              color: var(--muted);
+              font-size: 11px;
+              margin-top: 2px;
+            }
+            .timeline-page-axis span {
+              position: absolute;
+              transform: translateX(-50%);
+              white-space: nowrap;
+            }
+            .timeline-feature-details {
+              display: grid;
+              gap: 6px;
+              padding: 10px 12px;
+              border: 1px solid var(--border);
+              background: var(--surface-muted);
+              font-size: 13px;
+            }
+            .timeline-feature-details div {
+              display: grid;
+              grid-template-columns: minmax(58px, max-content) 1fr;
+              gap: 10px;
+            }
+            .timeline-feature-details b { color: var(--accent-red); }
             .timeline-legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
             .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 99px; margin-right: 5px; vertical-align: baseline; }
             @media (max-width: 760px) {
@@ -580,7 +608,7 @@ final class StaticReaderAssets {
               page_visible: '#7a8790'
             };
             const TIMELINE_SERIES = {
-              seen: {label: 'Встретилось', color: '#176d3b', y: 22},
+              seen: {label: 'Прочитано', color: '#176d3b', y: 22},
               lookup: {label: 'Открыто', color: '#c24432', y: 42},
               tts: {label: 'Озвучено', color: '#d7a80f', y: 62}
             };
@@ -1601,10 +1629,10 @@ final class StaticReaderAssets {
               params.set('window', state.timelineWindow);
               params.set('todayStartMs', String(startOfTodayMs()));
               const data = await api(`/api/reading/timeline?${params.toString()}`);
-              renderTimelineModal(kind, row, data.points || [], data.bounds || {});
+              renderTimelineModal(kind, row, data.points || [], data.bounds || {}, data);
             }
 
-            function renderTimelineModal(kind, row, points, bounds = {}) {
+            function renderTimelineModal(kind, row, points, bounds = {}, meta = {}) {
               const modal = $('timelineModal');
               const body = $('timelineBody');
               $('timelineTitle').textContent = kind === 'feature'
@@ -1614,15 +1642,19 @@ final class StaticReaderAssets {
               const pointValues = (points || []).map(point => timelinePointValue(point, axisMode)).filter(value => Number.isFinite(value));
               const fallbackMin = axisMode === 'time' ? Date.now() : 0;
               const pointMin = pointValues.length ? Math.min(...pointValues) : fallbackMin;
-              const pointMax = pointValues.length ? Math.max(...pointValues) : pointMin;
+              const textMax = axisMode === 'text' && Number(meta.workCharCount || 0) > 0 ? Number(meta.workCharCount) : 0;
+              const pointMax = textMax || (pointValues.length ? Math.max(...pointValues) : pointMin);
               const range = timelineRange(bounds, pointMin, pointMax);
               const min = range.min;
               const max = range.max;
               const span = Math.max(1, max - min);
               const series = aggregateTimelineSeries(points, axisMode);
               const timelineTargets = [];
+              const grid = timelineGrid(min, max, span, axisMode);
               const dots = timelineDots(series, min, max, span, axisMode, timelineTargets);
               const axis = timelineAxis(min, max, axisMode);
+              const pageAxis = timelinePageAxis(meta.pageTicks || [], min, max, span, axisMode);
+              const featureDetails = kind === 'feature' ? renderFeatureKeyDetails(row.featureKey) : '';
               const legend = Object.entries(TIMELINE_SERIES)
                 .map(([key, meta]) => `<span><i class="legend-dot" style="background:${meta.color}"></i>${escapeHtml(meta.label)}: ${series[key].total}</span>`)
                 .join('');
@@ -1643,13 +1675,16 @@ final class StaticReaderAssets {
                     ${timelineOption(state.timelineScaleKind, 'log', 'логарифмическая шкала')}
                   </select>
                 </div>
+                ${featureDetails}
                 <svg class="timeline-svg" viewBox="0 0 780 72" preserveAspectRatio="none" role="img" aria-label="Timeline">
+                  ${grid}
                   <line x1="24" y1="22" x2="756" y2="22" stroke="#ccd6d0" stroke-width="1.5" stroke-linecap="round"></line>
                   <line x1="24" y1="42" x2="756" y2="42" stroke="#ccd6d0" stroke-width="1.5" stroke-linecap="round"></line>
                   <line x1="24" y1="62" x2="756" y2="62" stroke="#ccd6d0" stroke-width="1.5" stroke-linecap="round"></line>
                   ${dots}
                 </svg>
                 <div class="timeline-axis">${axis}</div>
+                ${pageAxis}
                 <div class="timeline-legend">${legend}</div>`;
               $('timelineAxisMode').addEventListener('change', async event => {
                 state.timelineAxisMode = event.target.value;
@@ -1661,7 +1696,7 @@ final class StaticReaderAssets {
               });
               $('timelineScaleKind').addEventListener('change', event => {
                 state.timelineScaleKind = event.target.value;
-                renderTimelineModal(kind, row, points, bounds);
+                renderTimelineModal(kind, row, points, bounds, meta);
               });
               body.querySelectorAll('.timeline-point').forEach(node => {
                 node.addEventListener('click', async event => {
@@ -1678,9 +1713,21 @@ final class StaticReaderAssets {
               return `<option value="${value}"${selected}>${label}</option>`;
             }
 
+            function renderFeatureKeyDetails(featureKey) {
+              const parts = String(featureKey || '').split('+').filter(Boolean);
+              if (!parts.length) return '';
+              const [posCode, ...featureCodes] = parts;
+              const rows = [];
+              if (posCode) rows.push(`<div><b>${escapeHtml(posCode)}</b><span>${escapeHtml(formatPos(posCode))}</span></div>`);
+              for (const code of featureCodes) {
+                rows.push(`<div><b>${escapeHtml(code)}</b><span>${escapeHtml(formatFeature(code))}</span></div>`);
+              }
+              return `<div class="timeline-feature-details">${rows.join('')}</div>`;
+            }
+
             function timelineRange(bounds, pointMin, pointMax) {
               if (state.timelineAxisMode !== 'time') {
-                return {min: Math.max(0, pointMin), max: Math.max(pointMax, pointMin + 1)};
+                return {min: 0, max: Math.max(pointMax, pointMin + 1)};
               }
               if (state.timelineWindow === 'today') {
                 return {min: startOfTodayMs(), max: Math.max(Date.now(), pointMax)};
@@ -1689,6 +1736,26 @@ final class StaticReaderAssets {
                 return {min: pointMin, max: Math.max(pointMax, pointMin + 1)};
               }
               return {min: pointMin, max: Math.max(pointMax, pointMin + 1)};
+            }
+
+            function timelineGrid(min, max, span, axisMode) {
+              const ticks = timelineTickValues(min, max, axisMode);
+              return ticks.map(value => {
+                const x = timelineX(value, min, max, span);
+                return `<line class="timeline-grid-line" x1="${x}" y1="10" x2="${x}" y2="68"></line><line class="timeline-grid-tick" x1="${x}" y1="66" x2="${x}" y2="72"></line>`;
+              }).join('');
+            }
+
+            function timelineTickValues(min, max, axisMode) {
+              const count = 6;
+              const values = [];
+              for (let index = 0; index < count; index++) {
+                values.push(count === 1 ? min : min + Math.round(((max - min) * index) / (count - 1)));
+              }
+              if (axisMode === 'text') {
+                return [...new Set(values.map(value => Math.max(0, Math.round(value))))];
+              }
+              return values;
             }
 
             function aggregateTimelineSeries(points, axisMode) {
@@ -1803,13 +1870,24 @@ final class StaticReaderAssets {
             }
 
             function timelineAxis(min, max, axisMode = 'time') {
-              const count = min === max ? 1 : 5;
+              return timelineTickValues(min, max, axisMode)
+                .map(value => `<span>${axisMode === 'time' ? formatDate(value) : formatInteger(value)}</span>`)
+                .join('');
+            }
+
+            function timelinePageAxis(pageTicks, min, max, span, axisMode) {
+              if (axisMode !== 'text' || !pageTicks || pageTicks.length < 2) return '';
               const labels = [];
-              for (let index = 0; index < count; index++) {
-                const value = count === 1 ? min : min + Math.round(((max - min) * index) / (count - 1));
-                labels.push(`<span>${axisMode === 'time' ? formatDate(value) : value}</span>`);
+              let lastX = -999;
+              for (const tick of pageTicks) {
+                const value = Number(tick.charIndex || 0);
+                if (value < min || value > max) continue;
+                const x = timelineX(value, min, max, span);
+                if (x - lastX < 34) continue;
+                lastX = x;
+                labels.push(`<span style="left:${(x / 780) * 100}%">${escapeHtml(tick.label || tick.pageIndex + 1)}</span>`);
               }
-              return labels.join('');
+              return labels.length ? `<div class="timeline-page-axis" aria-label="Номера страниц">${labels.join('')}</div>` : '';
             }
 
             function timelinePointValue(point, axisMode) {
@@ -1822,6 +1900,10 @@ final class StaticReaderAssets {
             function startOfTodayMs() {
               const now = new Date();
               return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            }
+
+            function formatInteger(value) {
+              return Math.round(Number(value || 0)).toLocaleString('ru-RU');
             }
 
             async function loadLemmaTimeline(row) {

@@ -534,6 +534,13 @@ public class WebMorphologyApplication {
             }
             JsonObject payload = new JsonObject();
             payload.add("points", gson.toJsonTree(points));
+            String workId = query.getOrDefault("workId", "");
+            if (!workId.isBlank()) {
+                catalog.find(workId).ifPresent(work -> {
+                    payload.addProperty("workCharCount", work.charCount);
+                    payload.add("pageTicks", timelinePageTicks(work));
+                });
+            }
             payload.add("bounds", gson.toJsonTree(repository.timelineBounds(session.get().userId,
                     kind,
                     query.getOrDefault("lemma", ""),
@@ -548,6 +555,27 @@ public class WebMorphologyApplication {
         } finally {
             exchange.close();
         }
+    }
+
+    private JsonArray timelinePageTicks(ReaderWork work) {
+        JsonArray ticks = new JsonArray();
+        if (work == null || work.pages.isEmpty()) {
+            return ticks;
+        }
+        for (int pageIndex = 0; pageIndex < work.pages.size(); pageIndex++) {
+            List<ReaderToken> page = work.pages.get(pageIndex);
+            if (page.isEmpty()) {
+                continue;
+            }
+            ReaderToken first = page.get(0);
+            JsonObject tick = new JsonObject();
+            tick.addProperty("pageIndex", pageIndex);
+            tick.addProperty("sourcePage", first.sourcePage);
+            tick.addProperty("charIndex", first.charStart);
+            tick.addProperty("label", first.sourcePage >= 0 ? String.valueOf(first.sourcePage) : String.valueOf(pageIndex + 1));
+            ticks.add(tick);
+        }
+        return ticks;
     }
 
     private void handleReadingStats(HttpExchange exchange) throws IOException {
