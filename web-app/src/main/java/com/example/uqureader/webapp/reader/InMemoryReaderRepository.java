@@ -113,8 +113,10 @@ public final class InMemoryReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public synchronized List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String sortDir, String lemmaQuery, int limit) {
+    public synchronized List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String sortDir,
+                                                       String lemmaQuery, int limit, int offset) {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
+        int safeOffset = Math.max(0, offset);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
         String safeQuery = normalizeLemma(lemmaQuery);
@@ -135,12 +137,16 @@ public final class InMemoryReaderRepository implements ReaderRepository {
                     stats.firstPageIndex, stats.firstTokenIndex, stats.firstCharIndex));
         }
         result.sort(lemmaStatComparator(sort, sortDir));
-        return result.subList(0, Math.min(result.size(), safeLimit));
+        int from = Math.min(result.size(), safeOffset);
+        int to = Math.min(result.size(), from + safeLimit);
+        return result.subList(from, to);
     }
 
     @Override
-    public synchronized List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, String sortDir, int limit) {
+    public synchronized List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, String sortDir,
+                                                           int limit, int offset) {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
+        int safeOffset = Math.max(0, offset);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
         Map<String, FeatureBucket> buckets = new HashMap<>();
@@ -158,7 +164,9 @@ public final class InMemoryReaderRepository implements ReaderRepository {
                     bucket.firstPageIndex, bucket.firstTokenIndex, bucket.firstCharIndex));
         }
         result.sort(featureStatComparator(sort, sortDir));
-        return result.subList(0, Math.min(result.size(), safeLimit));
+        int from = Math.min(result.size(), safeOffset);
+        int to = Math.min(result.size(), from + safeLimit);
+        return result.subList(from, to);
     }
 
     private static Comparator<LemmaStat> lemmaStatComparator(String sort, String sortDir) {

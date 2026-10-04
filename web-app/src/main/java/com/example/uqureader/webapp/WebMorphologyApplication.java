@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.example.uqureader.webapp.reader.FeatureStat;
 import com.example.uqureader.webapp.reader.GrammarCatalog;
 import com.example.uqureader.webapp.reader.InMemoryReaderRepository;
 import com.example.uqureader.webapp.reader.LemmaStat;
@@ -642,13 +643,18 @@ public class WebMorphologyApplication {
             String sortDir = query.getOrDefault("dir", "desc");
             String lemmaQuery = query.getOrDefault("q", "");
             int limit = parseInt(query.get("limit"), 100);
+            int offset = parseInt(query.get("offset"), 0);
+            int fetchLimit = Math.min(1_001, Math.max(1, limit) + 1);
             JsonObject payload = new JsonObject();
             if (!"features".equals(mode)) {
-                List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, language, workId, sort, sortDir, lemmaQuery, limit);
-                payload.add("lemmas", gson.toJsonTree(stats));
+                List<LemmaStat> stats = repository.listLemmaStats(session.get().userId, language, workId, sort, sortDir, lemmaQuery, fetchLimit, offset);
+                payload.addProperty("hasMore", stats.size() > limit);
+                payload.add("lemmas", gson.toJsonTree(stats.subList(0, Math.min(stats.size(), limit))));
             }
             if (!"lemmas".equals(mode)) {
-                payload.add("features", gson.toJsonTree(repository.listFeatureStats(session.get().userId, language, workId, sort, sortDir, limit)));
+                List<FeatureStat> stats = repository.listFeatureStats(session.get().userId, language, workId, sort, sortDir, fetchLimit, offset);
+                payload.addProperty("hasMore", stats.size() > limit);
+                payload.add("features", gson.toJsonTree(stats.subList(0, Math.min(stats.size(), limit))));
             }
             sendJson(exchange, 200, payload);
         } catch (SQLException ex) {

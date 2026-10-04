@@ -404,7 +404,7 @@ final class StaticReaderAssets {
               inset: 64px 16px 16px;
               z-index: 5;
               display: grid;
-              grid-template-rows: auto auto 1fr;
+              grid-template-rows: auto auto auto minmax(0, 1fr);
               width: min(1040px, calc(100vw - 32px));
               margin-left: auto;
               padding: 18px;
@@ -421,7 +421,8 @@ final class StaticReaderAssets {
             .stats-tabs { display: flex; gap: 8px; padding: 14px 0; }
             .stats-tabs button { background: var(--surface-muted); color: var(--primary); border-color: var(--primary); }
             .stats-tabs button.active { background: var(--primary); color: var(--toolbar-icon); }
-            .stats-content { overflow: auto; border-top: 2px solid var(--primary); }
+            .stats-content { overflow: auto; min-height: 0; border-top: 2px solid var(--primary); }
+            .stats-loading { padding: 14px 0; color: var(--muted); text-align: center; }
             .stat-row {
               display: grid;
               grid-template-columns: minmax(120px, 1fr) 90px 90px 90px 130px;
@@ -590,6 +591,11 @@ final class StaticReaderAssets {
               statsSearchTimer: null,
               statsRequestId: 0,
               lastLemmaRows: [],
+              statsRows: [],
+              statsOffset: 0,
+              statsPageSize: 100,
+              statsHasMore: false,
+              statsLoadingMore: false,
               statsCache: new Map(),
               timelineAxisMode: 'time',
               timelineWindow: 'all',
@@ -1527,29 +1533,80 @@ final class StaticReaderAssets {
               const requestId = ++state.statsRequestId;
               refreshStatsFilters();
               const mode = state.statsMode === 'features' ? 'features' : 'lemmas';
-              const cacheKey = `${mode}|${state.statsLanguage}|${state.statsWorkId}|${state.statsSort}|${state.statsSortDir}|${state.statsSearch}`;
-              if (state.statsCache.has(cacheKey)) {
+              state.statsRows = [];
+              state.statsOffset = 0;
+              state.statsHasMore = false;
+              state.statsLoadingMore = false;
+              renderStatsShell(mode);
+              const data = await fetchStatsPage(mode, 0);
+              if (requestId !== state.statsRequestId) return;
+              const rows = mode === 'features' ? (data.features || []) : (data.lemmas || []);
+              state.statsRows = rows;
+              state.statsOffset = rows.length;
+              state.statsHasMore = Boolean(data.hasMore);
+              renderStatsRows(rows, false);
+              requestAnimationFrame(checkStatsScroll);
+            }
+
+            async function loadMoreStats() {
+              if (state.statsLoadingMore || !state.statsHasMore) return;
+              state.statsLoadingMore = true;
+              const requestId = state.statsRequestId;
+              const mode = state.statsMode === 'features' ? 'features' : 'lemmas';
+              renderStatsLoading(true);
+              try {
+                const data = await fetchStatsPage(mode, state.statsOffset);
                 if (requestId !== state.statsRequestId) return;
-                renderStatsRows(state.statsCache.get(cacheKey));
-                return;
+                const rows = mode === 'features' ? (data.features || []) : (data.lemmas || []);
+                state.statsRows.push(...rows);
+                state.statsOffset += rows.length;
+                state.statsHasMore = Boolean(data.hasMore);
+                renderStatsRows(rows, true);
+                requestAnimationFrame(checkStatsScroll);
+              } finally {
+                if (requestId === state.statsRequestId) {
+                  state.statsLoadingMore = false;
+                  renderStatsLoading(false);
+                }
               }
-              const params = new URLSearchParams({limit: '200', mode, sort: state.statsSort, dir: state.statsSortDir});
+            }
+
+            async function fetchStatsPage(mode, offset) {
+              const params = new URLSearchParams({
+                limit: String(state.statsPageSize),
+                offset: String(offset),
+                mode,
+                sort: state.statsSort,
+                dir: state.statsSortDir
+              });
               if (state.statsLanguage) params.set('language', state.statsLanguage);
               if (state.statsWorkId) params.set('workId', state.statsWorkId);
               if (mode === 'lemmas' && state.statsSearch) params.set('q', state.statsSearch);
-              const data = await api(`/api/reading/stats?${params.toString()}`);
-              if (requestId !== state.statsRequestId) return;
-              const rows = mode === 'features' ? (data.features || []) : (data.lemmas || []);
-              state.statsCache.set(cacheKey, rows);
-              renderStatsRows(rows);
+              return api(`/api/reading/stats?${params.toString()}`);
             }
 
-            function renderStatsRows(rows) {
-              if (state.statsMode === 'features') {
-                renderFeatureStats(rows || []);
+            function renderStatsRows(rows, append) {
+              const mode = state.statsMode === 'features' ? 'features' : 'lemmas';
+              if (mode === 'features') {
+                appendFeatureStats(rows || []);
               } else {
-                state.lastLemmaRows = rows || [];
-                renderLemmaStats(state.lastLemmaRows);
+                state.lastLemmaRows = append ? state.lastLemmaRows.concat(rows || []) : rows || [];
+                appendLemmaStats(rows || []);
+              }
+              if (!append && !rows.length) {
+                const message = mode === 'features'
+                  ? 'Пока нет статистики по признакам.'
+                  : 'Пока нет сохраненной статистики.';
+                $('statsContent').insertAdjacentHTML('beforeend', `<p class="message">${message}</p>`);
+              }
+              renderStatsLoading(false);
+            }
+
+            function renderStatsShell(mode) {
+              if (mode === 'features') {
+                renderFeatureStatsShell();
+              } else {
+                renderLemmaStatsShell();
               }
             }
 
@@ -1581,7 +1638,7 @@ final class StaticReaderAssets {
               return language || 'Без языка';
             }
 
-            function renderLemmaStats(rows) {
+            function renderLemmaStatsShell() {
               const content = $('statsContent');
               content.innerHTML = `
                 <div class="stat-row header">
@@ -1592,10 +1649,10 @@ final class StaticReaderAssets {
                   <div class="wide-only">${sortButton('Видимость', 'visible')}</div>
                 </div>`;
               bindStatSortButtons(content);
-              if (!rows.length) {
-                content.insertAdjacentHTML('beforeend', '<p class="message">Пока нет сохраненной статистики.</p>');
-                return;
-              }
+            }
+
+            function appendLemmaStats(rows) {
+              const content = $('statsContent');
               for (const row of rows) {
                 const element = document.createElement('div');
                 element.className = 'stat-row clickable';
@@ -2003,7 +2060,7 @@ final class StaticReaderAssets {
               return new Date(ms).toLocaleString('ru-RU', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
             }
 
-            function renderFeatureStats(rows) {
+            function renderFeatureStatsShell() {
               const content = $('statsContent');
               content.innerHTML = `
                 <div class="stat-row header">
@@ -2014,24 +2071,42 @@ final class StaticReaderAssets {
                   <div class="wide-only">${sortButton('Видимость', 'visible')}</div>
                 </div>`;
               bindStatSortButtons(content);
-              if (!rows.length) {
-                content.insertAdjacentHTML('beforeend', '<p class="message">Пока нет статистики по признакам.</p>');
-                return;
-              }
+            }
+
+            function appendFeatureStats(rows) {
+              const content = $('statsContent');
               for (const row of rows) {
+                const element = document.createElement('div');
+                element.className = 'stat-row clickable';
+                element.dataset.featureKey = row.featureKey;
                 const featureLabel = formatFeatureKey(row.featureKey);
-                content.insertAdjacentHTML('beforeend', `
-                  <div class="stat-row clickable" data-feature-key="${escapeHtml(row.featureKey)}">
-                    <div class="stat-main">${escapeHtml(featureLabel)}<div class="stat-sub">${escapeHtml(row.featureKey)}</div></div>
-                    <div>${row.committedCount}</div>
-                    <div>${row.lookupCount}</div>
-                    <div class="wide-only">${row.exposureCount}</div>
-                    <div class="wide-only">${Math.round((row.totalVisibleMs || 0) / 1000)} с</div>
-                  </div>`);
+                element.innerHTML = `
+                  <div class="stat-main">${escapeHtml(featureLabel)}<div class="stat-sub">${escapeHtml(row.featureKey)}</div></div>
+                  <div>${row.committedCount}</div>
+                  <div>${row.lookupCount}</div>
+                  <div class="wide-only">${row.exposureCount}</div>
+                  <div class="wide-only">${Math.round((row.totalVisibleMs || 0) / 1000)} с</div>`;
+                element.addEventListener('click', () => loadTimeline('feature', row));
+                content.append(element);
               }
-              for (const element of content.querySelectorAll('[data-feature-key]')) {
-                const row = rows.find(item => item.featureKey === element.dataset.featureKey);
-                if (row) element.addEventListener('click', () => loadTimeline('feature', row));
+            }
+
+            function renderStatsLoading(visible) {
+              const content = $('statsContent');
+              content.querySelector('.stats-loading')?.remove();
+              if (visible) {
+                content.insertAdjacentHTML('beforeend', '<div class="stats-loading">Загружаю еще...</div>');
+              } else if (state.statsHasMore) {
+                content.insertAdjacentHTML('beforeend', '<div class="stats-loading">Прокрутите ниже для продолжения</div>');
+              }
+            }
+
+            function checkStatsScroll() {
+              const content = $('statsContent');
+              if (!content || $('statsPanel').classList.contains('hidden')) return;
+              const remaining = content.scrollHeight - content.scrollTop - content.clientHeight;
+              if (remaining < 260) {
+                loadMoreStats();
               }
             }
 
@@ -2133,6 +2208,7 @@ final class StaticReaderAssets {
               state.statsWorkId = event.target.value;
               await loadStats();
             });
+            $('statsContent').addEventListener('scroll', checkStatsScroll);
             $('statsSort').addEventListener('change', async event => {
               state.statsSort = event.target.value;
               await loadStats();

@@ -250,8 +250,10 @@ public final class PostgresReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String sortDir, String lemmaQuery, int limit) throws SQLException {
+    public List<LemmaStat> listLemmaStats(long userId, String language, String workId, String sort, String sortDir,
+                                          String lemmaQuery, int limit, int offset) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
+        int safeOffset = Math.max(0, offset);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
         String searchPattern = searchPattern(lemmaQuery);
@@ -263,7 +265,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
                              + "SUM(total_visible_ms), MIN(first_seen_at), MAX(last_seen_at) FROM user_lemma_scope_stats "
                              + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
                              + "AND (?='' OR lemma ILIKE ? ESCAPE '\\') "
-                             + "GROUP BY lemma, pos ORDER BY " + orderBy + " LIMIT ?")) {
+                             + "GROUP BY lemma, pos ORDER BY " + orderBy + " LIMIT ? OFFSET ?")) {
             statement.setLong(1, userId);
             statement.setString(2, safeLanguage);
             statement.setString(3, safeLanguage);
@@ -272,6 +274,7 @@ public final class PostgresReaderRepository implements ReaderRepository {
             statement.setString(6, searchPattern);
             statement.setString(7, searchPattern);
             statement.setInt(8, safeLimit);
+            statement.setInt(9, safeOffset);
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
                     result.add(new LemmaStat(rs.getString(1), rs.getString(2), safeLanguage, safeWorkId, rs.getLong(3),
@@ -285,8 +288,10 @@ public final class PostgresReaderRepository implements ReaderRepository {
     }
 
     @Override
-    public List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, String sortDir, int limit) throws SQLException {
+    public List<FeatureStat> listFeatureStats(long userId, String language, String workId, String sort, String sortDir,
+                                              int limit, int offset) throws SQLException {
         int safeLimit = limit <= 0 ? 100 : Math.min(1_000, limit);
+        int safeOffset = Math.max(0, offset);
         String safeLanguage = normalizeScope(language);
         String safeWorkId = normalizeScope(workId);
         String orderBy = featureStatsOrderBy(sort, sortDir);
@@ -296,13 +301,14 @@ public final class PostgresReaderRepository implements ReaderRepository {
                      "SELECT feature_key, SUM(exposure_count), SUM(committed_count), SUM(lookup_count), "
                              + "SUM(total_visible_ms), MIN(first_seen_at), MAX(last_seen_at) FROM user_feature_scope_stats "
                              + "WHERE user_id=? AND (?='' OR language=?) AND (?='' OR work_id=?) "
-                             + "GROUP BY feature_key ORDER BY " + orderBy + " LIMIT ?")) {
+                             + "GROUP BY feature_key ORDER BY " + orderBy + " LIMIT ? OFFSET ?")) {
             statement.setLong(1, userId);
             statement.setString(2, safeLanguage);
             statement.setString(3, safeLanguage);
             statement.setString(4, safeWorkId);
             statement.setString(5, safeWorkId);
             statement.setInt(6, safeLimit);
+            statement.setInt(7, safeOffset);
             try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
                     result.add(new FeatureStat(rs.getString(1), safeLanguage, safeWorkId, rs.getLong(2), rs.getLong(3),
