@@ -26,7 +26,7 @@ public final class ReaderWorkCatalog {
             "elnet_puncheryshte", "Элнет пӱнчерыште"
     );
 
-    private final Map<String, ReaderWork> works;
+    private volatile Map<String, ReaderWork> works;
 
     private ReaderWorkCatalog(Map<String, ReaderWork> works) {
         this.works = Map.copyOf(works);
@@ -59,7 +59,61 @@ public final class ReaderWorkCatalog {
                 }
             }
         }
-        return new ReaderWorkCatalog(loaded);
+        ReaderWorkCatalog catalog = new ReaderWorkCatalog(loaded);
+        String published = System.getenv("EDITOR_PUBLISH_DIR");
+        if (published != null && !published.isBlank()) {
+            Path directory = Path.of(published);
+            catalog.loadPublished(directory);
+            Thread watcher = new Thread(() -> {
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        Thread.sleep(5000);
+                        catalog.loadPublished(directory);
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    } catch (IOException | RuntimeException ex) {
+                        System.err.println("Editorial catalog refresh failed: " + ex.getMessage());
+                    }
+                }
+            }, "editorial-catalog");
+            watcher.setDaemon(true);
+            watcher.start();
+        }
+        return catalog;
+    }
+
+    synchronized void loadPublished(Path directory) throws IOException {
+        if (!Files.isDirectory(directory)) {
+            return;
+        }
+        Map<String, ReaderWork> updated = new LinkedHashMap<>(works);
+        try (var files = Files.list(directory)) {
+            for (Path metadata : files.filter(p -> p.getFileName().toString().endsWith(".metadata.json")).toList()) {
+                String id = metadata.getFileName().toString().replace(".metadata.json", "");
+                if (updated.containsKey(id)) {
+                    continue;
+                }
+                JsonObject info = new Gson().fromJson(Files.readString(metadata), JsonObject.class);
+                String language = getString(info, "language");
+                if (!id.equals(getString(info, "id")) || !List.of("tt", "mhr").contains(language)) {
+                    throw new IOException("Invalid editorial metadata: " + metadata.getFileName());
+                }
+                Path data = directory.resolve(id + ".ttmorph.jsonl");
+                try {
+                    String hash = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                            .digest(Files.readAllBytes(data)));
+                    if (!hash.equals(getString(info, "sha256"))) {
+                        throw new IOException("Editorial checksum mismatch: " + id);
+                    }
+                } catch (java.security.NoSuchAlgorithmException ex) {
+                    throw new IllegalStateException(ex);
+                }
+                ReaderWork parsed = readJsonl(data);
+                updated.put(id, new ReaderWork(id, getString(info, "title"), parsed.assetName,
+                        parsed.tokens, parsed.charCount, language));
+            }
+        }
+        works = Map.copyOf(updated);
     }
 
     public List<ReaderWork> listWorks() {
@@ -223,7 +277,9 @@ public final class ReaderWorkCatalog {
                     .filter(description -> !description.isBlank())
                     .toList();
             List<ReaderAnalysisFeatureRow> featureRows = buildFeatureRows(segments, gloss, pos);
-            MorphologyData morphology = buildViennaMorphology(lemma, analysis, segments, gloss, pos);
+            MorphologyData morphology = segments.isEmpty() && pos.isEmpty()
+                    ? WebMorphologyParser.parse(surface, analysis)
+                    : buildViennaMorphology(lemma, analysis, segments, gloss, pos);
             result.add(new ReaderAnalysisVariant(analysis, lemma, segments, gloss, pos, translations,
                     posDescriptions, glossDescriptions, featureRows, morphology));
         }

@@ -13,3 +13,13 @@
 - Ensure the Codex SDK bundle has been provisioned under `.codex/android-sdk` so that `adb`, `emulator`, and signing keys are available. The script will update `PATH` automatically when that directory exists.
 - Logs from auto-launched emulators are stored under `.codex/logs/` with timestamps for later inspection.
 
+## Editorial MCP workflow
+
+- The project-local MCP server is `uqureader_editor`; see `editorial/README.md` for its contract and deployment.
+- Use stable sentence IDs and expected revisions. Obtain physical PDF pages via `find_sentence_sources` and `render_source_page` before correcting transcription.
+- Physical PDF page numbers are 1-based. Do not interpret legacy printed `sourcePage` folios as PDF page indices.
+- Analyze one sentence per request, explicitly selecting an analyzer from `list_analyzers`. Retain alternative analyses and existing dictionary translations.
+- Increased morphological coverage alone does not justify a correction: compare hypotheses against the source image. Do not replace verified embedded text with a wholesale OCR pass.
+- Prepare, validate, then save with a reason and an attested analyzer run. Published editions are immutable; never overwrite original assets or reassign historical reader token indices.
+- New Codex sessions load `.codex/config.toml`. `node tools/editorial-smoke.mjs` verifies the deployed SSH/MCP connection without modifying book text.
+

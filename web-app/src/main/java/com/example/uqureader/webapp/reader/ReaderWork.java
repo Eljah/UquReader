@@ -16,10 +16,15 @@ public final class ReaderWork {
     public final boolean sourcePaged;
 
     public ReaderWork(String id, String title, String assetName, List<ReaderToken> tokens, int charCount) {
+        this(id, title, assetName, tokens, charCount, inferLanguage(id, assetName));
+    }
+
+    public ReaderWork(String id, String title, String assetName, List<ReaderToken> tokens, int charCount,
+                      String language) {
         this.id = id;
         this.title = title;
         this.assetName = assetName;
-        this.language = inferLanguage(id, assetName);
+        this.language = language;
         this.tokens = tokens == null ? Collections.emptyList() : Collections.unmodifiableList(tokens);
         this.tokenCount = this.tokens.size();
         this.charCount = charCount;

@@ -1,0 +1,6 @@
+mcp==1.30.0
+psycopg[binary]==3.3.6
+httpx==0.28.1
+beautifulsoup4==4.15.0
+PyMuPDF==1.28.2
+regex==2026.9.29
