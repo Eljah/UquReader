@@ -72,6 +72,13 @@ unchanged. Cropped regions are not currently stored: tools return full pages.
    sourceRefs after splitting if each half needs a narrower page mapping.
 10. `publish_work(work_id, expected_revision)` creates a new immutable edition.
 
+For a record containing multiple sentences, analyze each sentence separately,
+preserving its whitespace, then use `combine_analysis_runs(language, run_ids)`.
+This combines only server-persisted runs of the same analyzer/language, rebases
+Unicode offsets, and produces one attested run for `prepare_sentence_revision`.
+It neither invents morphology nor changes book text. Source restoration can be
+explicitly authorized as conjectural; preserve that distinction in save reasons.
+
 The validator rejects broken token reconstruction, wrong offsets, lost diacritics,
 invalid source ownership/page bounds, malformed analyses and stale writes.
 Morphology must match a server-recorded run or the unchanged original revision.

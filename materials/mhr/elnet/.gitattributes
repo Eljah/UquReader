@@ -1,0 +1,3 @@
+*.ttmorph.jsonl -text
+*.txt text eol=lf
+*.metadata.json text eol=lf

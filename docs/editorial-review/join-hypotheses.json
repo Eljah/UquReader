@@ -1,0 +1,9 @@
+[
+  {"ids":[125,126,127],"from":3,"to":8,"replacement":"каласем","evidence":"p45 clipped left edge, readable ending -аласем and direct-speech context"},
+  {"ids":[128],"from":10,"to":11,"replacement":"пиалан","evidence":"p46 pi- at right edge followed by -алан ӱдыр"},
+  {"ids":[150],"from":4,"to":5,"replacement":"ревизорат","evidence":"p54 readable ревизора- before obscured final letter"},
+  {"ids":[172,173],"from":6,"to":9,"replacement":"коклаште","evidence":"p60 top line ends мемнан кок- and next begins лаште"},
+  {"ids":[194],"from":48,"to":50,"replacement":"удан","evidence":"p64 удан at end of line; next line ышта is a separate word, not a missing suffix"},
+  {"ids":[214],"from":10,"to":14,"replacement":"шындыме","evidence":"p68 line ends шын- and continuation дымы/дыме; check model spelling, original ending is д ы м е"},
+  {"ids":[232],"from":4,"to":7,"replacement":"пурымыж","evidence":"p74 толын пу- followed by рымыж годым, comma in extracted middle is noise"}
+]

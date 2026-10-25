@@ -1,0 +1,4470 @@
+{
+  "revision": 941,
+  "complete": false,
+  "scope": "Priority scanner windows, not proven errors or a complete inventory of spelling errors. Previously reviewed punctuation does not certify the entire window.",
+  "windows": [
+    {
+      "ordinals": [
+        75,
+        76
+      ],
+      "pages": [
+        6
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 75,
+          "text": " Сылне вер-шӧрым ончен, Миловидовым кумылжо нӧлтеш I яндар южышто коштын, шӱмжылан утыр ласкан чучеш, л Элнетын лыкын-лукын йогымаштыже, кӱртньӧ корно'."
+        },
+        {
+          "ordinal": 76,
+          "text": "г деч мӱндырнак огыл, лесничество верланен да иктаж коло- к кумло километрыш шарлен."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            75,
+            76
+          ],
+          "pages": [
+            6
+          ],
+          "evidence": "Paragraph contains margin I, л, г and к; punctuation after нӧлтеш and letters after корно lie in the right gutter. Removing all signs without determining sentence punctuation would invent a transcription."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        376,
+        377
+      ],
+      "pages": [
+        13
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 376,
+          "text": "\n\n— Салам, салам, Роза!"
+        },
+        {
+          "ordinal": 377,
+          "text": "."
+        },
+        {
+          "ordinal": 378,
+          "text": "."
+        },
+        {
+          "ordinal": 379,
+          "text": " Вара кузе илет?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            376,
+            395
+          ],
+          "page": 13,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue Роза!.. and каникул кузе ок лий?!. uses combined punctuation. These are not false sentence boundaries."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        395,
+        396
+      ],
+      "pages": [
+        13
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 393,
+          "text": "\n\n— Тимошка, каникул кузе ок лий?"
+        },
+        {
+          "ordinal": 395,
+          "text": "!"
+        },
+        {
+          "ordinal": 396,
+          "text": "."
+        },
+        {
+          "ordinal": 397,
+          "text": " Тый институтышто тунемын отылат, от пале."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            376,
+            395
+          ],
+          "page": 13,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue Роза!.. and каникул кузе ок лий?!. uses combined punctuation. These are not false sentence boundaries."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        427,
+        428
+      ],
+      "pages": [
+        14
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 426,
+          "text": " Роза вес институтыш кунам пурен кертеш?"
+        },
+        {
+          "ordinal": 427,
+          "text": "!"
+        },
+        {
+          "ordinal": 428,
+          "text": "."
+        },
+        {
+          "ordinal": 429,
+          "text": " Тиде институтышкыжат ала-могай амал дене Карпушкин пуртыктен."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            427,
+            452
+          ],
+          "page": 14,
+          "status": "verified-unchanged",
+          "evidence": "Printed пурен кертеш?!. and йӧным муынат!.. match source punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        452,
+        453
+      ],
+      "pages": [
+        14
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 452,
+          "text": "\n\n— Пеш сай йӧным муынат!"
+        },
+        {
+          "ordinal": 453,
+          "text": "."
+        },
+        {
+          "ordinal": 454,
+          "text": "."
+        },
+        {
+          "ordinal": 455,
+          "text": " Латкандаш ияш ӱдырлан тыгай ойым пуаш кузе от вожыл?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            427,
+            452
+          ],
+          "page": 14,
+          "status": "verified-unchanged",
+          "evidence": "Printed пурен кертеш?!. and йӧным муынат!.. match source punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        470,
+        471
+      ],
+      "pages": [
+        15
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 470,
+          "text": " Тыгай тӱсет, кап-кылет дене ала-могай качымат савырен кертат!"
+        },
+        {
+          "ordinal": 471,
+          "text": "."
+        },
+        {
+          "ordinal": 472,
+          "text": "."
+        },
+        {
+          "ordinal": 473,
+          "text": "\n\n— Молан мылам качыже?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            470,
+            473
+          ],
+          "page": 15,
+          "status": "verified-unchanged",
+          "evidence": "Printed савырен кертат!.. and Молан мылам качыже?.. match source punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        473,
+        474
+      ],
+      "pages": [
+        15
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 473,
+          "text": "\n\n— Молан мылам качыже?"
+        },
+        {
+          "ordinal": 474,
+          "text": "."
+        },
+        {
+          "ordinal": 475,
+          "text": "."
+        },
+        {
+          "ordinal": 476,
+          "text": " Мылам але ондак."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            470,
+            473
+          ],
+          "page": 15,
+          "status": "verified-unchanged",
+          "evidence": "Printed савырен кертат!.. and Молан мылам качыже?.. match source punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        611,
+        612
+      ],
+      "pages": [
+        18
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 611,
+          "text": " Пӧрт тич тем аш !"
+        },
+        {
+          "ordinal": 612,
+          "text": " тамле ӱпш пайрем кечым шижтара."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            611,
+            612
+          ],
+          "pages": [
+            18
+          ],
+          "evidence": "Top paragraph prints Пӧрт тич темше... / тамле ӱпш. The final part of the first-line adjective is obscured; extracted тем аш ! is not reliable, but the complete replacement cannot be read."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        675,
+        676
+      ],
+      "pages": [
+        19
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 675,
+          "text": " Тугай ӱдыр!"
+        },
+        {
+          "ordinal": 676,
+          "text": "."
+        },
+        {
+          "ordinal": 677,
+          "text": "."
+        },
+        {
+          "ordinal": 678,
+          "text": " Тый але омешетат ужын отыл!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            675
+          ],
+          "page": 19,
+          "status": "verified-unchanged",
+          "evidence": "Printed Тугай ӱдыр!.. has an exclamation followed by ellipsis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        784,
+        785
+      ],
+      "pages": [
+        21
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 784,
+          "text": "\n\n— Чодырасе шӱшпыклан салам!"
+        },
+        {
+          "ordinal": 785,
+          "text": "."
+        },
+        {
+          "ordinal": 786,
+          "text": "."
+        },
+        {
+          "ordinal": 787,
+          "text": " Еремей Еремеич Ел кин!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            784,
+            795
+          ],
+          "page": 21,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue салам!.. and логалын огыдал?.. matches exclamation/question plus ellipsis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        795,
+        796
+      ],
+      "pages": [
+        21
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 795,
+          "text": " Лидия тудым колышто-колыштат, чылаштланат шоктыжо манын, уло йӱкын каласыш:\n\n— Тынар ыштеда — ик ганат логалын огыдал?"
+        },
+        {
+          "ordinal": 796,
+          "text": "."
+        },
+        {
+          "ordinal": 797,
+          "text": "."
+        },
+        {
+          "ordinal": 798,
+          "text": " Елкин тидлан саҥгажым гына куптыртыш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            784,
+            795
+          ],
+          "page": 21,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue салам!.. and логалын огыдал?.. matches exclamation/question plus ellipsis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        861,
+        862
+      ],
+      "pages": [
+        23
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 861,
+          "text": " Неужели рвезе годсо палыме ӱдырем?"
+        },
+        {
+          "ordinal": 862,
+          "text": "."
+        },
+        {
+          "ordinal": 863,
+          "text": "."
+        },
+        {
+          "ordinal": 864,
+          "text": "» Кенета тудын шеҥгелныже «Здравствуйте» манме йӱк шоктыш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            861,
+            868
+          ],
+          "page": 23,
+          "status": "verified-unchanged",
+          "evidence": "Printed internal question ӱдырем?.. and apology Извинитлыза!.. retain ellipses."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        868,
+        869
+      ],
+      "pages": [
+        23
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 868,
+          "text": " Извинитлыза!"
+        },
+        {
+          "ordinal": 869,
+          "text": "."
+        },
+        {
+          "ordinal": 870,
+          "text": "."
+        },
+        {
+          "ordinal": 871,
+          "text": " Мый тендам ужнем ыле."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            861,
+            868
+          ],
+          "page": 23,
+          "status": "verified-unchanged",
+          "evidence": "Printed internal question ӱдырем?.. and apology Извинитлыза!.. retain ellipses."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        885,
+        886
+      ],
+      "pages": [
+        23,
+        24
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 885,
+          "text": " Шуко жап эртен гынат, мый тендам вигак палышым."
+        },
+        {
+          "ordinal": 886,
+          "text": " Миловидовын тыгай шере шомакше ыш келше гынат,Лидия ваштареш нимомат ыш пелеште, шке ораж дене1 гына шоналтыш: «Пӧръеҥ-влак тыге ойлаш мастар) улыт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 886,
+          "evidence": "PDF p24 first lines: right gutter obscures the end of мастар; source also crosses p23. Final letters and sentence-ending ellipsis need a wider revision."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            886
+          ],
+          "pages": [
+            23,
+            24
+          ],
+          "evidence": "Printed thought ends мастар... at the right gutter before улыт... on the next line. The bracket may stand for a lost final letter; whole-word spelling cannot be certified."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        886,
+        887
+      ],
+      "pages": [
+        23,
+        24
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 886,
+          "text": " Миловидовын тыгай шере шомакше ыш келше гынат,Лидия ваштареш нимомат ыш пелеште, шке ораж дене1 гына шоналтыш: «Пӧръеҥ-влак тыге ойлаш мастар) улыт."
+        },
+        {
+          "ordinal": 887,
+          "text": "."
+        },
+        {
+          "ordinal": 888,
+          "text": "."
+        },
+        {
+          "ordinal": 889,
+          "text": "» Эше кок-кум шокшо шомакым ваш-ваш каласымек,, Лидия шкенжын пашажым шарналтыш:\n\n— Миловидов йолташ, мыйын кызыт пеш содор паша й уло."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 886,
+          "evidence": "PDF p24 first lines: right gutter obscures the end of мастар; source also crosses p23. Final letters and sentence-ending ellipsis need a wider revision."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            886
+          ],
+          "pages": [
+            23,
+            24
+          ],
+          "evidence": "Printed thought ends мастар... at the right gutter before улыт... on the next line. The bracket may stand for a lost final letter; whole-word spelling cannot be certified."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        887,
+        888
+      ],
+      "pages": [
+        23,
+        24
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 886,
+          "text": " Миловидовын тыгай шере шомакше ыш келше гынат,Лидия ваштареш нимомат ыш пелеште, шке ораж дене1 гына шоналтыш: «Пӧръеҥ-влак тыге ойлаш мастар) улыт."
+        },
+        {
+          "ordinal": 887,
+          "text": "."
+        },
+        {
+          "ordinal": 888,
+          "text": "."
+        },
+        {
+          "ordinal": 889,
+          "text": "» Эше кок-кум шокшо шомакым ваш-ваш каласымек,, Лидия шкенжын пашажым шарналтыш:\n\n— Миловидов йолташ, мыйын кызыт пеш содор паша й уло."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 886,
+          "evidence": "PDF p24 first lines: right gutter obscures the end of мастар; source also crosses p23. Final letters and sentence-ending ellipsis need a wider revision."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            886
+          ],
+          "pages": [
+            23,
+            24
+          ],
+          "evidence": "Printed thought ends мастар... at the right gutter before улыт... on the next line. The bracket may stand for a lost final letter; whole-word spelling cannot be certified."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        888,
+        889
+      ],
+      "pages": [
+        23,
+        24
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 886,
+          "text": " Миловидовын тыгай шере шомакше ыш келше гынат,Лидия ваштареш нимомат ыш пелеште, шке ораж дене1 гына шоналтыш: «Пӧръеҥ-влак тыге ойлаш мастар) улыт."
+        },
+        {
+          "ordinal": 887,
+          "text": "."
+        },
+        {
+          "ordinal": 888,
+          "text": "."
+        },
+        {
+          "ordinal": 889,
+          "text": "» Эше кок-кум шокшо шомакым ваш-ваш каласымек,, Лидия шкенжын пашажым шарналтыш:\n\n— Миловидов йолташ, мыйын кызыт пеш содор паша й уло."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 886,
+          "evidence": "PDF p24 first lines: right gutter obscures the end of мастар; source also crosses p23. Final letters and sentence-ending ellipsis need a wider revision."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            886
+          ],
+          "pages": [
+            23,
+            24
+          ],
+          "evidence": "Printed thought ends мастар... at the right gutter before улыт... on the next line. The bracket may stand for a lost final letter; whole-word spelling cannot be certified."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        991,
+        992
+      ],
+      "pages": [
+        26
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 991,
+          "text": " Лидия!"
+        },
+        {
+          "ordinal": 992,
+          "text": "."
+        },
+        {
+          "ordinal": 993,
+          "text": "."
+        },
+        {
+          "ordinal": 994,
+          "text": " Мом верблюд гай шогылтат?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            991
+          ],
+          "page": 26,
+          "status": "verified-unchanged",
+          "evidence": "Printed repeated address Лидия! Лидия!.. contains an exclamation followed by ellipsis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1167,
+        1168
+      ],
+      "pages": [
+        30
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 1167,
+          "text": " Тек нуно чодырам шкее!"
+        },
+        {
+          "ordinal": 1168,
+          "text": " куштат, шонена."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1167,
+            1168
+          ],
+          "pages": [
+            30
+          ],
+          "evidence": "Printed Тек нуно чодырам шке... / куштат. The end of шке and any suffix are behind the right gutter; deleting ! alone would silently retain uncertain шкее."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1239,
+        1240
+      ],
+      "pages": [
+        32
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 1239,
+          "text": " Ӱдырет тидлан куаныме гай лин."
+        },
+        {
+          "ordinal": 1240,
+          "text": " корныжым сайын огеш пале гынат, умылтараш тӱҥале."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1239,
+            1240
+          ],
+          "pages": [
+            32
+          ],
+          "evidence": "First line has Ӱдырет ... куаныме гай ли... . Final letters/punctuation are clipped; baseline лин. cannot be replaced with лийын from grammatical plausibility alone."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1311,
+        1312
+      ],
+      "pages": [
+        33
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 1310,
+          "text": " Роза нимом пелештенат ыш шукто, ала-кудыжо коклаш пурыш:\n\n— Кӱч коклашкыже рок пурымо деч лӱдеш дыр?"
+        },
+        {
+          "ordinal": 1311,
+          "text": "!"
+        },
+        {
+          "ordinal": 1312,
+          "text": "."
+        },
+        {
+          "ordinal": 1313,
+          "text": " Ӱдыр-влак рӱж воштыл колтышт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            1311
+          ],
+          "page": 33,
+          "status": "verified-unchanged",
+          "evidence": "Printed question лӱдеш дыр?!. retains question, exclamation and trailing dot."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1343,
+        1344
+      ],
+      "pages": [
+        34
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 1343,
+          "text": "\n\n— Мый вет тудын оксажлан, кассыжлан оза омыл!"
+        },
+        {
+          "ordinal": 1344,
+          "text": " шке дечше йодса."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1343,
+            1344
+          ],
+          "pages": [
+            34
+          ],
+          "evidence": "After оза омыл the punctuation is behind the right gutter. шке дечше йодса continues, but the source does not establish comma versus sentence boundary."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1409,
+        1410
+      ],
+      "pages": [
+        35
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 1408,
+          "text": "\n\n— Кузе туге?"
+        },
+        {
+          "ordinal": 1409,
+          "text": "!"
+        },
+        {
+          "ordinal": 1410,
+          "text": "."
+        },
+        {
+          "ordinal": 1411,
+          "text": " Рвезе ватетым от чамане, ужат, окса деч посна ашнынет."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            1409
+          ],
+          "page": 35,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue Кузе туге?!. uses the same combined punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1438,
+        1439
+      ],
+      "pages": [
+        36
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 1437,
+          "text": " Мылам лекцийым лудат?"
+        },
+        {
+          "ordinal": 1438,
+          "text": "!"
+        },
+        {
+          "ordinal": 1439,
+          "text": "."
+        },
+        {
+          "ordinal": 1440,
+          "text": " Тый мыйын чал ӱпем дечат от вожыл?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            1438,
+            1444,
+            1447
+          ],
+          "page": 36,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue лудат?!., ойлыштыда?!., вожыл?!. uses combined question/exclamation punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1444,
+        1445
+      ],
+      "pages": [
+        36
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 1443,
+          "text": " Лидия колышто-колыштат, Самсонын ваштареш тӹдӹн каласыш:\n\n— Мом те ойлыштыда?"
+        },
+        {
+          "ordinal": 1444,
+          "text": "!"
+        },
+        {
+          "ordinal": 1445,
+          "text": "."
+        },
+        {
+          "ordinal": 1446,
+          "text": " Шонто вуйда дене тыгайым ойлышташ огыда вожыл?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            1438,
+            1444,
+            1447
+          ],
+          "page": 36,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue лудат?!., ойлыштыда?!., вожыл?!. uses combined question/exclamation punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1447,
+        1448
+      ],
+      "pages": [
+        36
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 1446,
+          "text": " Шонто вуйда дене тыгайым ойлышташ огыда вожыл?"
+        },
+        {
+          "ordinal": 1447,
+          "text": "!"
+        },
+        {
+          "ordinal": 1448,
+          "text": "."
+        },
+        {
+          "ordinal": 1449,
+          "text": " Тыланда шойышт ойлат, а те ӱдырамаш коклазе-влакым колыштыда!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            1438,
+            1444,
+            1447
+          ],
+          "page": 36,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue лудат?!., ойлыштыда?!., вожыл?!. uses combined question/exclamation punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1535,
+        1536
+      ],
+      "pages": [
+        38
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 1535,
+          "text": " Молан Карпушкин тунам мыйым пашашке куанен нале, а кызыт полшышаш олмеш тӱрлӧ чаракым веле шындылеш?"
+        },
+        {
+          "ordinal": 1536,
+          "text": "."
+        },
+        {
+          "ordinal": 1537,
+          "text": "."
+        },
+        {
+          "ordinal": 1538,
+          "text": "» Чодыра тымыкыште Лиднян вуйышкыжо Миловидов Алексеят пура."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            1535
+          ],
+          "page": 38,
+          "status": "verified-unchanged",
+          "evidence": "Printed internal quotation ends шындылеш?.. followed by closing quotation mark."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1581,
+        1582
+      ],
+      "pages": [
+        40
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 1581,
+          "text": " Мӱндыр1!"
+        },
+        {
+          "ordinal": 1582,
+          "text": " йоҥгалт толшо муро йӱкым мыняр колыштеш, шӱмжылан тунар ласкан чучеш, вара шкат ныжылгын, уледа шӱмым почын, муралтен колта: Монденат мо мемнан ойым, Мый декемже от толылдал."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1581,
+            1582,
+            1583
+          ],
+          "pages": [
+            40
+          ],
+          "evidence": "шӱмжылан restored from printed line break. The suffix after Мӱндыр is cut off by the right gutter, so the leading fragment Мӱндыр1! cannot be fully restored."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1647,
+        1648
+      ],
+      "pages": [
+        42
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 1647,
+          "text": "Ӱдырлан Алешан тыгай проста улмыжо пеш келшен ."
+        },
+        {
+          "ordinal": 1648,
+          "text": " садлан эре йодыштын:\n\n— Тышкыже кузе верештын улыда?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1647,
+            1648
+          ],
+          "pages": [
+            42
+          ],
+          "evidence": "Ӱдырлан Алешан corrected from the visible first line. The end of келшен and its punctuation are obscured at the right gutter; cannot certify removal versus replacement of the period."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1820,
+        1821
+      ],
+      "pages": [
+        46
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 1820,
+          "text": "— шкеже Миловидов деке мийышат, тудлан шьь."
+        },
+        {
+          "ordinal": 1821,
+          "text": " гыжалын, шылтален ойлымыла тӱҥале:— А мый тенд1 йомдаренам."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1820,
+            1821
+          ],
+          "pages": [
+            46
+          ],
+          "evidence": "Right gutter conceals the middle letters of шы... / гыжалын and the end of тенд... . A smiling-verb hypothesis is plausible but not fully readable."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1823,
+        1824
+      ],
+      "pages": [
+        46
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 1823,
+          "text": " Тышке Сергей толын шогале, вара саҥгаж йым."
+        },
+        {
+          "ordinal": 1824,
+          "text": "!"
+        },
+        {
+          "ordinal": 1825,
+          "text": " Миловидовым ончалят, тудын дене саламлалте."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1823,
+            1824,
+            1825
+          ],
+          "pages": [
+            46
+          ],
+          "evidence": "The word after вара is cut off at the right edge; baseline саҥгаж йым.! has missing/corrupt letters, so simply stripping .! would not restore it."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1831,
+        1832
+      ],
+      "pages": [
+        46
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 1831,
+          "text": ", да йӱкын каласыш:\n\n— Лидия Васильевна, тендан дене кутырышаш улы Миловидовым кораҥден колташ Сергейын йӧным м."
+        },
+        {
+          "ordinal": 1832,
+          "text": "!"
+        },
+        {
+          "ordinal": 1833,
+          "text": " ыҥ ойлымыжо Лилийлан пеш келшыш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1831,
+            1832,
+            1833
+          ],
+          "pages": [
+            46
+          ],
+          "evidence": "Two consecutive line endings are obscured: dialogue тендан дене кутырышаш ул... and subsequent Сергейын йӧным м... / ын. The sentence boundary cannot be reconstructed exactly from visible letters."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1832,
+        1833
+      ],
+      "pages": [
+        46
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 1831,
+          "text": ", да йӱкын каласыш:\n\n— Лидия Васильевна, тендан дене кутырышаш улы Миловидовым кораҥден колташ Сергейын йӧным м."
+        },
+        {
+          "ordinal": 1832,
+          "text": "!"
+        },
+        {
+          "ordinal": 1833,
+          "text": " ыҥ ойлымыжо Лилийлан пеш келшыш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1831,
+            1832,
+            1833
+          ],
+          "pages": [
+            46
+          ],
+          "evidence": "Two consecutive line endings are obscured: dialogue тендан дене кутырышаш ул... and subsequent Сергейын йӧным м... / ын. The sentence boundary cannot be reconstructed exactly from visible letters."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1844,
+        1845
+      ],
+      "pages": [
+        46
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 1844,
+          "text": " Тышак тетла мылам кода!"
+        },
+        {
+          "ordinal": 1845,
+          "text": " ок лий!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1844,
+            1845
+          ],
+          "pages": [
+            46
+          ],
+          "evidence": "Line ends Тышак тетла мылам кода... at the gutter, next line ок лий! . Infinitive ending is not visible; cannot certify кодаш rather than another form."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1925,
+        1926
+      ],
+      "pages": [
+        48
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 1925,
+          "text": " Кече ояр."
+        },
+        {
+          "ordinal": 1926,
+          "text": " Элнет лесничествыште пӱнчӧ шындыме паша) шолеш веле."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 1926,
+          "evidence": "PDF p48: right gutter obscures the end of паша...; cannot establish whether a letter is missing alongside the stray bracket."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1926
+          ],
+          "pages": [
+            48
+          ],
+          "evidence": "Opening of chapter 7 ends first line after паша... at the gutter. Cannot determine whether ) replaces a suffix or only punctuation before шолеш веле."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1926,
+        1927
+      ],
+      "pages": [
+        48
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 1926,
+          "text": " Элнет лесничествыште пӱнчӧ шындыме паша) шолеш веле."
+        },
+        {
+          "ordinal": 1927,
+          "text": " Лидия Чижован ик жаплан кумылжо волен!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 1926,
+          "evidence": "PDF p48: right gutter obscures the end of паша...; cannot establish whether a letter is missing alongside the stray bracket."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1926
+          ],
+          "pages": [
+            48
+          ],
+          "evidence": "Opening of chapter 7 ends first line after паша... at the gutter. Cannot determine whether ) replaces a suffix or only punctuation before шолеш веле."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1928,
+        1929
+      ],
+      "pages": [
+        48
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 1928,
+          "text": " 1 ыле гынат, тудо ыш чакне: план почеш пӱнчым да у чодыра культурым шке жапыштыже шынден шукташак^ тыршыш."
+        },
+        {
+          "ordinal": 1929,
+          "text": " Садлан шукыж годым тудо, лесник да объезд-- чик-влак деке миен, тӱрлӧ распоряженийым пуэден, эр) йӱдымак кынелын, кас ӱжара марте чодыраште лийын,, кажне обходым шке ончеден."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 1929,
+          "evidence": "PDF p48: bracket overlaps right gutter after эр; other artifacts include double hyphen and comma. Needs a complete source-verified sentence reconstruction."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1929
+          ],
+          "pages": [
+            48
+          ],
+          "evidence": "End of эр... before йӱдымак is clipped, so the bracket cannot be removed with assurance that the full word survives. Other wrapping/double-comma artifacts are visible but full sentence restoration is blocked by that ending."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        1929,
+        1930
+      ],
+      "pages": [
+        48
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 1929,
+          "text": " Садлан шукыж годым тудо, лесник да объезд-- чик-влак деке миен, тӱрлӧ распоряженийым пуэден, эр) йӱдымак кынелын, кас ӱжара марте чодыраште лийын,, кажне обходым шке ончеден."
+        },
+        {
+          "ordinal": 1930,
+          "text": " Лидия Васильевнан да молодёжный бригадын пашажым ужын, Розанат кумылжо тарванен."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 1929,
+          "evidence": "PDF p48: bracket overlaps right gutter after эр; other artifacts include double hyphen and comma. Needs a complete source-verified sentence reconstruction."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            1929
+          ],
+          "pages": [
+            48
+          ],
+          "evidence": "End of эр... before йӱдымак is clipped, so the bracket cannot be removed with assurance that the full word survives. Other wrapping/double-comma artifacts are visible but full sentence restoration is blocked by that ending."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2073,
+        2074
+      ],
+      "pages": [
+        52
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 2072,
+          "text": " Яра кияш оҥай мо?"
+        },
+        {
+          "ordinal": 2073,
+          "text": "!"
+        },
+        {
+          "ordinal": 2074,
+          "text": "."
+        },
+        {
+          "ordinal": 2075,
+          "text": " Тыгай вашмутлан Эльвира сырыме гай лие, шӱргӧ начкаже йошкарген кайыш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            2073
+          ],
+          "page": 52,
+          "status": "verified-unchanged",
+          "evidence": "Printed Яра кияш оҥай мо?!. matches combined punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2088,
+        2089
+      ],
+      "pages": [
+        53
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 2088,
+          "text": " Эльвира тугак ок чарне:\n\n— Каем, ӱмыр мучко мый тыйым оролен шинчаш ом тӱҥал!"
+        },
+        {
+          "ordinal": 2089,
+          "text": "."
+        },
+        {
+          "ordinal": 2090,
+          "text": "."
+        },
+        {
+          "ordinal": 2091,
+          "text": "\n\n— Ну, кает гын, кай!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            2088
+          ],
+          "page": 53,
+          "status": "verified-unchanged",
+          "evidence": "Printed ом тӱҥал!.. matches exclamation plus ellipsis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2133,
+        2134
+      ],
+      "pages": [
+        54
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 2133,
+          "text": "\n\n— Шукыжак огыл, кум тӱжем."
+        },
+        {
+          "ordinal": 2134,
+          "text": " Тӱлаш логалеш)."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 2134,
+          "evidence": "PDF p54: sentence-ending punctuation after логалеш is clipped by the right gutter; do not guess between a period and exclamation mark."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2134
+          ],
+          "pages": [
+            54
+          ],
+          "evidence": "Тӱлаш логалеш ends inside the right gutter; final punctuation cannot be distinguished from the extracted ). sequence."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2134,
+        2135
+      ],
+      "pages": [
+        54
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 2134,
+          "text": " Тӱлаш логалеш)."
+        },
+        {
+          "ordinal": 2135,
+          "text": ": йолшо, Тимофей Самсоныч!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 2134,
+          "evidence": "PDF p54: sentence-ending punctuation after логалеш is clipped by the right gutter; do not guess between a period and exclamation mark."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2134
+          ],
+          "pages": [
+            54
+          ],
+          "evidence": "Тӱлаш логалеш ends inside the right gutter; final punctuation cannot be distinguished from the extracted ). sequence."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2144,
+        2145
+      ],
+      "pages": [
+        54
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2144,
+          "text": " Пашам приниматлыме нерге/ актым возена, ведомостьым ыштена, подпись-влакыма!"
+        },
+        {
+          "ordinal": 2145,
+          "text": " кӱлеш семын келыштарена."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2144,
+            2145
+          ],
+          "pages": [
+            54
+          ],
+          "evidence": "Right gutter cuts нерге... and подпись-влакым... . The suffix before кӱлеш семын cannot be established exactly from the image."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2155,
+        2156
+      ],
+      "pages": [
+        54
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2155,
+          "text": " Тый вет тӱгана!"
+        },
+        {
+          "ordinal": 2156,
+          "text": " шке кӱлешетлан оксам касса гыч кучылтат, а кызьп йӧршын лӱдшӧ мераҥ гай кутыркален шинчылтат."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2155,
+            2156
+          ],
+          "pages": [
+            54
+          ],
+          "evidence": "Dialogue at bottom ends its first line with тӱгана... behind the gutter. Exact final letter before шке is unavailable; no suffix guessed."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2389,
+        2390
+      ],
+      "pages": [
+        60
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 2389,
+          "text": " Лесной институты."
+        },
+        {
+          "ordinal": 2390,
+          "text": "!"
+        },
+        {
+          "ordinal": 2391,
+          "text": " тунемаш каяш шона."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2389,
+            2390,
+            2391
+          ],
+          "pages": [
+            60
+          ],
+          "evidence": "Лесной институты... / тунемаш: locative suffix is hidden at the right gutter, so the complete replacement for институты.! is not source-readable."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2390,
+        2391
+      ],
+      "pages": [
+        60
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2389,
+          "text": " Лесной институты."
+        },
+        {
+          "ordinal": 2390,
+          "text": "!"
+        },
+        {
+          "ordinal": 2391,
+          "text": " тунемаш каяш шона."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2389,
+            2390,
+            2391
+          ],
+          "pages": [
+            60
+          ],
+          "evidence": "Лесной институты... / тунемаш: locative suffix is hidden at the right gutter, so the complete replacement for институты.! is not source-readable."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2402,
+        2403
+      ],
+      "pages": [
+        60
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2401,
+          "text": " Лиды ."
+        },
+        {
+          "ordinal": 2402,
+          "text": "."
+        },
+        {
+          "ordinal": 2403,
+          "text": " айда шинчын каналтена, станций мӱндыр огыл, шуына!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2401,
+            2402,
+            2403
+          ],
+          "pages": [
+            60
+          ],
+          "evidence": "Address Лиди... before айда is truncated at right gutter together with its punctuation; source does not clearly resolve the damaged Лиды.. fragment."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2406,
+        2407
+      ],
+      "pages": [
+        60
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 2406,
+          "text": "\n\n— Лидия,— тӱҥале Миловидов,— молан тыште или » мем жапыште мый дечем эртак кораҥаш тыршышдга:; Вет мый тиде вашлиймашым уло шӱмем дене вученам г а тый?"
+        },
+        {
+          "ordinal": 2407,
+          "text": "."
+        },
+        {
+          "ordinal": 2408,
+          "text": "."
+        },
+        {
+          "ordinal": 2409,
+          "text": "\n\n— Алексей, айда тидын нерген огына ойло."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            2406
+          ],
+          "page": 60,
+          "status": "verified-unchanged",
+          "evidence": "Only the closing question а тый?.. is verified against print; corrupt words earlier in this record are not approved."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2416,
+        2417
+      ],
+      "pages": [
+        60
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2416,
+          "text": "— Тунам тый денет пырля пашам ышташ, пырля чодырат."
+        },
+        {
+          "ordinal": 2417,
+          "text": " шындаш, пырля ончен кушташ тӱҥалына."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2416,
+            2417
+          ],
+          "pages": [
+            60
+          ],
+          "evidence": "Final letter in пырля чодыра... before шындаш is behind the gutter; likely object suffix cannot be certified from this scan."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2423,
+        2424
+      ],
+      "pages": [
+        60
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2423,
+          "text": " Тидым колын, Лидия чон канымеш воштыл колтыш Миловидовын чонжылан кӱчымын чучо: «Мый тудла!"
+        },
+        {
+          "ordinal": 2424,
+          "text": " уло чонем дене ойлем, а тудо воштылеш гына»."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2423,
+            2424
+          ],
+          "pages": [
+            60
+          ],
+          "evidence": "Printed Мый тудла... / уло чонем has a clipped ending at right gutter. Baseline exclamation may stand for a missing suffix, not only a sign to delete."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2499,
+        2500
+      ],
+      "pages": [
+        62
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2499,
+          "text": " Вагон гыч волышыжо вола."
+        },
+        {
+          "ordinal": 2500,
+          "text": " олаш т каяш шонышыжо поездыш шинчаш тырша."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2499,
+            2500
+          ],
+          "pages": [
+            62
+          ],
+          "evidence": "Punctuation after вола is too faint to distinguish dot from comma; олаш... is cut at the right edge. Do not impose a grammatical normalization on an unreadable ending."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2697,
+        2698
+      ],
+      "pages": [
+        68
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2697,
+          "text": " Садлан тудо мемнан у/ г."
+        },
+        {
+          "ordinal": 2698,
+          "text": " ловийыште кок пачаш пайдале!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2697,
+            2698
+          ],
+          "pages": [
+            68
+          ],
+          "evidence": "The beginning of the line-broken loanword у... / ловийыште is hidden at right gutter. условийыште is a plausible hypothesis but exact printed letters are unavailable."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2699,
+        2700
+      ],
+      "pages": [
+        68
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 2699,
+          "text": "\n\n— А тыгай у урлык пушеҥге озымжым те кузе шыве даш каҥашым пуэда?"
+        },
+        {
+          "ordinal": 2700,
+          "text": "— кенета шоҥго профессор йодо) Миловидовын мутшо тиде йодыш дене кӱрылтӧ, и ь жаплан ойлымыжым чарныш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 2700,
+          "evidence": "PDF p68: end of йодо... is obscured; false sentence boundary also joins the next sentence. Requires both ending recovery and split."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2700
+          ],
+          "pages": [
+            68
+          ],
+          "evidence": "Professor attribution ends йодо... at right gutter. Sentence-ending punctuation and following ик... are clipped, preventing a complete exact transcription."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2700,
+        2701
+      ],
+      "pages": [
+        68
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 2700,
+          "text": "— кенета шоҥго профессор йодо) Миловидовын мутшо тиде йодыш дене кӱрылтӧ, и ь жаплан ойлымыжым чарныш."
+        },
+        {
+          "ordinal": 2701,
+          "text": " Комиссий член-влак ваг ончалын шыргыжальыч."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 2700,
+          "evidence": "PDF p68: end of йодо... is obscured; false sentence boundary also joins the next sentence. Requires both ending recovery and split."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2700
+          ],
+          "pages": [
+            68
+          ],
+          "evidence": "Professor attribution ends йодо... at right gutter. Sentence-ending punctuation and following ик... are clipped, preventing a complete exact transcription."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2774,
+        2775
+      ],
+      "pages": [
+        70
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2774,
+          "text": " Тун!"
+        },
+        {
+          "ordinal": 2775,
+          "text": " мак шкенжым тӱрлӧ семын лыпландарен да Елкин дет ыштыме шояк договоржо нерген мондаш тыршен."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2774,
+            2775
+          ],
+          "pages": [
+            70
+          ],
+          "evidence": "The line before мак ends Тун... at the gutter; suffix and hyphen are obscured, as is the end of Елкин де... . No complete source-certified reconstruction."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2792,
+        2793
+      ],
+      "pages": [
+        70
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2792,
+          "text": " Митрофан »!"
+        },
+        {
+          "ordinal": 2793,
+          "text": " ятыр жап ала-мом шонен шинча."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2792,
+            2793
+          ],
+          "pages": [
+            70
+          ],
+          "evidence": "Name at the end of the paragraph-opening line is Митрофано... at the gutter. Baseline Митрофан »! is damaged; final character cannot be read confidently."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2942,
+        2943
+      ],
+      "pages": [
+        74
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2942,
+          "text": " Ложкин старший лесничий деке чак мийышат, ревизиг ."
+        },
+        {
+          "ordinal": 2943,
+          "text": " актым нале, вара кенета йодо:\n\n— Мочалова йолташ, тый мемнан партийный ӧргаш низацийын секретарьже улат, каласе, кузе шонет, ме ыш де мом ышташ тӱҥалына?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2942,
+            2943
+          ],
+          "pages": [
+            74
+          ],
+          "evidence": "End of ревизи... before актым and beginning of orga- continuation are truncated by right gutter; the precise genitive/name form and punctuation cannot be certified."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        2949,
+        2950
+      ],
+      "pages": [
+        74
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 2949,
+          "text": " Вет тид!"
+        },
+        {
+          "ordinal": 2950,
+          "text": " тыглай ситыдымаш але йоҥылыш огыл, а государствьп кӱсенышкыже шинчаора пурымаш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            2949,
+            2950
+          ],
+          "pages": [
+            74
+          ],
+          "evidence": "тид... and государствы... at right gutter have unreadable endings; ! may replace letters, not just sentence punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3097,
+        3098
+      ],
+      "pages": [
+        78
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 3097,
+          "text": " Мый тылат нетат, лесничествыланат нимогай осалым ыштен омыл!"
+        },
+        {
+          "ordinal": 3098,
+          "text": " а вот тыйым тыгай пашалан подсудимыйын теҥгылышкышт жат шындаш уто огыл ыле."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3097,
+            3098
+          ],
+          "pages": [
+            78
+          ],
+          "evidence": "Printed speech contains a split тыланетат but punctuation after омыл and the ending of теҥгылышкы... are hidden. Full boundary reconstruction would require guessing that punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3112,
+        3113
+      ],
+      "pages": [
+        78
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3112,
+          "text": " Суд лиеш гын, чыла тӱлем!"
+        },
+        {
+          "ordinal": 3113,
+          "text": "!"
+        },
+        {
+          "ordinal": 3114,
+          "text": " Тидым колын, Эльвира чот кожганыш, пудешталтшаш] гай сырыш, полан гай йошкарген шинче."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3114,
+          "evidence": "PDF p78: end of пудешталтшаш... is clipped; do not certify deletion without checking for a missing final character."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3114
+          ],
+          "pages": [
+            78
+          ],
+          "evidence": "The word пудешталтшаш... ends at right gutter before гай. Cannot certify whether ] substitutes only punctuation or any final character."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3113,
+        3114
+      ],
+      "pages": [
+        78
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3112,
+          "text": " Суд лиеш гын, чыла тӱлем!"
+        },
+        {
+          "ordinal": 3113,
+          "text": "!"
+        },
+        {
+          "ordinal": 3114,
+          "text": " Тидым колын, Эльвира чот кожганыш, пудешталтшаш] гай сырыш, полан гай йошкарген шинче."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3114,
+          "evidence": "PDF p78: end of пудешталтшаш... is clipped; do not certify deletion without checking for a missing final character."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3114
+          ],
+          "pages": [
+            78
+          ],
+          "evidence": "The word пудешталтшаш... ends at right gutter before гай. Cannot certify whether ] substitutes only punctuation or any final character."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3114,
+        3115
+      ],
+      "pages": [
+        78
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3114,
+          "text": " Тидым колын, Эльвира чот кожганыш, пудешталтшаш] гай сырыш, полан гай йошкарген шинче."
+        },
+        {
+          "ordinal": 3115,
+          "text": "\n\n— Еремей Еремеич, кузе туте?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3114,
+          "evidence": "PDF p78: end of пудешталтшаш... is clipped; do not certify deletion without checking for a missing final character."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3114
+          ],
+          "pages": [
+            78
+          ],
+          "evidence": "The word пудешталтшаш... ends at right gutter before гай. Cannot certify whether ] substitutes only punctuation or any final character."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3161,
+        3162
+      ],
+      "pages": [
+        79
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 3159,
+          "text": " А Роза."
+        },
+        {
+          "ordinal": 3160,
+          "text": "."
+        },
+        {
+          "ordinal": 3161,
+          "text": "."
+        },
+        {
+          "ordinal": 3162,
+          "text": " нигушкат, — мучашлан Оля эркын пелештыш, вара Самсонычым тӱслен ончалят, тудын чурийыштыже ала-могай ойгым ужо."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            3161
+          ],
+          "page": 79,
+          "status": "verified-unchanged",
+          "evidence": "Printed dialogue А Роза... нигушкат uses ellipsis before lowercase continuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3315,
+        3316
+      ],
+      "pages": [
+        85
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 3313,
+          "text": "\n\n— Поро йолташем, мый."
+        },
+        {
+          "ordinal": 3314,
+          "text": "."
+        },
+        {
+          "ordinal": 3315,
+          "text": "."
+        },
+        {
+          "ordinal": 3316,
+          "text": " мый."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            3315,
+            3338
+          ],
+          "page": 85,
+          "status": "verified-unchanged",
+          "evidence": "Printed hesitant dialogue мый... мый... repeats the lowercase pronoun after ellipses."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3338,
+        3339
+      ],
+      "pages": [
+        85
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 3336,
+          "text": "\n\n— Уке, мый."
+        },
+        {
+          "ordinal": 3337,
+          "text": "."
+        },
+        {
+          "ordinal": 3338,
+          "text": "."
+        },
+        {
+          "ordinal": 3339,
+          "text": " мый."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            3315,
+            3338
+          ],
+          "page": 85,
+          "status": "verified-unchanged",
+          "evidence": "Printed hesitant dialogue мый... мый... repeats the lowercase pronoun after ellipses."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3533,
+        3534
+      ],
+      "pages": [
+        89
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 3533,
+          "text": " Вара кӧргӧ йӱк дене кок мутым пелештен керте:\n\n— Эргым, тол!"
+        },
+        {
+          "ordinal": 3534,
+          "text": "."
+        },
+        {
+          "ordinal": 3535,
+          "text": "."
+        },
+        {
+          "ordinal": 3536,
+          "text": " Изи йоча тунамак ачажын шӱйышкыжӧ кержалте, кум ийлан первый гана чот ӧндале."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            3533
+          ],
+          "page": 89,
+          "status": "verified-unchanged",
+          "evidence": "Printed direct address Эргым, тол!.. matches punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3588,
+        3589
+      ],
+      "pages": [
+        90
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 3588,
+          "text": " «Оксам садак кучылт пытарена, ала модын налына, с Огына гын, аралымаште кия»,— шоналтышат, тыге пелештыш:\n\n— Картошкин йолташ!"
+        },
+        {
+          "ordinal": 3589,
+          "text": "."
+        },
+        {
+          "ordinal": 3590,
+          "text": "."
+        },
+        {
+          "ordinal": 3591,
+          "text": "\n\n— Чу!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            3588
+          ],
+          "page": 90,
+          "status": "verified-unchanged",
+          "evidence": "Printed address Картошкин йолташ!.. retains exclamation and ellipsis; this decision does not certify other words in the record."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3616,
+        3617
+      ],
+      "pages": [
+        91
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 3616,
+          "text": " Южгунам ӱдырамаш-шамыч Клавийым вашлийытат, Цтыге воштылыт:\n\n— Шӱдӧ теҥге оксат вара игым ыштыш?"
+        },
+        {
+          "ordinal": 3617,
+          "text": "."
+        },
+        {
+          "ordinal": 3618,
+          "text": "."
+        },
+        {
+          "ordinal": 3619,
+          "text": " Жап шуо вет."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            3616
+          ],
+          "page": 91,
+          "status": "verified-unchanged",
+          "evidence": "Printed ыштыш?.. retains question plus ellipsis; unrelated corrupt letters in the record remain outside this decision."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3729,
+        3730
+      ],
+      "pages": [
+        94
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 3729,
+          "text": " Туньп тышо эре «сто процентлан» погыныза манеш, а Окли!"
+        },
+        {
+          "ordinal": 3730,
+          "text": " пеш вустык вет, ик гана мийышат, тетла ыш кошт все Эре шарпан ден нашмакым мӧҥгыштыжӧ тӱрлен кийыш,-- умылтара саде ватет."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3729,
+            3730
+          ],
+          "pages": [
+            94
+          ],
+          "evidence": "At least three right-gutter endings are clipped: Туны... / тышо, Окли... before пеш, and кошт ве... before Эре. Cannot certify a full reconstruction by deleting ! alone."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3736,
+        3737
+      ],
+      "pages": [
+        94
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3736,
+          "text": " Ялыштыжат теве шкетак тунемде кодеш."
+        },
+        {
+          "ordinal": 3737,
+          "text": " Тиде мутшо Йыванын шӱмышкыжӧ кугу имымак кер) «Оклий йӧршын тунемдыме улмашыс."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3737,
+          "evidence": "PDF p94: end of кер... is hidden; needs verb-ending recovery and sentence split before quoted thought."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3737
+          ],
+          "pages": [
+            94
+          ],
+          "evidence": "Verb after кугу имымак кер... and its sentence punctuation are hidden; the next quoted thought begins on a new line. Need a clearer source to determine verb ending and boundary."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3737,
+        3738
+      ],
+      "pages": [
+        94
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3737,
+          "text": " Тиде мутшо Йыванын шӱмышкыжӧ кугу имымак кер) «Оклий йӧршын тунемдыме улмашыс."
+        },
+        {
+          "ordinal": 3738,
+          "text": " Тудын дене ик тым муаш ок лий докан?"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3737,
+          "evidence": "PDF p94: end of кер... is hidden; needs verb-ending recovery and sentence split before quoted thought."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3737
+          ],
+          "pages": [
+            94
+          ],
+          "evidence": "Verb after кугу имымак кер... and its sentence punctuation are hidden; the next quoted thought begins on a new line. Need a clearer source to determine verb ending and boundary."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3834,
+        3835
+      ],
+      "pages": [
+        98
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 3834,
+          "text": " Руш театрым ончен, руш авто» влакын пьесыштым лудын, нуно шочмо йылмышт де: Г."
+        },
+        {
+          "ordinal": 3835,
+          "text": " пьесым, тӱрлӧ койдарчыкым' возат."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3834,
+            3835
+          ],
+          "pages": [
+            98
+          ],
+          "evidence": "Top paragraph has clipped endings after авто... and де... at right gutter. автор-влакын and дене are plausible, but their complete printed forms are not visible."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3836,
+        3837
+      ],
+      "pages": [
+        98
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 3836,
+          "text": " Тиде жапыште Озаҥ олаште первый марла пьеса-вл; ."
+        },
+        {
+          "ordinal": 3837,
+          "text": " лектыт: Беляев ден Белковый «Тупела илыш», А."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3836,
+            3837
+          ],
+          "pages": [
+            98
+          ],
+          "evidence": "пьеса-вла... at end of upper line is cut by gutter. Cannot certify exact ending replacing extracted пьеса-вл; . before лектыт."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3846,
+        3847
+      ],
+      "pages": [
+        98
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3846,
+          "text": " Граждан сар чарнымеке, Коммунист партий да СовЫ правительство озанлыкым йол ӱмбак шогалташ, калыклан' у пиалым чоҥаш уло вийым пыштат."
+        },
+        {
+          "ordinal": 3847,
+          "text": " Ленинский нации} нальный политикым илышыш пуртен, революций деч ожно индыралтше тыгыде калыклан Коммунист партий автонс * мийым ышташ чыла йӧным пуа."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3847,
+          "evidence": "PDF p98: right gutter cuts the end of наци... and авто...; compound Russian loanwords are plausible but exact source spelling not certified."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3847
+          ],
+          "pages": [
+            98
+          ],
+          "evidence": "PDF p98 central paragraph: right gutter cuts наци... / нальный and авто... / мийым. The brace and asterisk overlap missing letters. Full spellings cannot be source-certified from the visible endings alone."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3847,
+        3848
+      ],
+      "pages": [
+        98
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3847,
+          "text": " Ленинский нации} нальный политикым илышыш пуртен, революций деч ожно индыралтше тыгыде калыклан Коммунист партий автонс * мийым ышташ чыла йӧным пуа."
+        },
+        {
+          "ordinal": 3848,
+          "text": " Тыге 1920 ий 4 ноябрьыште В. И. Ленинын декретше почеш Марий автономный область почылтеш, да марий калыкат партийын вуйлатымыж да руш калыкын полшымыж дене озанлыкым вияҥдаш, культурым нӧлташ тӱҥалеш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3847,
+          "evidence": "PDF p98: right gutter cuts the end of наци... and авто...; compound Russian loanwords are plausible but exact source spelling not certified."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3847
+          ],
+          "pages": [
+            98
+          ],
+          "evidence": "PDF p98 central paragraph: right gutter cuts наци... / нальный and авто... / мийым. The brace and asterisk overlap missing letters. Full spellings cannot be source-certified from the visible endings alone."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3903,
+        3904
+      ],
+      "pages": [
+        99,
+        100
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3903,
+          "text": " Шкетанын усталыкше утларакшым прозышто рашеме."
+        },
+        {
+          "ordinal": 3904,
+          "text": " Шкенжын ик эн сай «Юмын языкше» ойлымаштыжетудо нужна ий годым ялыште карт ден кулак-влакын, осал пашаштым, ялысе ончыл еҥ-влакын тошто койыш] ваштареш кредалмыштым пеш реалистически да келгын."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3904,
+          "evidence": "PDF pp99-100: end of койыш... hidden at right edge. Sentence continues into following record ончыктен пуэн; separate boundary repair needed."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3904,
+            3905
+          ],
+          "pages": [
+            99,
+            100
+          ],
+          "evidence": "PDF p100: right gutter hides the ending of койыш... and punctuation after келгын. The continuation ончыктен пуэн is visible, but a full source-certified reconstruction is not possible."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3904,
+        3905
+      ],
+      "pages": [
+        99,
+        100
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3904,
+          "text": " Шкенжын ик эн сай «Юмын языкше» ойлымаштыжетудо нужна ий годым ялыште карт ден кулак-влакын, осал пашаштым, ялысе ончыл еҥ-влакын тошто койыш] ваштареш кредалмыштым пеш реалистически да келгын."
+        },
+        {
+          "ordinal": 3905,
+          "text": "; ончыктен пуэн."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3904,
+          "evidence": "PDF pp99-100: end of койыш... hidden at right edge. Sentence continues into following record ончыктен пуэн; separate boundary repair needed."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3904,
+            3905
+          ],
+          "pages": [
+            99,
+            100
+          ],
+          "evidence": "PDF p100: right gutter hides the ending of койыш... and punctuation after келгын. The continuation ончыктен пуэн is visible, but a full source-certified reconstruction is not possible."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3909,
+        3910
+      ],
+      "pages": [
+        100
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3909,
+          "text": " Тылеч вара М."
+        },
+        {
+          "ordinal": 3910,
+          "text": " Шкетан шкенжын ойлымашлаштыже нэгп, жапысе Марий элын пычкемышлыкшым, класс кредалмашым, а кумлымшо ийлаште «Илыш ӱжеш», «Корнышто»/,; «Карпуш», «Капка орол» да моло ойлымашлаштыжаи е граждан сар жапым, мемнан элыштына социализмын се->- ҥымыжым, калыкын коммунистический сознательностьшо} кушмым сӱретла."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3910,
+          "evidence": "PDF p100: several clipped right-margin words and punctuation artifacts, not just the final brace; requires full sentence reconstruction."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3910
+          ],
+          "pages": [
+            100
+          ],
+          "evidence": "Several right-edge endings are hidden: opening нэп... and ending of сознательность.... The extracted brace and slash cannot safely be deleted as if all letters survived."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3910,
+        3911
+      ],
+      "pages": [
+        100
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 3910,
+          "text": " Шкетан шкенжын ойлымашлаштыже нэгп, жапысе Марий элын пычкемышлыкшым, класс кредалмашым, а кумлымшо ийлаште «Илыш ӱжеш», «Корнышто»/,; «Карпуш», «Капка орол» да моло ойлымашлаштыжаи е граждан сар жапым, мемнан элыштына социализмын се->- ҥымыжым, калыкын коммунистический сознательностьшо} кушмым сӱретла."
+        },
+        {
+          "ordinal": 3911,
+          "text": " 1932 ийыште М."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 3910,
+          "evidence": "PDF p100: several clipped right-margin words and punctuation artifacts, not just the final brace; requires full sentence reconstruction."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3910
+          ],
+          "pages": [
+            100
+          ],
+          "evidence": "Several right-edge endings are hidden: opening нэп... and ending of сознательность.... The extracted brace and slash cannot safely be deleted as if all letters survived."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3920,
+        3921
+      ],
+      "pages": [
+        100
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 3920,
+          "text": " Тый нимодымо айдемым уланым ыштенат, кредал!"
+        },
+        {
+          "ordinal": 3921,
+          "text": " - моштыдымым кредалаш туныктенат."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3920,
+            3921
+          ],
+          "pages": [
+            100
+          ],
+          "evidence": "The line before моштыдымым ends кредал... at the gutter. Infinitive ending and hyphen are not fully visible; кредалаш is a hypothesis, not a certified reading."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        3992,
+        3993
+      ],
+      "pages": [
+        102
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 3991,
+          "text": " Тунамсе поэзий патриотизм,!"
+        },
+        {
+          "ordinal": 3992,
+          "text": "!"
+        },
+        {
+          "ordinal": 3993,
+          "text": " шочмо элым йӧратымыж дене, партийлан преданный ул: йыж дене виян лийын."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            3991,
+            3992,
+            3993
+          ],
+          "pages": [
+            102
+          ],
+          "evidence": "The end of патриотизм... and the word before мыж дене are hidden at the right gutter. Two exclamation marks are suspect but replacing them requires recovering the lost endings."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4072,
+        4073
+      ],
+      "pages": [
+        104
+      ],
+      "reasons": [
+        "unmatched-opening-bracket",
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4072,
+          "text": " Сар Совет Ушемын кугу сеҥымашыж дене пытыш, д!"
+        },
+        {
+          "ordinal": 4073,
+          "text": " чумыр совет калык уло вийже дене тыныс пашалан пижем Фронт гыч пӧртылшӧ марий писатель-влакат, моло лит ратор дене пырля, совет калыкын войнаште сеҥымыже д[ тудын мирный, созидательный пашаж нерген возаш тӱ' ҥалыт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 4073,
+          "evidence": "PDF p104: right edge truncates д... and тӱ...; conjunction/word-ending restoration needs more legible source evidence."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4072,
+            4073
+          ],
+          "pages": [
+            104
+          ],
+          "evidence": "Right gutter obscures the conjunction after пытыш, the end of пиж... and д... before тудын. The record also contains a missing sentence boundary; a bracket-only deletion would not restore the sentence."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4073,
+        4074
+      ],
+      "pages": [
+        104
+      ],
+      "reasons": [
+        "unmatched-opening-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 4073,
+          "text": " чумыр совет калык уло вийже дене тыныс пашалан пижем Фронт гыч пӧртылшӧ марий писатель-влакат, моло лит ратор дене пырля, совет калыкын войнаште сеҥымыже д[ тудын мирный, созидательный пашаж нерген возаш тӱ' ҥалыт."
+        },
+        {
+          "ordinal": 4074,
+          "text": " М."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 4073,
+          "evidence": "PDF p104: right edge truncates д... and тӱ...; conjunction/word-ending restoration needs more legible source evidence."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4072,
+            4073
+          ],
+          "pages": [
+            104
+          ],
+          "evidence": "Right gutter obscures the conjunction after пытыш, the end of пиж... and д... before тудын. The record also contains a missing sentence boundary; a bracket-only deletion would not restore the sentence."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4223,
+        4224
+      ],
+      "pages": [
+        107,
+        108
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4223,
+          "text": " 1 0 7Тудо Совет властьлан 50 ий темме жапыште эр та р а л те да литературын БО ий жапыште кушкын толмыжым ш!"
+        },
+        {
+          "ordinal": 4224,
+          "text": " тешлен, тудлан ончык кушкашыже корным ончыктен."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4223,
+            4224
+          ],
+          "pages": [
+            107,
+            108
+          ],
+          "evidence": "PDF p108 first paragraph: ш... / тешлен has hidden letters at right gutter. The 107 page-number contamination and other clear fragments do not establish the complete split word."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4235,
+        4236
+      ],
+      "pages": [
+        108
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 4235,
+          "text": " Марий АССР Писатель ушем ончылно кугу задачаз влак шогат."
+        },
+        {
+          "ordinal": 4236,
+          "text": " Партий ЦК-н письмаштыже тыге каласыме: «Совет литератор-влакын ик эн кӱлешан задачыштлаи - тачысе илышым, у обществым ыштен толшо кызытсе эта) пым сылнымут дене ончыктымаш шотлалтеш»."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 4236,
+          "evidence": "PDF p108: этапым crosses the right gutter; preceding quotation introduction also contains a digit artifact and a missing punctuation boundary."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4236
+          ],
+          "pages": [
+            108
+          ],
+          "evidence": "Visible introduction is каласыме: and next line continues пым. The end of the word эта... and the suffix of задачышт... are hidden by the right gutter. Partial repairs do not certify those endings."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4236,
+        4237
+      ],
+      "pages": [
+        108
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 4236,
+          "text": " Партий ЦК-н письмаштыже тыге каласыме: «Совет литератор-влакын ик эн кӱлешан задачыштлаи - тачысе илышым, у обществым ыштен толшо кызытсе эта) пым сылнымут дене ончыктымаш шотлалтеш»."
+        },
+        {
+          "ordinal": 4237,
+          "text": " Коммунизмын идейже дене кумылаҥын, марий писатель-влак келге идеян сылне произведенийым эше утларак пуат манын, ӱшанаш лиеш."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 4236,
+          "evidence": "PDF p108: этапым crosses the right gutter; preceding quotation introduction also contains a digit artifact and a missing punctuation boundary."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4236
+          ],
+          "pages": [
+            108
+          ],
+          "evidence": "Visible introduction is каласыме: and next line continues пым. The end of the word эта... and the suffix of задачышт... are hidden by the right gutter. Partial repairs do not certify those endings."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4387,
+        4388
+      ],
+      "pages": [
+        112
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 4387,
+          "text": " Тудо кызыт кушто ила гын?"
+        },
+        {
+          "ordinal": 4388,
+          "text": "."
+        },
+        {
+          "ordinal": 4389,
+          "text": "."
+        },
+        {
+          "ordinal": 4390,
+          "text": " Кызытеш чыла."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            4387
+          ],
+          "page": 112,
+          "status": "verified-unchanged",
+          "evidence": "Printed letter ends question кушто ила гын?.. with ellipsis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4399,
+        4400
+      ],
+      "pages": [
+        113
+      ],
+      "reasons": [
+        "unmatched-opening-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 4399,
+          "text": " Колтымо альманах-шамычдам налынам."
+        },
+        {
+          "ordinal": 4400,
+          "text": " Моткоч-моткоч [анен лудам."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 4400,
+          "evidence": "PDF p113: left gutter hides the start of ...анен; bracket may replace letters, so simple deletion is unsafe."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4400
+          ],
+          "pages": [
+            113
+          ],
+          "evidence": "Printed Моткоч-моткоч is clear, but the next line begins ...анен behind the left gutter. The bracket replaces an unknown number of letters; куанен remains a hypothesis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4400,
+        4401
+      ],
+      "pages": [
+        113
+      ],
+      "reasons": [
+        "unmatched-opening-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 4400,
+          "text": " Моткоч-моткоч [анен лудам."
+        },
+        {
+          "ordinal": 4401,
+          "text": " Возымо произведений-шамыч, ойлыманат тыл, сылне улыт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 4400,
+          "evidence": "PDF p113: left gutter hides the start of ...анен; bracket may replace letters, so simple deletion is unsafe."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4400
+          ],
+          "pages": [
+            113
+          ],
+          "evidence": "Printed Моткоч-моткоч is clear, but the next line begins ...анен behind the left gutter. The bracket replaces an unknown number of letters; куанен remains a hypothesis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4408,
+        4409
+      ],
+      "pages": [
+        113
+      ],
+      "reasons": [
+        "unmatched-closing-bracket"
+      ],
+      "text": [
+        {
+          "ordinal": 4408,
+          "text": " Конешне, тӧр- аташ тушто паша уло дыр."
+        },
+        {
+          "ordinal": 4409,
+          "text": " Но мылам мӧҥгеш ида кол- )."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 4409,
+          "evidence": "PDF p113: printed кол- continues behind left gutter; the final word cannot be fully read from this scan."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4409
+          ],
+          "pages": [
+            113
+          ],
+          "evidence": "Printed кол- at the right line end continues at the obscured left gutter. The continuation before period cannot be read; do not delete the bracket and leave кол as a word."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4409,
+        4410
+      ],
+      "pages": [
+        113
+      ],
+      "reasons": [
+        "unmatched-closing-bracket",
+        "possible-hyphenation"
+      ],
+      "text": [
+        {
+          "ordinal": 4409,
+          "text": " Но мылам мӧҥгеш ида кол- )."
+        },
+        {
+          "ordinal": 4410,
+          "text": " Жапем уке."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [
+        {
+          "ordinal": 4409,
+          "evidence": "PDF p113: printed кол- continues behind left gutter; the final word cannot be fully read from this scan."
+        }
+      ],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4409
+          ],
+          "pages": [
+            113
+          ],
+          "evidence": "Printed кол- at the right line end continues at the obscured left gutter. The continuation before period cannot be read; do not delete the bracket and leave кол as a word."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4430,
+        4431
+      ],
+      "pages": [
+        113
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 4430,
+          "text": " Кугу деч кугу йолташем, тау!"
+        },
+        {
+          "ordinal": 4431,
+          "text": "."
+        },
+        {
+          "ordinal": 4432,
+          "text": "."
+        },
+        {
+          "ordinal": 4433,
+          "text": " Ала-молан тиде шомак-шамычым возымем годым кумылем тодылто, илалше кугу вуем дене шинчавӱдым луктам."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            4430
+          ],
+          "page": 113,
+          "status": "verified-unchanged",
+          "evidence": "Printed letter ends thanks with тау!.., then starts Ала-молан. Preserve author punctuation."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4451,
+        4452
+      ],
+      "pages": [
+        114
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4451,
+          "text": " Мог!"
+        },
+        {
+          "ordinal": 4452,
+          "text": " шижын, мыйын чонем, ом шинче, ала сайлан, ала осаллан тулла йӱла."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4451,
+            4452
+          ],
+          "pages": [
+            114
+          ],
+          "evidence": "Right gutter hides the end of Мог... before шижын. No complete source reading for the fragment Мог!; the missing suffix is not inferable from punctuation alone."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4454,
+        4455
+      ],
+      "pages": [
+        114
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4454,
+          "text": " Пӱрымашем уло гын, илыш!"
+        },
+        {
+          "ordinal": 4455,
+          "text": " кодам, уке гын — чеверын, ош тӱня."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4454,
+            4455
+          ],
+          "pages": [
+            114
+          ],
+          "evidence": "End of илыш... before кодам is hidden at the right gutter. Possible locative ending cannot be certified; deleting ! would leave an uncertain word."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4460,
+        4461
+      ],
+      "pages": [
+        114
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4460,
+          "text": " Нун!"
+        },
+        {
+          "ordinal": 4461,
+          "text": " литературный илышыште активнын участвоватленыт, маа рий поэзийым рушлашке кусареныт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4460,
+            4461
+          ],
+          "pages": [
+            114
+          ],
+          "evidence": "End of Нун... and ма... / рий touch the right gutter. The apparent exclamation substitutes missing letter(s); the complete printed subject is not visible."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4550,
+        4551
+      ],
+      "pages": [
+        117
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 4550,
+          "text": " Тидлан мый тыланет пеш кугу деч кугу таум каласем!"
+        },
+        {
+          "ordinal": 4551,
+          "text": "."
+        },
+        {
+          "ordinal": 4552,
+          "text": "."
+        },
+        {
+          "ordinal": 4553,
+          "text": " Уло шӱмем дене мый тыланет кужу ӱмырым, тазалыкым, литературный пашаштет чапле сеҥымашым желатлем»."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            4550
+          ],
+          "page": 117,
+          "status": "verified-unchanged",
+          "evidence": "Printed letter таум каласем!.. retains exclamation and ellipsis."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4556,
+        4557
+      ],
+      "pages": [
+        118
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4556,
+          "text": " Касвел гыч лу дене пр* Т мышленный предприятий-влак кусненыт, южышт йӧршьп ."
+        },
+        {
+          "ordinal": 4557,
+          "text": " лан тышан кодыныт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4556,
+            4557
+          ],
+          "pages": [
+            118
+          ],
+          "evidence": "Right gutter hides end of про... / мышленный and йӧршы... / лан. The first printed fragment is partly visible, but the latter suffix cannot be established; full replacement would require guessing."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4559,
+        4560
+      ],
+      "pages": [
+        118
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4559,
+          "text": " Моло олт."
+        },
+        {
+          "ordinal": 4560,
+          "text": " гыч театральный коллектив, посна артист-влак гастрол дене толеденыт, спектакльым, концертым ончыктеныт Олаштына чӱчкыдынак ик военный частьын ансамбльже выступатлен."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4559,
+            4560
+          ],
+          "pages": [
+            118
+          ],
+          "evidence": "Моло ола... ends inside the gutter; case suffix missing before гыч. Source cannot certify correction of олт. or sentence punctuation after ончыктеныт."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4566,
+        4567
+      ],
+      "pages": [
+        118
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4566,
+          "text": " Концерт годы!"
+        },
+        {
+          "ordinal": 4567,
+          "text": " ӱдырамаш тӱшкаште кожганаш тӱҥальыч, ик рат гьн весыш кагазым колтылыт, южышт лудыт, южышт возен налыт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4566,
+            4567
+          ],
+          "pages": [
+            118
+          ],
+          "evidence": "Концерт годым... is cut at right edge, as is гы... before весыш. Cannot determine exact endings from the scan; no forced merge based only on the analyzer."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4575,
+        4576
+      ],
+      "pages": [
+        118
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4575,
+          "text": " Шочмо мландым йӧратымаш!"
+        },
+        {
+          "ordinal": 4576,
+          "text": " совет патриотизм, калык-влакын келшен илымышт Отечественный война жапысе марий литературын тӱҥ темыже лийыныт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4575,
+            4576
+          ],
+          "pages": [
+            118
+          ],
+          "evidence": "End and punctuation of йӧратымаш... are obscured by the right gutter. The list continues with совет патриотизм, but replacing ! with a comma is not visually certified."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        4929,
+        4930
+      ],
+      "pages": [
+        128
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 4929,
+          "text": " Лени лӱмеш культура дворецеш юбилейный кас эртаралте!"
+        },
+        {
+          "ordinal": 4930,
+          "text": " марий театр «Салика» пьесым 700-шӧ гана ончыктыш!"
+        }
+      ],
+      "punctuationPreviouslyReviewed": false,
+      "sourceNotes": [],
+      "status": "source-unreadable",
+      "evidence": [
+        {
+          "kind": "source-unreadable",
+          "ordinals": [
+            4929,
+            4930
+          ],
+          "pages": [
+            128
+          ],
+          "evidence": "Right gutter clips Лени..., эртаралте... and ончыктыш.... These are multiple lost endings, not just two stray exclamation marks; source does not establish a complete sentence."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        5502,
+        5503
+      ],
+      "pages": [
+        144
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 5502,
+          "text": " Усл."
+        },
+        {
+          "ordinal": 5503,
+          "text": " печ."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            5502,
+            5503,
+            5504,
+            5506,
+            5507,
+            5508,
+            5510,
+            5511
+          ],
+          "page": 144,
+          "status": "verified-unchanged",
+          "evidence": "Printed publishing abbreviations Усл. печ. л., Усл. кр.-отт., Учетно-изд. л. contain real periods. Do not treat these periods as OCR noise."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        5503,
+        5504
+      ],
+      "pages": [
+        144
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 5503,
+          "text": " печ."
+        },
+        {
+          "ordinal": 5504,
+          "text": " л."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            5502,
+            5503,
+            5504,
+            5506,
+            5507,
+            5508,
+            5510,
+            5511
+          ],
+          "page": 144,
+          "status": "verified-unchanged",
+          "evidence": "Printed publishing abbreviations Усл. печ. л., Усл. кр.-отт., Учетно-изд. л. contain real periods. Do not treat these periods as OCR noise."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        5506,
+        5507
+      ],
+      "pages": [
+        144
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 5506,
+          "text": " Усл."
+        },
+        {
+          "ordinal": 5507,
+          "text": " кр."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            5502,
+            5503,
+            5504,
+            5506,
+            5507,
+            5508,
+            5510,
+            5511
+          ],
+          "page": 144,
+          "status": "verified-unchanged",
+          "evidence": "Printed publishing abbreviations Усл. печ. л., Усл. кр.-отт., Учетно-изд. л. contain real periods. Do not treat these periods as OCR noise."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        5507,
+        5508
+      ],
+      "pages": [
+        144
+      ],
+      "reasons": [
+        "suspicious-punctuation-sequence"
+      ],
+      "text": [
+        {
+          "ordinal": 5507,
+          "text": " кр."
+        },
+        {
+          "ordinal": 5508,
+          "text": "-отт."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            5502,
+            5503,
+            5504,
+            5506,
+            5507,
+            5508,
+            5510,
+            5511
+          ],
+          "page": 144,
+          "status": "verified-unchanged",
+          "evidence": "Printed publishing abbreviations Усл. печ. л., Усл. кр.-отт., Учетно-изд. л. contain real periods. Do not treat these periods as OCR noise."
+        }
+      ]
+    },
+    {
+      "ordinals": [
+        5510,
+        5511
+      ],
+      "pages": [
+        144
+      ],
+      "reasons": [
+        "lowercase-continuation"
+      ],
+      "text": [
+        {
+          "ordinal": 5510,
+          "text": " Учетно-изд."
+        },
+        {
+          "ordinal": 5511,
+          "text": " л."
+        }
+      ],
+      "punctuationPreviouslyReviewed": true,
+      "sourceNotes": [],
+      "status": "verified-punctuation",
+      "evidence": [
+        {
+          "kind": "verified-punctuation",
+          "ordinals": [
+            5502,
+            5503,
+            5504,
+            5506,
+            5507,
+            5508,
+            5510,
+            5511
+          ],
+          "page": 144,
+          "status": "verified-unchanged",
+          "evidence": "Printed publishing abbreviations Усл. печ. л., Усл. кр.-отт., Учетно-изд. л. contain real periods. Do not treat these periods as OCR noise."
+        }
+      ]
+    }
+  ]
+}

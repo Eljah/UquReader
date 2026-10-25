@@ -14,6 +14,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from analyzers import analyze
+from analysis_bundle import combine_results
 
 
 def identity():
@@ -112,16 +113,16 @@ class Store:
     def sentences(self, work_id, offset=0, limit=25, unknown_only=False):
         if offset < 0 or not 1 <= limit <= 100:
             raise ValueError('offset >= 0; limit 1..100')
-        condition = " AND EXISTS (SELECT 1 FROM jsonb_array_elements(document->'tokens') t WHERE t->>'analysis' IN ('Unknown','Error','') OR t->>'analysis' LIKE '%%+na|%%' OR t->>'analysis' LIKE '%%+?%%')" if unknown_only else ''
+        condition = " AND EXISTS (SELECT 1 FROM jsonb_array_elements(document->'tokens') t WHERE t->>'analysis' IN ('Unknown','Error','') OR t->>'analysis' LIKE '%%+***|%%' OR t->>'analysis' LIKE '%%+?%%')" if unknown_only else ''
         with self.connect() as db:
-            return db.execute('SELECT * FROM editorial.sentences WHERE work_id=%s' + condition +
+            return db.execute('SELECT * FROM editorial.sentences WHERE work_id=%s AND merged_into IS NULL' + condition +
                               ' ORDER BY ordinal LIMIT %s OFFSET %s', (work_id, limit, offset)).fetchall()
 
     def find(self, work_id, text):
         with self.connect() as db:
-            rows = db.execute("SELECT * FROM editorial.sentences WHERE work_id=%s AND document->>'text'=%s ORDER BY ordinal", (work_id, text)).fetchall()
+            rows = db.execute("SELECT * FROM editorial.sentences WHERE work_id=%s AND merged_into IS NULL AND document->>'text'=%s ORDER BY ordinal", (work_id, text)).fetchall()
             if not rows:
-                rows = db.execute("SELECT * FROM editorial.sentences WHERE work_id=%s AND position(%s in document->>'text') > 0 ORDER BY ordinal LIMIT 50", (work_id, text)).fetchall()
+                rows = db.execute("SELECT * FROM editorial.sentences WHERE work_id=%s AND merged_into IS NULL AND position(%s in document->>'text') > 0 ORDER BY ordinal LIMIT 50", (work_id, text)).fetchall()
             return rows
 
     def get(self, sentence_id):
@@ -182,6 +183,25 @@ class Store:
                        (run_id, language, analyzer, text, Jsonb(result)))
         return {'runId': run_id, **result, 'cached': False}
 
+    def combine_runs(self, language, run_ids):
+        if not 1 <= len(run_ids) <= 16:
+            raise ValueError('Supply 1..16 run IDs')
+        with self.connect() as db:
+            runs = []
+            for run_id in run_ids:
+                row = db.execute('SELECT analyzer,result FROM editorial.analysis_runs WHERE id=%s AND language=%s',
+                                 (run_id, language)).fetchone()
+                if not row:
+                    raise ValueError('Analyzer run not found for this language')
+                runs.append(row)
+            if len({r['analyzer'] for r in runs}) != 1:
+                raise ValueError('Use the same analyzer for every sentence')
+            result = combine_results([r['result'] for r in runs])
+            combined_id = identity()
+            db.execute('INSERT INTO editorial.analysis_runs(id,language,analyzer,input,result) VALUES (%s,%s,%s,%s,%s)',
+                       (combined_id, language, runs[0]['analyzer'] + ':sentences', result['text'], Jsonb(result)))
+        return {'runId': combined_id, **result, 'componentRunIds': run_ids}
+
     def check(self, db, work_id, document, run_id=None, old=None):
         sources = db.execute('SELECT id,page_count FROM editorial.sources WHERE work_id=%s', (work_id,)).fetchall()
         trusted = old
@@ -196,6 +216,8 @@ class Store:
 
     def prepare(self, sentence_id, run_id):
         original = self.get(sentence_id)
+        if original.get('merged_into'):
+            raise ValueError('Record has been merged; reload its surviving record')
         with self.connect() as db:
             run = db.execute('SELECT r.result FROM editorial.analysis_runs r JOIN editorial.works w ON r.language=w.language WHERE r.id=%s AND w.id=%s', (run_id, original['work_id'])).fetchone()
         if not run:
@@ -258,6 +280,8 @@ class Store:
                 raise ValueError('Sentence not found')
             db.execute('SELECT id FROM editorial.works WHERE id=%s FOR UPDATE', (original['work_id'],))
             row = db.execute('SELECT * FROM editorial.sentences WHERE id=%s FOR UPDATE', (sentence_id,)).fetchone()
+            if row.get('merged_into'):
+                raise ValueError('Record has been merged; reload its surviving record')
             if row['revision'] != expected_revision:
                 raise ValueError('Revision conflict: reload sentence before editing')
             errors = self.check(db, row['work_id'], document, run_id, row['document'])
@@ -291,6 +315,8 @@ class Store:
                 raise ValueError('Sentence not found')
             db.execute('SELECT id FROM editorial.works WHERE id=%s FOR UPDATE', (location['work_id'],))
             row = db.execute('SELECT * FROM editorial.sentences WHERE id=%s FOR UPDATE', (sentence_id,)).fetchone()
+            if row.get('merged_into'):
+                raise ValueError('Record has been merged; reload its surviving record')
             if row['revision'] != expected_revision:
                 raise ValueError('Revision conflict')
             old = row['document']
@@ -324,6 +350,58 @@ class Store:
             db.execute('UPDATE editorial.works SET revision=revision+1 WHERE id=%s', (row['work_id'],))
         return {'sentenceId': sentence_id, 'revision': expected_revision + 1, 'nextSentenceId': new_id}
 
+    def merge(self, sentence_ids, expected_revisions, reason, dry_run=False):
+        if not reason.strip() or not 2 <= len(sentence_ids) <= 8 or len(sentence_ids) != len(expected_revisions) or len(set(sentence_ids)) != len(sentence_ids):
+            raise ValueError('Supply 2..8 distinct adjacent records, revisions and a reason')
+        with self.connect() as db:
+            location = db.execute('SELECT work_id FROM editorial.sentences WHERE id=%s', (sentence_ids[0],)).fetchone()
+            if not location:
+                raise ValueError('Sentence not found')
+            work_id = location['work_id']
+            db.execute('SELECT id FROM editorial.works WHERE id=%s FOR UPDATE', (work_id,))
+            rows = db.execute('SELECT * FROM editorial.sentences WHERE id=ANY(%s) ORDER BY ordinal FOR UPDATE', (sentence_ids,)).fetchall()
+            if [r['id'] for r in rows] != sentence_ids or any(r['work_id'] != work_id or r['merged_into'] for r in rows):
+                raise ValueError('Records must be active, in order and in the same work')
+            if [r['revision'] for r in rows] != expected_revisions:
+                raise ValueError('Revision conflict')
+            between = db.execute('SELECT id FROM editorial.sentences WHERE work_id=%s AND merged_into IS NULL AND ordinal BETWEEN %s AND %s ORDER BY ordinal',
+                                 (work_id, rows[0]['ordinal'], rows[-1]['ordinal'])).fetchall()
+            if [r['id'] for r in between] != sentence_ids:
+                raise ValueError('Records are not adjacent')
+            doc = {'text': ''.join(r['document']['text'] for r in rows), 'tokens': [], 'trailing': '', 'sourceRefs': []}
+            pending, cursor = '', 0
+            for row in rows:
+                original = row['document']
+                for index, item in enumerate(original['tokens']):
+                    token = copy.deepcopy(item)
+                    if index == 0:
+                        token['prefix'] = pending + token.get('prefix', '')
+                    cursor += len(token.get('prefix', ''))
+                    token['start'] = cursor
+                    cursor += len(token['surface'])
+                    token['end'] = cursor
+                    doc['tokens'].append(token)
+                pending = original.get('trailing', '')
+                for ref in original.get('sourceRefs', []):
+                    if ref not in doc['sourceRefs']:
+                        doc['sourceRefs'].append(copy.deepcopy(ref))
+            doc['trailing'] = pending
+            errors = self.check(db, work_id, doc, old=doc)
+            if errors:
+                raise ValueError('; '.join(errors))
+            if dry_run:
+                return {'valid': True, 'saved': False, 'document': doc}
+            survivor = sentence_ids[0]
+            audit = reason + '; lossless merge=' + ','.join(sentence_ids)
+            for index, row in enumerate(rows):
+                document = doc if index == 0 else row['document']
+                db.execute('UPDATE editorial.sentences SET document=%s,revision=revision+1,merged_into=%s WHERE id=%s',
+                           (Jsonb(document), None if index == 0 else survivor, row['id']))
+                db.execute('INSERT INTO editorial.revisions(sentence_id,revision,document,reason) VALUES (%s,%s,%s,%s)',
+                           (row['id'], row['revision'] + 1, Jsonb(document), audit))
+            db.execute('UPDATE editorial.works SET revision=revision+1 WHERE id=%s', (work_id,))
+        return {'saved': True, 'sentenceId': survivor, 'revision': expected_revisions[0] + 1, 'mergedIds': sentence_ids[1:]}
+
     def publish(self, work_id, expected_revision):
         directory = Path(os.environ['EDITOR_PUBLISH_DIR'])
         directory.mkdir(parents=True, exist_ok=True)
@@ -331,7 +409,7 @@ class Store:
             work = db.execute('SELECT * FROM editorial.works WHERE id=%s FOR UPDATE', (work_id,)).fetchone()
             if not work or work['revision'] != expected_revision:
                 raise ValueError('Work revision conflict')
-            rows = db.execute('SELECT * FROM editorial.sentences WHERE work_id=%s ORDER BY ordinal', (work_id,)).fetchall()
+            rows = db.execute('SELECT * FROM editorial.sentences WHERE work_id=%s AND merged_into IS NULL ORDER BY ordinal', (work_id,)).fetchall()
             if not rows:
                 raise ValueError('Cannot publish an empty work')
             edition = 'edition_' + work_id + '_r' + str(expected_revision)

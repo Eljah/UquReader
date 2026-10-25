@@ -1,0 +1,29 @@
+{
+  "baselineRevision": 475,
+  "scope": "Only the specified punctuation windows were visually checked; this is not whole-page proofreading.",
+  "decisions": [
+    {"ordinals": [1409], "page": 35, "status": "verified-unchanged", "evidence": "Printed dialogue Кузе туге?!. uses the same combined punctuation."},
+    {"ordinals": [4430], "page": 113, "status": "verified-unchanged", "evidence": "Printed letter ends thanks with тау!.., then starts Ала-молан. Preserve author punctuation."},
+    {"ordinals": [2406], "page": 60, "status": "verified-unchanged", "evidence": "Only the closing question а тый?.. is verified against print; corrupt words earlier in this record are not approved."},
+    {"ordinals": [784, 795], "page": 21, "status": "verified-unchanged", "evidence": "Printed dialogue салам!.. and логалын огыдал?.. matches exclamation/question plus ellipsis."},
+    {"ordinals": [861, 868], "page": 23, "status": "verified-unchanged", "evidence": "Printed internal question ӱдырем?.. and apology Извинитлыза!.. retain ellipses."},
+    {"ordinals": [376, 395], "page": 13, "status": "verified-unchanged", "evidence": "Printed dialogue Роза!.. and каникул кузе ок лий?!. uses combined punctuation. These are not false sentence boundaries."},
+    {"ordinals": [675], "page": 19, "status": "verified-unchanged", "evidence": "Printed Тугай ӱдыр!.. has an exclamation followed by ellipsis."},
+    {"ordinals": [1311], "page": 33, "status": "verified-unchanged", "evidence": "Printed question лӱдеш дыр?!. retains question, exclamation and trailing dot."},
+    {"ordinals": [3588], "page": 90, "status": "verified-unchanged", "evidence": "Printed address Картошкин йолташ!.. retains exclamation and ellipsis; this decision does not certify other words in the record."},
+    {"ordinals": [3616], "page": 91, "status": "verified-unchanged", "evidence": "Printed ыштыш?.. retains question plus ellipsis; unrelated corrupt letters in the record remain outside this decision."},
+    {"ordinals": [4550], "page": 117, "status": "verified-unchanged", "evidence": "Printed letter таум каласем!.. retains exclamation and ellipsis."},
+    {"ordinals": [5502, 5503, 5504, 5506, 5507, 5508, 5510, 5511], "page": 144, "status": "verified-unchanged", "evidence": "Printed publishing abbreviations Усл. печ. л., Усл. кр.-отт., Учетно-изд. л. contain real periods. Do not treat these periods as OCR noise."},
+    {"ordinals": [3161], "page": 79, "status": "verified-unchanged", "evidence": "Printed dialogue А Роза... нигушкат uses ellipsis before lowercase continuation."},
+    {"ordinals": [3315, 3338], "page": 85, "status": "verified-unchanged", "evidence": "Printed hesitant dialogue мый... мый... repeats the lowercase pronoun after ellipses."},
+    {"ordinals": [427, 452], "page": 14, "status": "verified-unchanged", "evidence": "Printed пурен кертеш?!. and йӧным муынат!.. match source punctuation."},
+    {"ordinals": [470, 473], "page": 15, "status": "verified-unchanged", "evidence": "Printed савырен кертат!.. and Молан мылам качыже?.. match source punctuation."},
+    {"ordinals": [991], "page": 26, "status": "verified-unchanged", "evidence": "Printed repeated address Лидия! Лидия!.. contains an exclamation followed by ellipsis."},
+    {"ordinals": [1438, 1444, 1447], "page": 36, "status": "verified-unchanged", "evidence": "Printed dialogue лудат?!., ойлыштыда?!., вожыл?!. uses combined question/exclamation punctuation."},
+    {"ordinals": [1535], "page": 38, "status": "verified-unchanged", "evidence": "Printed internal quotation ends шындылеш?.. followed by closing quotation mark."},
+    {"ordinals": [2073], "page": 52, "status": "verified-unchanged", "evidence": "Printed Яра кияш оҥай мо?!. matches combined punctuation."},
+    {"ordinals": [2088], "page": 53, "status": "verified-unchanged", "evidence": "Printed ом тӱҥал!.. matches exclamation plus ellipsis."},
+    {"ordinals": [3533], "page": 89, "status": "verified-unchanged", "evidence": "Printed direct address Эргым, тол!.. matches punctuation."},
+    {"ordinals": [4387], "page": 112, "status": "verified-unchanged", "evidence": "Printed letter ends question кушто ила гын?.. with ellipsis."}
+  ]
+}

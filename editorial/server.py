@@ -71,6 +71,15 @@ def analyze_sentence(language: str, analyzer: str, text: str, refresh: bool = Fa
 
 
 @mcp.tool()
+def combine_analysis_runs(language: str, run_ids: list[str]) -> dict:
+    """Attest concatenation of 1..16 persisted sentence analyses of the same analyzer.
+    Keeps whitespace, Unicode offsets and all alternatives. Does not change any book.
+    Analyze each sentence separately first; clients cannot supply invented morphology.
+    """
+    return store.combine_runs(language, run_ids)
+
+
+@mcp.tool()
 def compare_hypotheses(language: str, analyzer: str, sentences: list[str]) -> dict:
     """Analyze up to 8 alternative transcriptions, one sentence per request.
     Coverage is evidence, NOT proof of spelling: inspect original page before saving.
@@ -133,6 +142,15 @@ def split_sentence(sentence_id: str, expected_revision: int, after_token: int, r
     all analyses and source references, shift later ordinals, retain revision history.
     """
     return store.split(sentence_id, expected_revision, after_token, reason)
+
+
+@mcp.tool()
+def merge_sentences(sentence_ids: list[str], expected_revisions: list[int], reason: str, dry_run: bool = False) -> dict:
+    """Losslessly merge 2..8 adjacent active records atomically. Preserve tokens, layout,
+    sourceRefs and history; consumed records remain archived and readable by ID.
+    Analyze and save a correction separately after visual review. Does not publish.
+    """
+    return store.merge(sentence_ids, expected_revisions, reason, dry_run)
 
 
 @mcp.tool()

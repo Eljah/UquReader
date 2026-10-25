@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS editorial.revisions (
   revision bigint NOT NULL, document jsonb NOT NULL, reason text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(sentence_id, revision)
 );
+ALTER TABLE editorial.sentences ADD COLUMN IF NOT EXISTS merged_into text REFERENCES editorial.sentences(id);
 CREATE TABLE IF NOT EXISTS editorial.analysis_runs (
   id text PRIMARY KEY, language text NOT NULL, analyzer text NOT NULL,
   input text NOT NULL, result jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now()

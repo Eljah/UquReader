@@ -1,0 +1,1248 @@
+{
+  "workId": "43be7044888e4e938575110b818ca1d2",
+  "totalUnits": 5528,
+  "complete": false,
+  "published": true,
+  "publication": {
+    "id": "edition_43be7044888e4e938575110b818ca1d2_r475",
+    "title": "Элнет пӱнчерыште [r475]",
+    "language": "mhr",
+    "workId": "43be7044888e4e938575110b818ca1d2",
+    "revision": 475,
+    "sha256": "ad8fb196405eabf3aff38ac617111ec55617914fe28a1dd97365aec6fafe7022"
+  },
+  "structuralScanUnits": 5528,
+  "baselineViennaRechecked": 80,
+  "baselineErrors": 0,
+  "correctedUnits": 63,
+  "sourcePagesInspected": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "oldUnknownInCorrectedUnits": 93,
+  "newUnknownInCorrectedUnits": 13,
+  "remaining": [
+    "Full sentence-level proofreading beyond the completed join-candidate review",
+    "Sentence boundary repairs and margin-only artifacts on inspected pages",
+    "Remaining unknown-word hypotheses"
+  ],
+  "decisions": [
+    {
+      "sentenceId": "e3db01e55ddb4370bccce59613400137",
+      "ordinal": 9,
+      "before": " Тиде Миловидов Алексей, лесотехн и ческий институтын студентше.",
+      "after": " Тиде Миловидов Алексей, лесотехнический институтын студентше.",
+      "sourcePages": [
+        4
+      ],
+      "evidence": "PDF page 4: printed line ending лесотехни- followed by ческий. Join typographic hyphenation; preserve Russian word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "be1c3c2ad9924efe86176fd74216e50a",
+      "layoutWarnings": [
+        "Token 4: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "e23cd90ba9594d89a20bb79da1a84760",
+      "ordinal": 19,
+      "before": " Тиде лӱмым колын, Миловидовын йоча годсо илышыже да кыдалаш школышто пырля тунемше ик йытыра, шемал ге ӱдыр ушышкыжо пурен: «Неужели Лида?",
+      "after": " Тиде лӱмым колын, Миловидовын йоча годсо илышыже да кыдалаш школышто пырля тунемше ик йытыра, шемалге ӱдыр ушышкыжо пурен: «Неужели Лида?",
+      "sourcePages": [
+        4
+      ],
+      "evidence": "PDF page 4: шемал- at line end followed by ге; one word шемалге.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "bfcb676d70fc4c5bbaf76c5da01217fc",
+      "layoutWarnings": [
+        "Token 16: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "f128f7c87af64615a85c6bd4462d0c78",
+      "ordinal": 23,
+      "before": " — Миловидов, палаш тӧчен, куа нымыж дене йодын.",
+      "after": " — Миловидов, палаш тӧчен, куанымыж дене йодын.",
+      "sourcePages": [
+        4
+      ],
+      "evidence": "PDF page 4: printed куа- / нымыж, join line-break fragments.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "bc64533fbb014d47a214255b08b2565a",
+      "layoutWarnings": [
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "3ce80b1a599049539314966389a49c1e",
+      "ordinal": 27,
+      "before": " Тый Элнет лесничествышке обяза тельно миен тол, тушто шуко материалым муат.",
+      "after": " Тый Элнет лесничествышке обязательно миен тол, тушто шуко материалым муат.",
+      "sourcePages": [
+        4
+      ],
+      "evidence": "PDF page 4: printed обяза- / тельно; Russian обязательно.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 1,
+      "runId": "0435ef35a0064269bf006515d60f7b78",
+      "layoutWarnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "c3fcb1959ca84cf8998dfbd9f8677124",
+      "ordinal": 33,
+      "before": " Тамбур омса почмат, ӱдырын ужар косынкыж йымач лекше шӧрт ньӧ гай ӱпшӧ мардеж дене лойга.",
+      "after": " Тамбур омса почмат, ӱдырын ужар косынкыж йымач лекше шӧртньӧ гай ӱпшӧ мардеж дене лойга.",
+      "sourcePages": [
+        5
+      ],
+      "evidence": "PDF page 5: шӧрт- / ньӧ. Preserve ӧ in both parts.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 3,
+      "newUnknown": 1,
+      "runId": "3de8c834f5dc4b069f4b91610b200962",
+      "layoutWarnings": [
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "643d41cd4f5f4a7bb2ef0853fba1addb",
+      "ordinal": 36,
+      "before": " Поезд, чодырам шергылтарен, йӱкым пуыш, вара, шӱ лешт-шӱлешт, эркын шогале.",
+      "after": " Поезд, чодырам шергылтарен, йӱкым пуыш, вара, шӱлешт-шӱлешт, эркын шогале.",
+      "sourcePages": [
+        5
+      ],
+      "evidence": "PDF page 5: шӱ- / лешт-шӱлешт. Remove only the typographic line split, retain lexical reduplication hyphen.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "b94ab53749c744969c44dd1ad51f53f6",
+      "layoutWarnings": [
+        "Token 10: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "1872a4fd54274adca9a92610d7052819",
+      "ordinal": 42,
+      "before": " йеш сай!",
+      "after": " Пеш сай!",
+      "sourcePages": [
+        5
+      ],
+      "evidence": "PDF page 5 dialogue clearly reads Пеш сай!, not йеш сай!.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "6ef449424f454b88be23638e8e7c52ee",
+      "layoutWarnings": [
+        "Token 0: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "2b9c29dc079f4abd96803232f48d1f7b",
+      "ordinal": 43,
+      "before": " — икте ве сыжым сеҥышаш гай кычкырат.",
+      "after": " — икте весыжым сеҥышаш гай кычкырат.",
+      "sourcePages": [
+        5
+      ],
+      "evidence": "PDF page 5: ве- / сыжым. Join broken word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "64a28cee48354f568a5220b6eab708dd",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "8a36901ce78549fba73e7b2a300b9b7e",
+      "ordinal": 44,
+      "before": " Роза чыла денат саламлалте да, нунын деч вик корным йодын, поселкыш йолгор но дене ошкыльо.",
+      "after": " Роза чыла денат саламлалте да, нунын деч вик корным йодын, поселкыш йолгорно дене ошкыльо.",
+      "sourcePages": [
+        5
+      ],
+      "evidence": "PDF page 5: йолгор- / но. Join broken word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 1,
+      "runId": "3046f4a042e94984b7ae3c1806dfcf07",
+      "layoutWarnings": [
+        "Token 13: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "e164da517e6d4bc0a4b6439bcd3f5bff",
+      "ordinal": 46,
+      "before": " Алексей Миловидов вагон гыч волен шогалят, куш кайы шашым палыде, кок могырыш ятыр ончышт шогыш.",
+      "after": " Алексей Миловидов вагон гыч волен шогалят, куш кайышашым палыде, кок могырыш ятыр ончышт шогыш.",
+      "sourcePages": [
+        5
+      ],
+      "evidence": "PDF page 5: кайы- / шашым. Join broken word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "7ef4e10fdf104adfaf339f3477b6af6b",
+      "layoutWarnings": [
+        "Token 8: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "007df2cda8614842af70ed46f1643fa2",
+      "ordinal": 63,
+      "before": " Сип чодыра мучко ший гай Элнет вӱдшӧ, эр чевер кечеш воштончышла йылгыжын, кугу Юл вӱдыш шумеш лыкын- лукын йога.",
+      "after": " Сип чодыра мучко ший гай Элнет вӱдшӧ, эр чевер кечеш воштончышла йылгыжын, кугу Юл вӱдыш шумеш лыкын-лукын йога.",
+      "sourcePages": [
+        5
+      ],
+      "evidence": "PDF page 5: лыкын- / лукын. Retain the lexical reduplication hyphen but remove whitespace.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "61d7485e59384dabab4f327f39b57fea",
+      "layoutWarnings": [
+        "Token 18: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "9c376797e21347dda740ddc75141ef8e",
+      "ordinal": 65,
+      "before": " Тушто яктер кушкеш, а лапрак верыште, вӱд воктене, лышташан тӱрлӧ пушеҥге: арама, нӧлпӧ, лом б о — кушкыт да ошман вӱд серым сылнештарат.",
+      "after": " Тушто яктер кушкеш, а лапрак верыште, вӱд воктене, лышташан тӱрлӧ пушеҥге: арама, нӧлпӧ, ломбо — кушкыт да ошман вӱд серым сылнештарат.",
+      "sourcePages": [
+        5
+      ],
+      "evidence": "PDF page 5: лом- / бо. Three machine-text fragments belong to one printed word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "ee98ec39d5e143738c44d71e9acbd24a",
+      "layoutWarnings": [
+        "Token 19: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "9577fa5ca34e4054b92ee139d66fdfff",
+      "ordinal": 70,
+      "before": " Йырым-йыр умла вара гайвияш, пеш чапле пӱнчӧ-влак кушкыт.",
+      "after": " Йырым-йыр умла вара гай вияш, пеш чапле пӱнчӧ-влак кушкыт.",
+      "sourcePages": [
+        5,
+        6
+      ],
+      "evidence": "PDF page 5 ends гай with no hyphen; page 6 begins вияш. Separate words were concatenated across physical pages.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "b9d2b5006cd8472d8ca9d27e72203729",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "bc50f88251f344108274e531e0e5ac5d",
+      "ordinal": 71,
+      "before": " Шӱдӧ ийышке шуме кышт, нуным электропила дене пӱчкеден, кугу элна мучко тӱрлӧ стройкышко колтат.",
+      "after": " Шӱдӧ ийышке шумекышт, нуным электропила дене пӱчкеден, кугу элна мучко тӱрлӧ стройкышко колтат.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: шуме- / кышт; join typographic line break.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "9e976e83fffb4c019e66f16de0060669",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "6db3d14d9a4c4050bd4a3d928e1511e2",
+      "ordinal": 77,
+      "before": " Леспромхозлан чодырам ямды- I лаш тудо ий еда шуко делянкым ойыра.",
+      "after": " Леспромхозлан чодырам ямдылаш тудо ий еда шуко делянкым ойыра.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: ямды- / лаш. Latin I is a margin artifact, absent from the printed sentence.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 3,
+      "newUnknown": 0,
+      "runId": "ff756dbd6d85424c8efbda3cc3d695d8",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "41cc403e3d1c406ab9d46b5a0f6fdf85",
+      "ordinal": 79,
+      "before": " Теве ик тыгай верыш те йӱк-йӱан шергылтеш.",
+      "after": " Теве ик тыгай верыште йӱк-йӱан шергылтеш.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: верыш- / те, one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "64e2ddce9d9648bab697b511000a1422",
+      "layoutWarnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "2242733a701e4566a006cd119d10eb35",
+      "ordinal": 80,
+      "before": " Тушто пӱнчым шындыше-влак н койыт.",
+      "after": " Тушто пӱнчым шындыше-влак койыт.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6 shows шындыше-влак / койыт without an intervening н; stray margin glyph removed.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "d4b96e2019dd495aabf2940e61052ed3",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "8570481c525046bf9bd48fc62b38a15b",
+      "ordinal": 81,
+      "before": " Нунын коклаште комбинезоным чийыше ик рвезе р палдырна.",
+      "after": " Нунын коклаште комбинезоным чийыше ик рвезе палдырна.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6 reads ик рвезе / палдырна; isolated р is absent from the printed text.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "7abca95d41dd42dc84419959c1b564d0",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "5787c956b0894f6da670429d61514107",
+      "ordinal": 82,
+      "before": " Тиде Сергей Карпушкин, тысе лесничийын эр- - гыже.",
+      "after": " Тиде Сергей Карпушкин, тысе лесничийын эргыже.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: эр- / гыже; one word, duplicated hyphen from extraction removed.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "e53d7f882f934c169d9276d75322061c",
+      "layoutWarnings": [
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "aefe18799c584890a88b340778aa8a22",
+      "ordinal": 83,
+      "before": " Средний школым тунем пытаренат, ынде кок ий лиеш, I эре чодыраште пашам ышта.",
+      "after": " Средний школым тунем пытаренат, ынде кок ий лиеш, эре чодыраште пашам ышта.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: лиеш, / эре, no Latin I in sentence.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "8a5876738dfa4aeea85ae0b4e693c681",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "ceca7c533c704e9d864b1aa4fa8a1f5d",
+      "ordinal": 84,
+      "before": " Рвезе кугу, пеҥгыде кап-кы- - лан, шара шинчан.",
+      "after": " Рвезе кугу, пеҥгыде кап-кылан, шара шинчан.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: кап-кы- / лан. Keep lexical кап-кылан hyphen, remove duplicated typographic break.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "0215d3b21c26443dbba49442d688865a",
+      "layoutWarnings": [
+        "Token 4: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "e62fa4a6879b4c07901d74e3227ba5f9",
+      "ordinal": 89,
+      "before": " Тудын йылмы же пӱсемдыме товар гай, пашаланат пеш тале.",
+      "after": " Тудын йылмыже пӱсемдыме товар гай, пашаланат пеш тале.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: йылмы- / же; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "d467bf597d9f404898ca665bf03bc524",
+      "layoutWarnings": [
+        "Token 1: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "109d6563992f4e708a4f9083d92f2bb3",
+      "ordinal": 91,
+      "before": "\n\n— Мурым, мурым муралтышаш, — кычкырале Оля Ял паева.",
+      "after": "\n\n— Мурым, мурым муралтышаш, — кычкырале Оля Ялпаева.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: Ял- / паева; one proper name.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "f8267595f3334c5fb86faaa4b921e8d1",
+      "layoutWarnings": [
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "c5cdd732ffa7459190c2af5685e8ed35",
+      "ordinal": 95,
+      "before": " Тидын годым лесничество контора могырым шем вӱр геман ик ӱдырамаш толгыч койо.",
+      "after": " Тидын годым лесничество контора могырым шем вӱргеман ик ӱдырамаш толгыч койо.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: вӱр- / геман; one word with ӱ preserved.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 4,
+      "newUnknown": 4,
+      "runId": "7119d56f92774a49a279ee422c0b32cd",
+      "layoutWarnings": [
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "7d3b8f4b52d041c19d76dc73f375e5a6",
+      "ordinal": 97,
+      "before": " — кычкырале нк ӱдыр.",
+      "after": " — кычкырале ик ӱдыр.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6 clearly reads ик ӱдыр, not нк ӱдыр.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "ea594ee36e2b4a1e9f4e3adf1f85ce06",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "2f457e23ca7e4123a5a694240755fda7",
+      "ordinal": 100,
+      "before": " — Ӱдыр-влак, айста Кузьма Смирновын «Толынат тый» мурыжым мурал тена.",
+      "after": " — Ӱдыр-влак, айста Кузьма Смирновын «Толынат тый» мурыжым муралтена.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: мурал- / тена; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "491f3c0095244982b37dc47c6edb7b24",
+      "layoutWarnings": [
+        "Token 11: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "367d1074993741cca9e9fb6e98373469",
+      "ordinal": 103,
+      "before": "\n\n— А тый ит воштыл, Ялпаева йолташ, — мане Сергей,— пашам сайын ыштеда гын, планым темеда веле огыл, па шадарымат утларак налыда.",
+      "after": "\n\n— А тый ит воштыл, Ялпаева йолташ, — мане Сергей,— пашам сайын ыштеда гын, планым темеда веле огыл, пашадарымат утларак налыда.",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: па- / шадарымат; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "ed0398209f7d49e8b28cc09c7867ba44",
+      "layoutWarnings": [
+        "Token 24: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "66b746090dde4d6a823b06e2e10331e5",
+      "ordinal": 106,
+      "before": " Ӱдыр-влак, мурал тыза!",
+      "after": " Ӱдыр-влак, муралтыза!",
+      "sourcePages": [
+        6
+      ],
+      "evidence": "PDF page 6: мурал- / тыза; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "94eb23faa9614eaf97d87f9bd7c46444",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "24de5afb7f0444dcb9ea2d82db69565a",
+      "ordinal": 112,
+      "before": "\n\nЯ Сергей гармоньым лыжган шокта.",
+      "after": "\n\nСергей гармоньым лыжган шокта.",
+      "sourcePages": [
+        7
+      ],
+      "evidence": "PDF page 7 begins Сергей гармоньым, without an initial Я; extraction margin artifact.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "010922d1f2d94561ab1d300bab9b3358",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "f2006b6f2d3a41c1adf36e7d1b608e0a",
+      "ordinal": 120,
+      "before": " Чижова шем юбкым да пинчакым чиен, вуйыштыжо— беретка, йинчак согаштыже — ужар петли ца, петлицыште эм блем а— шӧртньӧ тӱсан кок тумо лыш таш, шӱдыр — уло.",
+      "after": " Чижова шем юбкым да пинчакым чиен, вуйыштыжо— беретка, Пинчак согаштыже — ужар петлица, петлицыште эмблема— шӧртньӧ тӱсан кок тумо лышташ, шӱдыр — уло.",
+      "sourcePages": [
+        7
+      ],
+      "evidence": "PDF page 7 shows Пинчак; петли- / ца; эмблема with no internal spaces; лыш- / таш. Only these verified glyph/line-break errors corrected.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 7,
+      "newUnknown": 3,
+      "runId": "3b809864a8d54028aaeb6e8d73d605f8",
+      "layoutWarnings": [
+        "Token 11: inferred layout, verify page/footnote placement",
+        "Token 15: inferred layout, verify page/footnote placement",
+        "Token 18: inferred layout, verify page/footnote placement",
+        "Token 24: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "8fc56274f5a9450bb24966239a78b13e",
+      "ordinal": 128,
+      "before": " Гармонь почеш паша ышташ куштылго, — воштылале Ялпаева, а шкеже Серге йым шыман ончале.",
+      "after": " Гармонь почеш паша ышташ куштылго, — воштылале Ялпаева, а шкеже Сергейым шыман ончале.",
+      "sourcePages": [
+        7
+      ],
+      "evidence": "PDF page 7: Серге- / йым; one inflected proper name.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "111f93c6712745099ae32ff882ea766b",
+      "layoutWarnings": [
+        "Token 12: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "8ee6a70667074a508e6a4b97561f0681",
+      "ordinal": 130,
+      "before": " Чижова Карпушкин деке мийы шат, шыргыжалын йодо:\n\n— Ну, Сережа, пашада кузе?",
+      "after": " Чижова Карпушкин деке мийышат, шыргыжалын йодо:\n\n— Ну, Сережа, пашада кузе?",
+      "sourcePages": [
+        7
+      ],
+      "evidence": "PDF page 7: мийы- / шат; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 3,
+      "newUnknown": 1,
+      "runId": "99fdac7204834e90b308e53151f73436",
+      "layoutWarnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "3d1ca55da3bf4f059eabcddc2a8233c2",
+      "ordinal": 140,
+      "before": " Сергей Лидиялан ала-мом ойлынеже ыле, вара, ӧрмал гышыла койын, эркын йодо:\n\n— Шкеже тушко миеда?",
+      "after": " Сергей Лидиялан ала-мом ойлынеже ыле, вара, ӧрмалгышыла койын, эркын йодо:\n\n— Шкеже тушко миеда?",
+      "sourcePages": [
+        7
+      ],
+      "evidence": "PDF page 7: ӧрмал- / гышыла, preserving ӧ.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 3,
+      "newUnknown": 1,
+      "runId": "d3a9bd547f3347a2950ae1973e5d0945",
+      "layoutWarnings": [
+        "Token 8: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "9efad17b94a9431389f78ba6a6c52b3a",
+      "ordinal": 143,
+      "before": " Сережа, сайын эске ре, кошкышо вожан озымым ида шынде.",
+      "after": " Сережа, сайын эскере, кошкышо вожан озымым ида шынде.",
+      "sourcePages": [
+        7
+      ],
+      "evidence": "PDF page 7: эске- / ре; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "0e4a30ac1f5a4f83af57c2af5487e28c",
+      "layoutWarnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "a5c5fbcace644d93a007e170b8f434ef",
+      "ordinal": 144,
+      "before": "Чылашт денат шокшын чеверласен, Лидия Чижова чо дыра йолгорно дене ошкыльо.",
+      "after": "Чылашт денат шокшын чеверласен, Лидия Чижова чодыра йолгорно дене ошкыльо.",
+      "sourcePages": [
+        8
+      ],
+      "evidence": "PDF page 8: чо- / дыра; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "ddfbe8d2337f4bea9e524446819212a4",
+      "layoutWarnings": [
+        "Token 7: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "df99a6a65b56464790d6ebf7c52b8fa6",
+      "ordinal": 146,
+      "before": " Вара кӱртньӧ кольмым нале, рокым куалын, ӧрдыжкӧ кудалтышат, адак Лилиян кайыме могырыш ончаш тӱҥале.",
+      "after": " Вара кӱртньӧ кольмым нале, рокым куалын, ӧрдыжкӧ кудалтышат, адак Лидиян кайыме могырыш ончаш тӱҥале.",
+      "sourcePages": [
+        8
+      ],
+      "evidence": "PDF page 8 printed Лидиян; machine text confused д with л.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "9e24b29b3afc4b95ba29cf8017ad57e1",
+      "layoutWarnings": [
+        "Token 12: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "9a2877a6ed6a4aef981ffac1d5c63cea",
+      "ordinal": 154,
+      "before": " Лӱнчӧ шындыше-влак, тыге кутыркален, мурым мурен, тиде делянкыште пашам пытарышт.",
+      "after": " Пӱнчӧ шындыше-влак, тыге кутыркален, мурым мурен, тиде делянкыште пашам пытарышт.",
+      "sourcePages": [
+        8
+      ],
+      "evidence": "PDF page 8 paragraph starts Пӱнчӧ; printed П was misread as Л. Preserve ӱ/ӧ.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "e6551eb25ea2464da5c823b8b24e11c7",
+      "layoutWarnings": [
+        "Token 0: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "2307aa55accf460bb113d300e50f1d0c",
+      "ordinal": 159,
+      "before": " — Кечывал кочкы шым ышташ жап шуын!",
+      "after": " — Кечывал кочкышым ышташ жап шуын!",
+      "sourcePages": [
+        8
+      ],
+      "evidence": "PDF page 8: кочкы- / шым; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "2f08ee12ec814ca580bb788a88656af8",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "ab4a83de6ec54105b6d650d87069627e",
+      "ordinal": 164,
+      "before": " — рӱжге кыч кыральыч.",
+      "after": " — рӱжге кычкыральыч.",
+      "sourcePages": [
+        8
+      ],
+      "evidence": "PDF page 8: кыч- / кыральыч; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "01a5d389c98f4984a2747358ce4662b2",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "2244cc9fe57c4178965fee53e8036718",
+      "ordinal": 166,
+      "before": " Оля, тый корным палет вет, наҥ г а е,— мане Сергей.",
+      "after": " Оля, тый корным палет вет, наҥгае,— мане Сергей.",
+      "sourcePages": [
+        8
+      ],
+      "evidence": "PDF page 8: наҥ- / гае. Internal spaces are extraction artifacts, preserve ҥ.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 3,
+      "newUnknown": 0,
+      "runId": "48f6eb45d7f14a0cad6ab1dbf690d408",
+      "layoutWarnings": [
+        "Token 7: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "435ecaa804ec43e9a5e163e6818cf92f",
+      "ordinal": 172,
+      "before": " Пӱнчым шындыше-влак кольмым, озым нумалме кор- зинкаштым кучыштат, у делянкыш ошкыльыч.",
+      "after": " Пӱнчым шындыше-влак кольмым, озым нумалме корзинкаштым кучыштат, у делянкыш ошкыльыч.",
+      "sourcePages": [
+        8
+      ],
+      "evidence": "PDF page 8: кор- / зинкаштым; one word, typographic hyphen removed.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 1,
+      "runId": "140e6c211db2470b965e59fdc6439c7a",
+      "layoutWarnings": [
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "f8d5f68bb17643bdb0b07efb49f67f8f",
+      "ordinal": 174,
+      "before": " Кузе тый мыйын чо нем йӱлатет?",
+      "after": " Кузе тый мыйын чонем йӱлатет?",
+      "sourcePages": [
+        8
+      ],
+      "evidence": "PDF page 8: чо- / нем; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "7a7079395ebb489ab243c7295da4e4ae",
+      "layoutWarnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "f95629ec022d4001a3a7ca0f149100d9",
+      "ordinal": 191,
+      "before": " Тушко ли- у шеммыж годым станций могыр гыч сумкам лупшен толшо, .",
+      "after": " Тушко лишеммыж годым станций могыр гыч сумкам лупшен толшо, .",
+      "sourcePages": [
+        9
+      ],
+      "evidence": "PDF page 9: ли- / шеммыж. Intervening у is a margin artifact, not part of the printed sentence.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "882c3ef762f84b7eb71daa301d1c58c3",
+      "layoutWarnings": [
+        "Token 1: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "89393eaf1f6c45ba8bf9ea5d56fbfd84",
+      "ordinal": 195,
+      "before": " Удыр Сергейым ужын куаныш.",
+      "after": " Ӱдыр Сергейым ужын куаныш.",
+      "sourcePages": [
+        9
+      ],
+      "evidence": "PDF page 9 paragraph starts Ӱдыр; restore the visibly printed diaeresis.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "87d4dd73f39247b393ed5b4d2aaa0e9d",
+      "layoutWarnings": [
+        "Token 0: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "a96718faba054114bf160695b87a56ba",
+      "ordinal": 196,
+      "before": " Нуно кенета вашлийынытат, коктынат ӧрын шогалы- д йыт.",
+      "after": " Нуно кенета вашлийынытат, коктынат ӧрын шогалыныт.",
+      "sourcePages": [
+        9
+      ],
+      "evidence": "PDF page 9: шогалы- / ныт. The extracted д and й do not match the printed letters.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 3,
+      "newUnknown": 0,
+      "runId": "8b4703dcce9a4e4a973e02bda805fa03",
+      "layoutWarnings": [
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "b5988dc77501434fb3fa43fc49cd06a8",
+      "ordinal": 200,
+      "before": " Сергей — Карпушкинын пер- , вый ватыж деч кодшо эргыже, а Роза — Карпушкинын изватыжын, Эльвиран, ӱдыржӧ.",
+      "after": " Сергей — Карпушкинын первый ватыж деч кодшо эргыже, а Роза — Карпушкинын изватыжын, Эльвиран, ӱдыржӧ.",
+      "sourcePages": [
+        9
+      ],
+      "evidence": "PDF page 9: пер- / вый. Remove layout hyphen and spurious comma.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "c5989b5c570442eea1f4933dc63a44fb",
+      "layoutWarnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "489511a66e6f442a8e3a5fbfd0695f60",
+      "ordinal": 201,
+      "before": " Кок пеле тулык икшыве-влак ик ий гыч веле вашлийы ныт.",
+      "after": " Кок пеле тулык икшыве-влак ик ий гыч веле вашлийыныт.",
+      "sourcePages": [
+        9
+      ],
+      "evidence": "PDF page 9: вашлийы- / ныт; one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "0d33eb324abc47c18be04ebb389a77d7",
+      "layoutWarnings": [
+        "Token 8: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "052870f6b452461f9b291e4c8cc10b4c",
+      "ordinal": 211,
+      "before": " Йолгорно воктен, ошын койын, кугу ломбо пелед шогалын, тудын тамле ӱпшыжӧ [мӱндыркӧ шарла.",
+      "after": " Йолгорно воктен, ошын койын, кугу ломбо пелед шогалын, тудын тамле ӱпшыжӧ мӱндыркӧ шарла.",
+      "sourcePages": [
+        9
+      ],
+      "evidence": "PDF page 9 has no opening square bracket before мӱндыркӧ.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "91713428d50149f39052d8d7cc7a4bcd",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "5056c0e83db34ef6a9f4846974ae9b5b",
+      "ordinal": 215,
+      "before": " Тиде лесничий Тимофей Самсоным Карпуш кинын суртшо.",
+      "after": " Тиде лесничий Тимофей Самсоныч Карпушкинын суртшо.",
+      "sourcePages": [
+        9
+      ],
+      "evidence": "PDF page 9 explicitly reads Тимофей Самсоныч Карпуш- / кинын. Correct visible final ч and join surname.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "cdea354440dc4a1a8be08d594348ae86",
+      "layoutWarnings": [
+        "Token 3: inferred layout, verify page/footnote placement",
+        "Token 4: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "e92fd1b45a7b49c2ac8b838e35e2bb80",
+      "ordinal": 216,
+      "before": " Тимофей Самсонын коло ий утла эре чо дыраште, лесничествыште, пашам ышта.",
+      "after": " Тимофей Самсоныч коло ий утла эре чодыраште, лесничествыште, пашам ышта.",
+      "sourcePages": [
+        9
+      ],
+      "evidence": "PDF page 9: Тимофей Самсоныч; чо- / дыраште. Correct final ч and line break.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "d254d29fff3c40b6aaf9bcac6640e1b4",
+      "layoutWarnings": [
+        "Token 1: inferred layout, verify page/footnote placement",
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "014b8eacd79b4ce3b2672c8395ddb429",
+      "ordinal": 223,
+      "before": " Малыме пӧлемыште кугучапле кровать шога, пырдыжыште — роза пеледышан кугу ковер.",
+      "after": " Малыме пӧлемыште кугу чапле кровать шога, пырдыжыште — роза пеледышан кугу ковер.",
+      "sourcePages": [
+        9,
+        10
+      ],
+      "evidence": "PDF page 9 ends кугу without a hyphen; page 10 starts чапле. Restore space between separate words.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "1ba52621d1a74d45ae3b61b073ced18d",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "dd30919b80374f178acb43d90046d875",
+      "ordinal": 225,
+      "before": " Сурт озалан вашке кудло ий шуэш гынат, тӱжвач он- I чымаште тудо але самырыкын коеш.",
+      "after": " Сурт озалан вашке кудло ий шуэш гынат, тӱжвач ончымаште тудо але самырыкын коеш.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10: он- / чымаште. Latin I is absent from printed text.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "3a20eca02c0a4d85846ec930e04c8936",
+      "layoutWarnings": [
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "d2174aed768046c99c8a8abf39cad296",
+      "ordinal": 226,
+      "before": " Лесничий-влак, эре 1 чодыраште илен, яндар южым шӱлен, шкеныштын таза- I лыкыштым сайын арален кертыт.",
+      "after": " Лесничий-влак, эре чодыраште илен, яндар южым шӱлен, шкеныштын тазалыкыштым сайын арален кертыт.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10: no 1 after эре; таза- / лыкыштым, no Latin I. Remove margin artifacts and join hyphenation.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "69bbd1b35e8640588da78410a935d546",
+      "layoutWarnings": [
+        "Token 11: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "164636b905aa41298481549a13e0db41",
+      "ordinal": 227,
+      "before": " Карпушкин — кугу капан,, тичмаш тылзе гай лопка шӱргывылышан пӧръеҥ.",
+      "after": " Карпушкин — кугу капан, тичмаш тылзе гай лопка шӱргывылышан пӧръеҥ.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10 prints a single comma after капан.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "bfb1f977bda14866ad9e6baa5a68029a",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "2396091c5f794dc788bae33d9fadc4c0",
+      "ordinal": 230,
+      "before": " Эльвирам изватылан налме деч ончыч Самсонын тыга як кӱжгӧ огыл ыле.",
+      "after": " Эльвирам изватылан налме деч ончыч Самсоныч тыгаяк кӱжгӧ огыл ыле.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10 reads Самсоныч тыга- / як. Join the printed fragments without dropping letters.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "fb55e2c30d544249835ed9c19df57a7e",
+      "layoutWarnings": [
+        "Token 5: inferred layout, verify page/footnote placement",
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "90ca10739609442e93aefe7c46c572b8",
+      "ordinal": 231,
+      "before": " Тунам тудо утларакше пашаште лийын, кечыгут чодыраште жапым эртарен, чием шотыштат г васартылын огыл.",
+      "after": " Тунам тудо утларакше пашаште лийын, кечыгут чодыраште жапым эртарен, чием шотыштат васартылын огыл.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10 has no standalone г at the line boundary after шотыштат. Preserve the spelling of the next word pending separate review.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "abc6b7f9cc8740de9f870b4e22e42b6d",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "580220b2436e4051a51763906c1dbbc4",
+      "ordinal": 239,
+      "before": " — Еҥ деч д вожыл!",
+      "after": " — Еҥ деч вожыл!",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10 reads Еҥ деч / вожыл!, no standalone д.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 1,
+      "newUnknown": 0,
+      "runId": "cc766d7e8a904980b52aa461c7669420",
+      "layoutWarnings": [],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "4c5d516bb98344649aa4f6dddfd7a2bd",
+      "ordinal": 242,
+      "before": " Тудын костюм согаштыже кок могырге шӧртньӧ тӱсан тумо лыш таш ден шӱдыр йылгыжыныт.",
+      "after": " Тудын костюм согаштыже кок могырге шӧртньӧ тӱсан тумо лышташ ден шӱдыр йылгыжыныт.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10: лыш- / таш, one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "9669fb64a2d34eebb65d295844251408",
+      "layoutWarnings": [
+        "Token 8: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "9d4943c43f034b40b56bcf96361c944c",
+      "ordinal": 246,
+      "before": " Тиде кундемыште Карпушкиньш пеш палат.",
+      "after": " Тиде кундемыште Карпушкиным пеш палат.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10 reads Карпушкиным пеш палат, final ным rather than ньш.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "6b5cf3c878b74bb891f07d1df1f476d0",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "24408a9e6b424a38bcef6e9dbb236a02",
+      "ordinal": 248,
+      "before": " деке толыт; кӧлан шудо солаш олыкым йодман — Карпуш кин деч посна нимат ок лек; кӧлан у пӧрт шындаш реген чым муман— адак Тимофей Самсонычын шинчажым кӱ тыман.",
+      "after": " деке толыт; кӧлан шудо солаш олыкым йодман — Карпушкин деч посна нимат ок лек; кӧлан у пӧрт шындаш регенчым муман— адак Тимофей Самсонычын шинчажым кӱтыман.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10: Карпуш- / кин; реген- / чым; кӱ- / тыман. Join typographic hyphens and preserve ӱ.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 3,
+      "newUnknown": 0,
+      "runId": "325ce87b5378401fa40ab472a63ec4db",
+      "layoutWarnings": [
+        "Token 9: inferred layout, verify page/footnote placement",
+        "Token 20: inferred layout, verify page/footnote placement",
+        "Token 27: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "1409df019f1347688b0f1e56a0ddade8",
+      "ordinal": 251,
+      "before": " Карпушкин пашаш лек тын огыл.",
+      "after": " Карпушкин пашаш лектын огыл.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10: лек- / тын, one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "fb17495b62324c4cb22803b69fa58e09",
+      "layoutWarnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "726a15f51d734112b62825e220101599",
+      "ordinal": 256,
+      "before": " Ончыч, ватыже колымеке, Самсонын кум ни наре Сергей эргыж дене коктын илен, тудын кушкын шумыжым вучен.",
+      "after": " Ончыч, ватыже колымеке, Самсоныч кум ий наре Сергей эргыж дене коктын илен, тудын кушкын шумыжым вучен.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10 shows Самсоныч кум ий наре; correct clearly visible ч and ий.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 0,
+      "newUnknown": 0,
+      "runId": "f4ba64bded59463a87d0657101b06a21",
+      "layoutWarnings": [
+        "Token 5: inferred layout, verify page/footnote placement",
+        "Token 7: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    },
+    {
+      "sentenceId": "66b26aece9ec45b9afbc6a72cf9e9d03",
+      "ordinal": 257,
+      "before": " «Ала тошто ватын эрге извате авалан келшаш ок тӱҥал, лу классым тунем пытарымекше, олашке, иктаж-могай ин ститутыш, ужатемат, шинчаш перныдыме лиеш», — манын шонен.",
+      "after": " «Ала тошто ватын эрге извате авалан келшаш ок тӱҥал, лу классым тунем пытарымекше, олашке, иктаж-могай институтыш, ужатемат, шинчаш перныдыме лиеш», — манын шонен.",
+      "sourcePages": [
+        10
+      ],
+      "evidence": "PDF page 10: ин- / ститутыш, one word.",
+      "visualReviewed": true,
+      "saved": true,
+      "oldUnknown": 2,
+      "newUnknown": 0,
+      "runId": "46a437d519854a4296efd0ceb51799c4",
+      "layoutWarnings": [
+        "Token 19: inferred layout, verify page/footnote placement"
+      ],
+      "newRevision": 2
+    }
+  ],
+  "wholeWorkHfstScan": {
+    "workId": "43be7044888e4e938575110b818ca1d2",
+    "workRevision": 64,
+    "analyzer": "giella-hfst",
+    "unitsScanned": 5528,
+    "formsQueriedIncludingCandidates": 13433,
+    "hfstRecognizedForms": 8030,
+    "viennaUnknownHfstKnownTokens": 1388,
+    "joinCandidates": 522,
+    "automaticChanges": 0,
+    "visualReviewComplete": false
+  },
+  "joinCandidatePass": {
+    "candidateCount": 522,
+    "savedCandidates": 480,
+    "rejectedCandidates": 33,
+    "unresolvedCandidates": 9,
+    "correctedSentences": 410,
+    "wordEdits": 430,
+    "candidateReviewComplete": true,
+    "report": "join-progress.json"
+  },
+  "totalCorrectedUnits": 473,
+  "correctedUnitsScope": "Initial pages 4-10 batch only; see totalCorrectedUnits and joinCandidatePass"
+}

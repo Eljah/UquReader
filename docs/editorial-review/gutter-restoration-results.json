@@ -1,0 +1,2804 @@
+{
+  "workId": "43be7044888e4e938575110b818ca1d2",
+  "baselineRevision": 941,
+  "currentRevision": 1094,
+  "requestedHypothesesApplied": true,
+  "sourceCertified": false,
+  "published": true,
+  "reviewedGroups": 59,
+  "changedGroups": 58,
+  "mergedRecords": 45,
+  "untouchedDocumentsVerified": 5164,
+  "textFile": "materials/mhr/elnet/elnet-r1094.txt",
+  "textSha256": "7ad41663e4690480ad9275cbf060ff5337ff0357e7b944ef403fedc1e69c6c2c",
+  "lowConfidenceGroups": [
+    [
+      1823,
+      1824,
+      1825
+    ],
+    [
+      2155,
+      2156
+    ],
+    [
+      3737
+    ],
+    [
+      4026
+    ],
+    [
+      4451,
+      4452
+    ],
+    [
+      4556,
+      4557
+    ]
+  ],
+  "changes": [
+    {
+      "ordinals": [
+        16
+      ],
+      "pages": [
+        4
+      ],
+      "replacements": [],
+      "note": "Keep адакшым пеш: the previously proposed preferred reading is already present.",
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 4; Keep адакшым пеш: the previously proposed preferred reading is already present.; confidence=contextual",
+      "sentenceId": "d0193ffb19b8401b9bd2565cae63f051",
+      "before": " Тудо адакшым пеш тыматле да ушан».",
+      "after": " Тудо адакшым пеш тыматле да ушан».",
+      "saved": true,
+      "revision": 3,
+      "currentRevision": 3,
+      "outcome": "already-matched-preferred-hypothesis",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        75,
+        76
+      ],
+      "pages": [
+        6
+      ],
+      "replacements": [
+        [
+          "нӧлтеш I яндар",
+          "нӧлтеш, яндар"
+        ],
+        [
+          "чучеш, л Элнетын",
+          "чучеш. Элнетын"
+        ],
+        [
+          "корно'.г деч",
+          "корно деч"
+        ],
+        [
+          "коло- к кумло",
+          "коло-кумло"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 6; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "43854cd0091f4c24bbdc227161ff645a",
+      "before": " Сылне вер-шӧрым ончен, Миловидовым кумылжо нӧлтеш I яндар южышто коштын, шӱмжылан утыр ласкан чучеш, л Элнетын лыкын-лукын йогымаштыже, кӱртньӧ корно'.г деч мӱндырнак огыл, лесничество верланен да иктаж коло- к кумло километрыш шарлен.",
+      "after": " Сылне вер-шӧрым ончен, Миловидовым кумылжо нӧлтеш, яндар южышто коштын, шӱмжылан утыр ласкан чучеш. Элнетын лыкын-лукын йогымаштыже, кӱртньӧ корно деч мӱндырнак огыл, лесничество верланен да иктаж коло-кумло километрыш шарлен.",
+      "saved": true,
+      "analysisParts": [
+        " Сылне вер-шӧрым ончен, Миловидовым кумылжо нӧлтеш, яндар южышто коштын, шӱмжылан утыр ласкан чучеш. ",
+        "Элнетын лыкын-лукын йогымаштыже, кӱртньӧ корно деч мӱндырнак огыл, лесничество верланен да иктаж коло-кумло километрыш шарлен."
+      ],
+      "componentRunIds": [
+        "6a591456af3d4bc4ba513928f24b88fb",
+        "580567fac8df4e45bd5be50f90ea7cb3"
+      ],
+      "unknownTokens": [
+        "лесничество"
+      ],
+      "runId": "f3c5ab8e26f94bd7813b92c9df661427",
+      "merge": {
+        "saved": true,
+        "sentenceId": "43854cd0091f4c24bbdc227161ff645a",
+        "revision": 2,
+        "mergedIds": [
+          "4c4b2de921bb4d10b304789c73dd9455"
+        ]
+      },
+      "warnings": [
+        "Token 7: inferred layout, verify page/footnote placement",
+        "Token 16: inferred layout, verify page/footnote placement",
+        "Token 31: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 10,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        611,
+        612
+      ],
+      "pages": [
+        18
+      ],
+      "replacements": [
+        [
+          "тем аш ! тамле",
+          "темше тамле"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 18; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "117eb2e2f363473298c74923815599fc",
+      "before": " Пӧрт тич тем аш ! тамле ӱпш пайрем кечым шижтара.",
+      "after": " Пӧрт тич темше тамле ӱпш пайрем кечым шижтара.",
+      "saved": true,
+      "analysisParts": [
+        " Пӧрт тич темше тамле ӱпш пайрем кечым шижтара."
+      ],
+      "componentRunIds": [
+        "029f218592a845679d09171f844df412"
+      ],
+      "unknownTokens": [],
+      "runId": "c4b426e633854440a85b890dc967af9e",
+      "merge": {
+        "saved": true,
+        "sentenceId": "117eb2e2f363473298c74923815599fc",
+        "revision": 2,
+        "mergedIds": [
+          "9fe52cb9c73a44e7822c854b36796fce"
+        ]
+      },
+      "warnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        886
+      ],
+      "pages": [
+        23,
+        24
+      ],
+      "replacements": [
+        [
+          "мастар) улыт",
+          "мастар улыт"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 23,24; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "109f49b70f1e40d884c904b91488c4ee",
+      "before": " Миловидовын тыгай шере шомакше ыш келше гынат,Лидия ваштареш нимомат ыш пелеште, шке ораж дене1 гына шоналтыш: «Пӧръеҥ-влак тыге ойлаш мастар) улыт.",
+      "after": " Миловидовын тыгай шере шомакше ыш келше гынат,Лидия ваштареш нимомат ыш пелеште, шке ораж дене1 гына шоналтыш: «Пӧръеҥ-влак тыге ойлаш мастар улыт.",
+      "saved": true,
+      "analysisParts": [
+        " Миловидовын тыгай шере шомакше ыш келше гынат,Лидия ваштареш нимомат ыш пелеште, шке ораж дене1 гына шоналтыш: «Пӧръеҥ-влак тыге ойлаш мастар улыт."
+      ],
+      "componentRunIds": [
+        "747269edc3de4591abc4a6783e42e5bf"
+      ],
+      "unknownTokens": [
+        "Лидия",
+        "дене"
+      ],
+      "runId": "1dd33bb60b3a415cae9467851f3a4847",
+      "warnings": [],
+      "revision": 2,
+      "dictionaryEntriesRestored": 36,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1143
+      ],
+      "pages": [
+        30
+      ],
+      "replacements": [
+        [
+          "шогышаш улан",
+          "шогышаш улат."
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 30; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "5b64fe565dd44d2c8c0c19f296ba4411",
+      "before": " От пале мо: чодыра культурым ончен куштышаш верч тый вуйын шогышаш улан",
+      "after": " От пале мо: чодыра культурым ончен куштышаш верч тый вуйын шогышаш улат.",
+      "saved": true,
+      "analysisParts": [
+        " От пале мо: чодыра культурым ончен куштышаш верч тый вуйын шогышаш улат."
+      ],
+      "componentRunIds": [
+        "0365bf93fb5347f89d5cf486dfd74bbe"
+      ],
+      "unknownTokens": [],
+      "runId": "665a1eddeacd467e9c2897f2031bb1f4",
+      "warnings": [
+        "Token 12: inferred layout, verify page/footnote placement",
+        "Token 13: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 4,
+      "dictionaryEntriesRestored": 18,
+      "dictionaryRevision": 5,
+      "currentRevision": 5,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1167,
+        1168
+      ],
+      "pages": [
+        30
+      ],
+      "replacements": [
+        [
+          "шкее! куштат",
+          "шкеак куштат"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 30; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "44c046f479f84be8a228776992916401",
+      "before": " Тек нуно чодырам шкее! куштат, шонена.",
+      "after": " Тек нуно чодырам шкеак куштат, шонена.",
+      "saved": true,
+      "analysisParts": [
+        " Тек нуно чодырам шкеак куштат, шонена."
+      ],
+      "componentRunIds": [
+        "a2e1703a8e4e4778aa1ca99b0935d551"
+      ],
+      "unknownTokens": [],
+      "runId": "ec901e554f574fbc9ddbd1706ba65ada",
+      "merge": {
+        "saved": true,
+        "sentenceId": "44c046f479f84be8a228776992916401",
+        "revision": 2,
+        "mergedIds": [
+          "3058cbb2d1d645a098b6c255cefa333e"
+        ]
+      },
+      "warnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 8,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1239,
+        1240
+      ],
+      "pages": [
+        32
+      ],
+      "replacements": [
+        [
+          "гай лин. корныжым",
+          "гай лийын, корныжым"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 32; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "5895d6dafaac4637b6d64333e2274ee8",
+      "before": " Ӱдырет тидлан куаныме гай лин. корныжым сайын огеш пале гынат, умылтараш тӱҥале.",
+      "after": " Ӱдырет тидлан куаныме гай лийын, корныжым сайын огеш пале гынат, умылтараш тӱҥале.",
+      "saved": true,
+      "analysisParts": [
+        " Ӱдырет тидлан куаныме гай лийын, корныжым сайын огеш пале гынат, умылтараш тӱҥале."
+      ],
+      "componentRunIds": [
+        "bd3c34719781475fa19cf201fadb1932"
+      ],
+      "unknownTokens": [],
+      "runId": "4573391344df4596abbcf681e7bf4e96",
+      "merge": {
+        "saved": true,
+        "sentenceId": "5895d6dafaac4637b6d64333e2274ee8",
+        "revision": 2,
+        "mergedIds": [
+          "7716fd336f6d4faf8162af0ba423506f"
+        ]
+      },
+      "warnings": [
+        "Token 4: inferred layout, verify page/footnote placement",
+        "Token 5: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 6,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1299
+      ],
+      "pages": [
+        33
+      ],
+      "replacements": [
+        [
+          "паша штышыжлак",
+          "паша ыштышыжлак"
+        ],
+        [
+          "шыҥ- (ымын",
+          "шындымын"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 33; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "1d383487e4e041b6a4d8606b02a4c444",
+      "before": " Миловидов нунын денат палыме лие, вара, паша штышыжлак, молодежьлан квадратный йӧн дене шыҥ- (ымын пайдалыкшым, чодыра шындыме пашан кӱлешлыкшым умылтараш тӱҥале.",
+      "after": " Миловидов нунын денат палыме лие, вара, паша ыштышыжлак, молодежьлан квадратный йӧн дене шындымын пайдалыкшым, чодыра шындыме пашан кӱлешлыкшым умылтараш тӱҥале.",
+      "saved": true,
+      "analysisParts": [
+        " Миловидов нунын денат палыме лие, вара, паша ыштышыжлак, молодежьлан квадратный йӧн дене шындымын пайдалыкшым, чодыра шындыме пашан кӱлешлыкшым умылтараш тӱҥале."
+      ],
+      "componentRunIds": [
+        "bd91064abf2c480ba659a29acbb70321"
+      ],
+      "unknownTokens": [],
+      "runId": "77fe672474ed4bdf90c60cc7d6f1dd43",
+      "warnings": [
+        "Token 9: inferred layout, verify page/footnote placement",
+        "Token 15: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 4,
+      "dictionaryEntriesRestored": 18,
+      "dictionaryRevision": 5,
+      "currentRevision": 5,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1340
+      ],
+      "pages": [
+        34
+      ],
+      "replacements": [
+        [
+          "йо) мам",
+          "йомам"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 34; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "25eb0ba2a40348caa42ed73ac8f23307",
+      "before": " Уке гын, мый йо) мам, утаре!",
+      "after": " Уке гын, мый йомам, утаре!",
+      "saved": true,
+      "analysisParts": [
+        " Уке гын, мый йомам, утаре!"
+      ],
+      "componentRunIds": [
+        "a80f58ba3c314f0ba56fc923143e2a99"
+      ],
+      "unknownTokens": [],
+      "runId": "4c71b70bb9cd479b9ce9f352e21befa5",
+      "warnings": [
+        "Token 4: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 2,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1343,
+        1344
+      ],
+      "pages": [
+        34
+      ],
+      "replacements": [
+        [
+          "оза омыл! шке",
+          "оза омыл, шке"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 34; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "5ab6efbfd4c74dc49ae9b5a472dabd58",
+      "before": "\n\n— Мый вет тудын оксажлан, кассыжлан оза омыл! шке дечше йодса.",
+      "after": "\n\n— Мый вет тудын оксажлан, кассыжлан оза омыл, шке дечше йодса.",
+      "saved": true,
+      "analysisParts": [
+        "\n\n— Мый вет тудын оксажлан, кассыжлан оза омыл, шке дечше йодса."
+      ],
+      "componentRunIds": [
+        "16444005615441cf8a0aaa9d5b6e04a7"
+      ],
+      "unknownTokens": [],
+      "runId": "222d871de10a4753acb7c397866ac444",
+      "merge": {
+        "saved": true,
+        "sentenceId": "5ab6efbfd4c74dc49ae9b5a472dabd58",
+        "revision": 2,
+        "mergedIds": [
+          "c258281419f94a819cbac4a57b5e9570"
+        ]
+      },
+      "warnings": [
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1581,
+        1582
+      ],
+      "pages": [
+        40
+      ],
+      "replacements": [
+        [
+          "Мӱндыр1! йоҥгалт",
+          "Мӱндырч йоҥгалт"
+        ]
+      ],
+      "note": "Select the from-afar form attested elsewhere in the book, rather than distant/genitive alternatives.",
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 40; Select the from-afar form attested elsewhere in the book, rather than distant/genitive alternatives.; confidence=contextual",
+      "sentenceId": "bdfb59e484384d07975b2c18c3ea100e",
+      "before": " Мӱндыр1! йоҥгалт толшо муро йӱкым мыняр колыштеш, шӱмжылан тунар ласкан чучеш, вара шкат ныжылгын, уледа шӱмым почын, муралтен колта: Монденат мо мемнан ойым, Мый декемже от толылдал.",
+      "after": " Мӱндырч йоҥгалт толшо муро йӱкым мыняр колыштеш, шӱмжылан тунар ласкан чучеш, вара шкат ныжылгын, уледа шӱмым почын, муралтен колта: Монденат мо мемнан ойым, Мый декемже от толылдал.",
+      "saved": true,
+      "analysisParts": [
+        " Мӱндырч йоҥгалт толшо муро йӱкым мыняр колыштеш, шӱмжылан тунар ласкан чучеш, вара шкат ныжылгын, уледа шӱмым почын, муралтен колта: Монденат мо мемнан ойым, Мый декемже от толылдал."
+      ],
+      "componentRunIds": [
+        "770ee4922534419b867b9ae6d3a2608f"
+      ],
+      "unknownTokens": [
+        "шкат"
+      ],
+      "runId": "86f9d656a8644f81b176e44550f3919e",
+      "merge": {
+        "saved": true,
+        "sentenceId": "bdfb59e484384d07975b2c18c3ea100e",
+        "revision": 2,
+        "mergedIds": [
+          "472f4bf537604a2d89b84f7be0054ab9"
+        ]
+      },
+      "warnings": [
+        "Token 0: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 13,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1647,
+        1648
+      ],
+      "pages": [
+        42
+      ],
+      "replacements": [
+        [
+          "келшен . садлан",
+          "келшен, садлан"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 42; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "d49b4f973f1a4371a9fcd54670f755a0",
+      "before": "Ӱдырлан Алешан тыгай проста улмыжо пеш келшен . садлан эре йодыштын:\n\n— Тышкыже кузе верештын улыда?",
+      "after": "Ӱдырлан Алешан тыгай проста улмыжо пеш келшен, садлан эре йодыштын:\n\n— Тышкыже кузе верештын улыда?",
+      "saved": true,
+      "analysisParts": [
+        "Ӱдырлан Алешан тыгай проста улмыжо пеш келшен, садлан эре йодыштын:\n",
+        "\n— Тышкыже кузе верештын улыда?"
+      ],
+      "componentRunIds": [
+        "f6f25e4dd668448389476addcbddefdf",
+        "c544bef040314bc3912ce91178a6ba44"
+      ],
+      "unknownTokens": [
+        "йодыштын"
+      ],
+      "runId": "c29b1d455e774ea29cfc842f7fb9fd9c",
+      "merge": {
+        "saved": true,
+        "sentenceId": "d49b4f973f1a4371a9fcd54670f755a0",
+        "revision": 3,
+        "mergedIds": [
+          "1177ddbf800c4bb1805ec5443c37f69c"
+        ]
+      },
+      "warnings": [
+        "Token 7: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 4,
+      "dictionaryEntriesRestored": 5,
+      "dictionaryRevision": 5,
+      "currentRevision": 5,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1820,
+        1821
+      ],
+      "pages": [
+        46
+      ],
+      "replacements": [
+        [
+          "шьь. гыжалын",
+          "шыргыжалын"
+        ],
+        [
+          "тенд1 йомдаренам",
+          "тендам йомдаренам"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 46; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "93b80dc437874b579eba5533a2862365",
+      "before": "— шкеже Миловидов деке мийышат, тудлан шьь. гыжалын, шылтален ойлымыла тӱҥале:— А мый тенд1 йомдаренам.",
+      "after": "— шкеже Миловидов деке мийышат, тудлан шыргыжалын, шылтален ойлымыла тӱҥале:— А мый тендам йомдаренам.",
+      "saved": true,
+      "analysisParts": [
+        "— шкеже Миловидов деке мийышат, тудлан шыргыжалын, шылтален ойлымыла тӱҥале:— А мый тендам йомдаренам."
+      ],
+      "componentRunIds": [
+        "aefc3a46feb94386ba13ec8052a22870"
+      ],
+      "unknownTokens": [],
+      "runId": "9d68b0c72fdd4f9a89bd79210253e238",
+      "merge": {
+        "saved": true,
+        "sentenceId": "93b80dc437874b579eba5533a2862365",
+        "revision": 2,
+        "mergedIds": [
+          "36794331c06d4032819a22218196e290"
+        ]
+      },
+      "warnings": [
+        "Token 7: inferred layout, verify page/footnote placement",
+        "Token 16: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 6,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1823,
+        1824,
+        1825
+      ],
+      "pages": [
+        46
+      ],
+      "replacements": [
+        [
+          "саҥгаж йым.! Миловидовым",
+          "саҥгаж йымал Миловидовым"
+        ]
+      ],
+      "confidence": "low",
+      "note": "Conjectural under-the-brow phrase, explicitly authorized despite uncertainty.",
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 46; Conjectural under-the-brow phrase, explicitly authorized despite uncertainty.; confidence=low",
+      "sentenceId": "56cc79b3e4da418397b1e0a9bde35e5d",
+      "before": " Тышке Сергей толын шогале, вара саҥгаж йым.! Миловидовым ончалят, тудын дене саламлалте.",
+      "after": " Тышке Сергей толын шогале, вара саҥгаж йымал Миловидовым ончалят, тудын дене саламлалте.",
+      "saved": true,
+      "analysisParts": [
+        " Тышке Сергей толын шогале, вара саҥгаж йымал Миловидовым ончалят, тудын дене саламлалте."
+      ],
+      "componentRunIds": [
+        "cc5a4d909fd041438d1ee7951bb0de12"
+      ],
+      "unknownTokens": [],
+      "runId": "ab59dca8447e4a6485d0688e6143f6f7",
+      "merge": {
+        "saved": true,
+        "sentenceId": "56cc79b3e4da418397b1e0a9bde35e5d",
+        "revision": 2,
+        "mergedIds": [
+          "308adb76fd634a8987e7365ba1e46533",
+          "d5892a3b78ac49aa9ffc06b9abc34f96"
+        ]
+      },
+      "warnings": [
+        "Token 7: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 5,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1831,
+        1832,
+        1833
+      ],
+      "pages": [
+        46
+      ],
+      "replacements": [
+        [
+          "кутырышаш улы Миловидовым",
+          "кутырышаш уло.\n\nМиловидовым"
+        ],
+        [
+          "йӧным м.! ыҥ",
+          "йӧным муын"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 46; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "53cd0090531c48df86ff6239276262a1",
+      "before": ", да йӱкын каласыш:\n\n— Лидия Васильевна, тендан дене кутырышаш улы Миловидовым кораҥден колташ Сергейын йӧным м.! ыҥ ойлымыжо Лилийлан пеш келшыш.",
+      "after": ", да йӱкын каласыш:\n\n— Лидия Васильевна, тендан дене кутырышаш уло.\n\nМиловидовым кораҥден колташ Сергейын йӧным муын ойлымыжо Лилийлан пеш келшыш.",
+      "saved": true,
+      "analysisParts": [
+        ", да йӱкын каласыш:\n",
+        "\n— Лидия Васильевна, тендан дене кутырышаш уло.\n",
+        "\nМиловидовым кораҥден колташ Сергейын йӧным муын ойлымыжо Лилийлан пеш келшыш."
+      ],
+      "componentRunIds": [
+        "dcbf2898afd24807a2dc866eefa3b846",
+        "617b5d69dcdb47e39b388a2c31c4068e",
+        "5d641f605cfa41829039450fa5f42482"
+      ],
+      "unknownTokens": [
+        "каласыш",
+        "уло"
+      ],
+      "runId": "a5681f9821c84057939814f45cd859e0",
+      "merge": {
+        "saved": true,
+        "sentenceId": "53cd0090531c48df86ff6239276262a1",
+        "revision": 2,
+        "mergedIds": [
+          "b4b2f9cc8fbb4500baa32b242acd8aee",
+          "dce14d0113ee4250a7396224b76495f0"
+        ]
+      },
+      "warnings": [
+        "Token 12: inferred layout, verify page/footnote placement",
+        "Token 13: inferred layout, verify page/footnote placement",
+        "Token 19: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1844,
+        1845
+      ],
+      "pages": [
+        46
+      ],
+      "replacements": [
+        [
+          "кода! ок лий",
+          "кодаш ок лий"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 46; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "a2fa9f35ac1d48ee99c7041aa8e5bf19",
+      "before": " Тышак тетла мылам кода! ок лий!",
+      "after": " Тышак тетла мылам кодаш ок лий!",
+      "saved": true,
+      "analysisParts": [
+        " Тышак тетла мылам кодаш ок лий!"
+      ],
+      "componentRunIds": [
+        "f3159e811a4947689695b035bb343165"
+      ],
+      "unknownTokens": [],
+      "runId": "fb8580b1e47d4f0196ef92e34d373c6e",
+      "merge": {
+        "saved": true,
+        "sentenceId": "a2fa9f35ac1d48ee99c7041aa8e5bf19",
+        "revision": 2,
+        "mergedIds": [
+          "44eb7c523702488eafc8d696b9394e45"
+        ]
+      },
+      "warnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1926
+      ],
+      "pages": [
+        48
+      ],
+      "replacements": [
+        [
+          "паша) шолеш",
+          "паша шолеш"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 48; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "4ff7b7c52cbd4492bb66a9ee67217b50",
+      "before": " Элнет лесничествыште пӱнчӧ шындыме паша) шолеш веле.",
+      "after": " Элнет лесничествыште пӱнчӧ шындыме паша шолеш веле.",
+      "saved": true,
+      "analysisParts": [
+        " Элнет лесничествыште пӱнчӧ шындыме паша шолеш веле."
+      ],
+      "componentRunIds": [
+        "6b098f4fef074292bdc312e9b10a2b79"
+      ],
+      "unknownTokens": [],
+      "runId": "86618e3e8e4c48c5b1a3d03d03a76819",
+      "warnings": [],
+      "revision": 2,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        1929
+      ],
+      "pages": [
+        48
+      ],
+      "replacements": [
+        [
+          "эр) йӱдымак",
+          "эр йӱдымак"
+        ],
+        [
+          "объезд-- чик-влак",
+          "объездчик-влак"
+        ],
+        [
+          "лийын,, кажне",
+          "лийын, кажне"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 48; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "f35ee83b51fe4d1eb93b092b70367c1e",
+      "before": " Садлан шукыж годым тудо, лесник да объезд-- чик-влак деке миен, тӱрлӧ распоряженийым пуэден, эр) йӱдымак кынелын, кас ӱжара марте чодыраште лийын,, кажне обходым шке ончеден.",
+      "after": " Садлан шукыж годым тудо, лесник да объездчик-влак деке миен, тӱрлӧ распоряженийым пуэден, эр йӱдымак кынелын, кас ӱжара марте чодыраште лийын, кажне обходым шке ончеден.",
+      "saved": true,
+      "analysisParts": [
+        " Садлан шукыж годым тудо, лесник да объездчик-влак деке миен, тӱрлӧ распоряженийым пуэден, эр йӱдымак кынелын, кас ӱжара марте чодыраште лийын, кажне обходым шке ончеден."
+      ],
+      "componentRunIds": [
+        "8f4a0a0f751e47ef93a3aa6367a1e061"
+      ],
+      "unknownTokens": [],
+      "runId": "1792ceb5b0024adcbc818cf35c7096a3",
+      "warnings": [
+        "Token 7: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 2,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2134
+      ],
+      "pages": [
+        54
+      ],
+      "replacements": [
+        [
+          "логалеш).",
+          "логалеш."
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 54; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "2b02af48cdca445f857d0f2118c7915b",
+      "before": " Тӱлаш логалеш).",
+      "after": " Тӱлаш логалеш.",
+      "saved": true,
+      "analysisParts": [
+        " Тӱлаш логалеш."
+      ],
+      "componentRunIds": [
+        "afed2f93522642af83fed9f70d4ccc60"
+      ],
+      "unknownTokens": [],
+      "runId": "2f2f8b70561847b8a3f9b2668036f933",
+      "warnings": [],
+      "revision": 2,
+      "currentRevision": 2,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2144,
+        2145
+      ],
+      "pages": [
+        54
+      ],
+      "replacements": [
+        [
+          "нерге/ актым",
+          "нерген актым"
+        ],
+        [
+          "подпись-влакыма! кӱлеш",
+          "подпись-влакымат кӱлеш"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 54; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "168ee526ae984bb186d3494dcfde0cc7",
+      "before": " Пашам приниматлыме нерге/ актым возена, ведомостьым ыштена, подпись-влакыма! кӱлеш семын келыштарена.",
+      "after": " Пашам приниматлыме нерген актым возена, ведомостьым ыштена, подпись-влакымат кӱлеш семын келыштарена.",
+      "saved": true,
+      "analysisParts": [
+        " Пашам приниматлыме нерген актым возена, ведомостьым ыштена, подпись-влакымат кӱлеш семын келыштарена."
+      ],
+      "componentRunIds": [
+        "c99586c0388c4a1f8a519162c7fae52d"
+      ],
+      "unknownTokens": [],
+      "runId": "ec8cf916036848eda5284da2f09d2eda",
+      "merge": {
+        "saved": true,
+        "sentenceId": "168ee526ae984bb186d3494dcfde0cc7",
+        "revision": 2,
+        "mergedIds": [
+          "b136b36b540a40caa64db536e8fe0695"
+        ]
+      },
+      "warnings": [
+        "Token 2: inferred layout, verify page/footnote placement",
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 12,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2155,
+        2156
+      ],
+      "pages": [
+        54
+      ],
+      "replacements": [
+        [
+          "тӱгана! шке",
+          "тунамак шке"
+        ]
+      ],
+      "confidence": "low",
+      "note": "Select the proposed temporal interpretation тунамак; тӱганак had an unsuitable wear-out analysis.",
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 54; Select the proposed temporal interpretation тунамак; тӱганак had an unsuitable wear-out analysis.; confidence=low",
+      "sentenceId": "340fb5420bbf44438f2428ac49eec780",
+      "before": " Тый вет тӱгана! шке кӱлешетлан оксам касса гыч кучылтат, а кызьп йӧршын лӱдшӧ мераҥ гай кутыркален шинчылтат.",
+      "after": " Тый вет тунамак шке кӱлешетлан оксам касса гыч кучылтат, а кызьп йӧршын лӱдшӧ мераҥ гай кутыркален шинчылтат.",
+      "saved": true,
+      "analysisParts": [
+        " Тый вет тунамак шке кӱлешетлан оксам касса гыч кучылтат, а кызьп йӧршын лӱдшӧ мераҥ гай кутыркален шинчылтат."
+      ],
+      "componentRunIds": [
+        "a5c538ba36ba48dda85bda54a5982a21"
+      ],
+      "unknownTokens": [
+        "касса",
+        "кызьп"
+      ],
+      "runId": "1127065b94064d1ea98b0eae90e5e420",
+      "merge": {
+        "saved": true,
+        "sentenceId": "340fb5420bbf44438f2428ac49eec780",
+        "revision": 2,
+        "mergedIds": [
+          "a37e0e2bad4049eab7f6e949a4200e30"
+        ]
+      },
+      "warnings": [
+        "Token 2: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 16,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2389,
+        2390,
+        2391
+      ],
+      "pages": [
+        60
+      ],
+      "replacements": [
+        [
+          "институты.! тунемаш",
+          "институтыш тунемаш"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 60; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "7b9ea19bec944ec685b9ad9a4eaf4eb7",
+      "before": " Лесной институты.! тунемаш каяш шона.",
+      "after": " Лесной институтыш тунемаш каяш шона.",
+      "saved": true,
+      "analysisParts": [
+        " Лесной институтыш тунемаш каяш шона."
+      ],
+      "componentRunIds": [
+        "38db25fb7b85469ab3be672f5cfeef32"
+      ],
+      "unknownTokens": [],
+      "runId": "ef583aeaf7e64c9da2f04e980882068c",
+      "merge": {
+        "saved": true,
+        "sentenceId": "7b9ea19bec944ec685b9ad9a4eaf4eb7",
+        "revision": 2,
+        "mergedIds": [
+          "db85be18779f42b683fb221e18b171f0",
+          "717c51b6c85c44db982d0337c84d0e51"
+        ]
+      },
+      "warnings": [
+        "Token 1: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 2,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2401,
+        2402,
+        2403
+      ],
+      "pages": [
+        60
+      ],
+      "replacements": [
+        [
+          "Лиды .. айда",
+          "Лидия, айда"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 60; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "e827020a06df4abbb7deacbc38821ec2",
+      "before": " Лиды .. айда шинчын каналтена, станций мӱндыр огыл, шуына!",
+      "after": " Лидия, айда шинчын каналтена, станций мӱндыр огыл, шуына!",
+      "saved": true,
+      "analysisParts": [
+        " Лидия, айда шинчын каналтена, станций мӱндыр огыл, шуына!"
+      ],
+      "componentRunIds": [
+        "ce63cfaa1bbc4d89b675d4737bcd75fb"
+      ],
+      "unknownTokens": [],
+      "runId": "83118bb8cdf9493485fc4d8fb86b5dc6",
+      "merge": {
+        "saved": true,
+        "sentenceId": "e827020a06df4abbb7deacbc38821ec2",
+        "revision": 2,
+        "mergedIds": [
+          "dac61f0c2e4442e8bdb83f8e65224878",
+          "3557b56e1e044c348e089c380b1aea63"
+        ]
+      },
+      "warnings": [
+        "Token 0: inferred layout, verify page/footnote placement",
+        "Token 1: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2416,
+        2417
+      ],
+      "pages": [
+        60
+      ],
+      "replacements": [
+        [
+          "чодырат. шындаш",
+          "чодырам шындаш"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 60; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "9cd3878284fc4326a2095e942c2b3a7d",
+      "before": "— Тунам тый денет пырля пашам ышташ, пырля чодырат. шындаш, пырля ончен кушташ тӱҥалына.",
+      "after": "— Тунам тый денет пырля пашам ышташ, пырля чодырам шындаш, пырля ончен кушташ тӱҥалына.",
+      "saved": true,
+      "analysisParts": [
+        "— Тунам тый денет пырля пашам ышташ, пырля чодырам шындаш, пырля ончен кушташ тӱҥалына."
+      ],
+      "componentRunIds": [
+        "0b78722a06034e90a277ac2c2972d5f7"
+      ],
+      "unknownTokens": [],
+      "runId": "cc5028fc82274a619cc7528baa7f15bd",
+      "merge": {
+        "saved": true,
+        "sentenceId": "9cd3878284fc4326a2095e942c2b3a7d",
+        "revision": 2,
+        "mergedIds": [
+          "c29a3dda3cfa4ba1a5cbd78ce19c181c"
+        ]
+      },
+      "warnings": [
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 20,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2423,
+        2424
+      ],
+      "pages": [
+        60
+      ],
+      "replacements": [
+        [
+          "тудла! уло",
+          "тудлан уло"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 60; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "2f66a8f5723d47e78437866e4f9f08f1",
+      "before": " Тидым колын, Лидия чон канымеш воштыл колтыш Миловидовын чонжылан кӱчымын чучо: «Мый тудла! уло чонем дене ойлем, а тудо воштылеш гына».",
+      "after": " Тидым колын, Лидия чон канымеш воштыл колтыш Миловидовын чонжылан кӱчымын чучо: «Мый тудлан уло чонем дене ойлем, а тудо воштылеш гына».",
+      "saved": true,
+      "analysisParts": [
+        " Тидым колын, Лидия чон канымеш воштыл колтыш Миловидовын чонжылан кӱчымын чучо: «Мый тудлан уло чонем дене ойлем, а тудо воштылеш гына»."
+      ],
+      "componentRunIds": [
+        "4c1488907307425487eaa03a8a368fc1"
+      ],
+      "unknownTokens": [],
+      "runId": "b0779eecacf34af1bfe345e68534bbf2",
+      "merge": {
+        "saved": true,
+        "sentenceId": "2f66a8f5723d47e78437866e4f9f08f1",
+        "revision": 2,
+        "mergedIds": [
+          "6fdd4f69441340b7a1473889e47d6f43"
+        ]
+      },
+      "warnings": [
+        "Token 15: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 5,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2499,
+        2500
+      ],
+      "pages": [
+        62
+      ],
+      "replacements": [
+        [
+          "вола. олаш т каяш",
+          "вола, олаш каяш"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 62; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "061ebdfb15b2463bb1471ad5cb6b13be",
+      "before": " Вагон гыч волышыжо вола. олаш т каяш шонышыжо поездыш шинчаш тырша.",
+      "after": " Вагон гыч волышыжо вола, олаш каяш шонышыжо поездыш шинчаш тырша.",
+      "saved": true,
+      "analysisParts": [
+        " Вагон гыч волышыжо вола, олаш каяш шонышыжо поездыш шинчаш тырша."
+      ],
+      "componentRunIds": [
+        "66af8cc1c1ea41ef8442bb7b71d4647e"
+      ],
+      "unknownTokens": [],
+      "runId": "5b4e6e1846734f8ba349a94224859c7d",
+      "merge": {
+        "saved": true,
+        "sentenceId": "061ebdfb15b2463bb1471ad5cb6b13be",
+        "revision": 2,
+        "mergedIds": [
+          "cf669871951844c4ae79baf4ffb039dc"
+        ]
+      },
+      "warnings": [
+        "Token 4: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 7,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2697,
+        2698
+      ],
+      "pages": [
+        68
+      ],
+      "replacements": [
+        [
+          "у/ г. ловийыште",
+          "условийыште"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 68; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "edaa7cbc66f94e4f8a27602c25bdb285",
+      "before": " Садлан тудо мемнан у/ г. ловийыште кок пачаш пайдале!",
+      "after": " Садлан тудо мемнан условийыште кок пачаш пайдале!",
+      "saved": true,
+      "analysisParts": [
+        " Садлан тудо мемнан условийыште кок пачаш пайдале!"
+      ],
+      "componentRunIds": [
+        "87733ba8c82f4afb83ffe4776bc7b896"
+      ],
+      "unknownTokens": [],
+      "runId": "414223fc136b40b8862cb78701678e90",
+      "merge": {
+        "saved": true,
+        "sentenceId": "edaa7cbc66f94e4f8a27602c25bdb285",
+        "revision": 2,
+        "mergedIds": [
+          "4d6685127ed14ac09ec7badea2a6a0e4"
+        ]
+      },
+      "warnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2700
+      ],
+      "pages": [
+        68
+      ],
+      "replacements": [
+        [
+          "профессор йодо) Миловидовын",
+          "профессор йодо.\n\nМиловидовын"
+        ],
+        [
+          "и ь жаплан",
+          "ик жаплан"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 68; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "ce136632da374ff497fba78943f4e7af",
+      "before": "— кенета шоҥго профессор йодо) Миловидовын мутшо тиде йодыш дене кӱрылтӧ, и ь жаплан ойлымыжым чарныш.",
+      "after": "— кенета шоҥго профессор йодо.\n\nМиловидовын мутшо тиде йодыш дене кӱрылтӧ, ик жаплан ойлымыжым чарныш.",
+      "saved": true,
+      "analysisParts": [
+        "— кенета шоҥго профессор йодо.\n",
+        "\nМиловидовын мутшо тиде йодыш дене кӱрылтӧ, ик жаплан ойлымыжым чарныш."
+      ],
+      "componentRunIds": [
+        "d21185eb2d2841c1a38ac4499fafc319",
+        "d9c81da722f44370808b00f3db07ac93"
+      ],
+      "unknownTokens": [
+        "йодо"
+      ],
+      "runId": "1eb3120019ce475381b5319073ff80e9",
+      "warnings": [
+        "Token 5: inferred layout, verify page/footnote placement",
+        "Token 13: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 2,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2774,
+        2775
+      ],
+      "pages": [
+        70
+      ],
+      "replacements": [
+        [
+          "Тун! мак",
+          "Тунамак"
+        ],
+        [
+          "Елкин дет",
+          "Елкин дене"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 70; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "5acc37307897407dbf230ce35d9d5b6a",
+      "before": " Тун! мак шкенжым тӱрлӧ семын лыпландарен да Елкин дет ыштыме шояк договоржо нерген мондаш тыршен.",
+      "after": " Тунамак шкенжым тӱрлӧ семын лыпландарен да Елкин дене ыштыме шояк договоржо нерген мондаш тыршен.",
+      "saved": true,
+      "analysisParts": [
+        " Тунамак шкенжым тӱрлӧ семын лыпландарен да Елкин дене ыштыме шояк договоржо нерген мондаш тыршен."
+      ],
+      "componentRunIds": [
+        "75f22b5f41af485f9abcb09906bd8480"
+      ],
+      "unknownTokens": [],
+      "runId": "c8352c5a4f734186a1484f1c0abf0b3a",
+      "merge": {
+        "saved": true,
+        "sentenceId": "5acc37307897407dbf230ce35d9d5b6a",
+        "revision": 2,
+        "mergedIds": [
+          "78b92879fe7c40fe91250ab5062cc6f0"
+        ]
+      },
+      "warnings": [
+        "Token 0: inferred layout, verify page/footnote placement",
+        "Token 7: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 17,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2792,
+        2793
+      ],
+      "pages": [
+        70
+      ],
+      "replacements": [
+        [
+          "Митрофан »!",
+          "Митрофанов"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 70; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "234f9eb2c9df470182d41c112a2c3b3a",
+      "before": " Митрофан »! ятыр жап ала-мом шонен шинча.",
+      "after": " Митрофанов ятыр жап ала-мом шонен шинча.",
+      "saved": true,
+      "analysisParts": [
+        " Митрофанов ятыр жап ала-мом шонен шинча."
+      ],
+      "componentRunIds": [
+        "e85ef1d73c484f11936aa54df7ace97b"
+      ],
+      "unknownTokens": [],
+      "runId": "6dcf6916354c4d35b98d6443c0565c09",
+      "merge": {
+        "saved": true,
+        "sentenceId": "234f9eb2c9df470182d41c112a2c3b3a",
+        "revision": 2,
+        "mergedIds": [
+          "20bc8fee31704a18b12246bc99d41a64"
+        ]
+      },
+      "warnings": [
+        "Token 0: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 2,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2942,
+        2943
+      ],
+      "pages": [
+        74
+      ],
+      "replacements": [
+        [
+          "ревизиг . актым",
+          "ревизийын актым"
+        ],
+        [
+          "ӧргаш низацийын",
+          "организацийын"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 74; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "741eac5e578747a8ada179549b66d72f",
+      "before": " Ложкин старший лесничий деке чак мийышат, ревизиг . актым нале, вара кенета йодо:\n\n— Мочалова йолташ, тый мемнан партийный ӧргаш низацийын секретарьже улат, каласе, кузе шонет, ме ыш де мом ышташ тӱҥалына?",
+      "after": " Ложкин старший лесничий деке чак мийышат, ревизийын актым нале, вара кенета йодо:\n\n— Мочалова йолташ, тый мемнан партийный организацийын секретарьже улат, каласе, кузе шонет, ме ыш де мом ышташ тӱҥалына?",
+      "saved": true,
+      "analysisParts": [
+        " Ложкин старший лесничий деке чак мийышат, ревизийын актым нале, вара кенета йодо:\n",
+        "\n— Мочалова йолташ, тый мемнан партийный организацийын секретарьже улат, каласе, кузе шонет, ме ыш де мом ышташ тӱҥалына?"
+      ],
+      "componentRunIds": [
+        "b3cc616956bb4e50a5a0873717476f93",
+        "db494d19ba434544a663752808c08dd9"
+      ],
+      "unknownTokens": [
+        "йодо",
+        "де"
+      ],
+      "runId": "f91b42676fe644caa3209a5107df88c0",
+      "merge": {
+        "saved": true,
+        "sentenceId": "741eac5e578747a8ada179549b66d72f",
+        "revision": 2,
+        "mergedIds": [
+          "0a9bb4dbd5f045a69d26cd88ad7473bf"
+        ]
+      },
+      "warnings": [
+        "Token 7: inferred layout, verify page/footnote placement",
+        "Token 22: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 6,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        2949,
+        2950
+      ],
+      "pages": [
+        74
+      ],
+      "replacements": [
+        [
+          "Вет тид!",
+          "Вет тиде"
+        ],
+        [
+          "государствьп",
+          "государствын"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 74; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "f5cd15755c4148bcb3414f92681d5896",
+      "before": " Вет тид! тыглай ситыдымаш але йоҥылыш огыл, а государствьп кӱсенышкыже шинчаора пурымаш.",
+      "after": " Вет тиде тыглай ситыдымаш але йоҥылыш огыл, а государствын кӱсенышкыже шинчаора пурымаш.",
+      "saved": true,
+      "analysisParts": [
+        " Вет тиде тыглай ситыдымаш але йоҥылыш огыл, а государствын кӱсенышкыже шинчаора пурымаш."
+      ],
+      "componentRunIds": [
+        "6d79941c10ee4d37add2fc2231083722"
+      ],
+      "unknownTokens": [],
+      "runId": "f411cda037ea49cbb89a822fe1fe7e35",
+      "merge": {
+        "saved": true,
+        "sentenceId": "f5cd15755c4148bcb3414f92681d5896",
+        "revision": 2,
+        "mergedIds": [
+          "898c7e7e02174a819231d3449a752309"
+        ]
+      },
+      "warnings": [
+        "Token 1: inferred layout, verify page/footnote placement",
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 4,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3097,
+        3098
+      ],
+      "pages": [
+        78
+      ],
+      "replacements": [
+        [
+          "тылат нетат",
+          "тыланетат"
+        ],
+        [
+          "ыштен омыл! а вот",
+          "ыштен омыл, а вот"
+        ],
+        [
+          "теҥгылышкышт жат",
+          "теҥгылышкыжат"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 78; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "251bff089d50402bbd7296f377587c08",
+      "before": " Мый тылат нетат, лесничествыланат нимогай осалым ыштен омыл! а вот тыйым тыгай пашалан подсудимыйын теҥгылышкышт жат шындаш уто огыл ыле.",
+      "after": " Мый тыланетат, лесничествыланат нимогай осалым ыштен омыл, а вот тыйым тыгай пашалан подсудимыйын теҥгылышкыжат шындаш уто огыл ыле.",
+      "saved": true,
+      "analysisParts": [
+        " Мый тыланетат, лесничествыланат нимогай осалым ыштен омыл, а вот тыйым тыгай пашалан подсудимыйын теҥгылышкыжат шындаш уто огыл ыле."
+      ],
+      "componentRunIds": [
+        "4502ce7ca9504d89812930960a322bd4"
+      ],
+      "unknownTokens": [],
+      "runId": "2bca34ceb1d74928b560cc8985ae2048",
+      "merge": {
+        "saved": true,
+        "sentenceId": "251bff089d50402bbd7296f377587c08",
+        "revision": 2,
+        "mergedIds": [
+          "8d7172c763154cfeac1dbf07b140dfb1"
+        ]
+      },
+      "warnings": [
+        "Token 1: inferred layout, verify page/footnote placement",
+        "Token 8: inferred layout, verify page/footnote placement",
+        "Token 15: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 12,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3114
+      ],
+      "pages": [
+        78
+      ],
+      "replacements": [
+        [
+          "пудешталтшаш] гай",
+          "пудешталтшаш гай"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 78; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "e993c4a854004eaa9486c9c1a74181bf",
+      "before": " Тидым колын, Эльвира чот кожганыш, пудешталтшаш] гай сырыш, полан гай йошкарген шинче.",
+      "after": " Тидым колын, Эльвира чот кожганыш, пудешталтшаш гай сырыш, полан гай йошкарген шинче.",
+      "saved": true,
+      "analysisParts": [
+        " Тидым колын, Эльвира чот кожганыш, пудешталтшаш гай сырыш, полан гай йошкарген шинче."
+      ],
+      "componentRunIds": [
+        "8e24accd67664c89a8be85a677825271"
+      ],
+      "unknownTokens": [],
+      "runId": "b78bd6432e0d4e16b8068dbbfcf3e604",
+      "warnings": [],
+      "revision": 2,
+      "currentRevision": 2,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3729,
+        3730
+      ],
+      "pages": [
+        94
+      ],
+      "replacements": [
+        [
+          "Туньп тышо",
+          "Туныктышо"
+        ],
+        [
+          "Окли! пеш",
+          "Оклий пеш"
+        ],
+        [
+          "ыш кошт все Эре",
+          "ыш кошт веле. Эре"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 94; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "8a4cca03c7324760a7688517c12d7ac0",
+      "before": " Туньп тышо эре «сто процентлан» погыныза манеш, а Окли! пеш вустык вет, ик гана мийышат, тетла ыш кошт все Эре шарпан ден нашмакым мӧҥгыштыжӧ тӱрлен кийыш,-- умылтара саде ватет.",
+      "after": " Туныктышо эре «сто процентлан» погыныза манеш, а Оклий пеш вустык вет, ик гана мийышат, тетла ыш кошт веле. Эре шарпан ден нашмакым мӧҥгыштыжӧ тӱрлен кийыш,-- умылтара саде ватет.",
+      "saved": true,
+      "analysisParts": [
+        " Туныктышо эре «сто процентлан» погыныза манеш, а Оклий пеш вустык вет, ик гана мийышат, тетла ыш кошт веле. ",
+        "Эре шарпан ден нашмакым мӧҥгыштыжӧ тӱрлен кийыш,-- умылтара саде ватет."
+      ],
+      "componentRunIds": [
+        "46fc0c168bcd4adf8b18eb45c2ce2be1",
+        "c6415d2d044a444a8dca43c3a418b5ea"
+      ],
+      "unknownTokens": [
+        "сто"
+      ],
+      "runId": "a1106215a37f448cb4949ad4aa50dfe9",
+      "merge": {
+        "saved": true,
+        "sentenceId": "8a4cca03c7324760a7688517c12d7ac0",
+        "revision": 2,
+        "mergedIds": [
+          "f8ebc83f47104a87b1d4e575a4904e2f"
+        ]
+      },
+      "warnings": [
+        "Token 0: inferred layout, verify page/footnote placement",
+        "Token 10: inferred layout, verify page/footnote placement",
+        "Token 22: inferred layout, verify page/footnote placement",
+        "Token 23: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 12,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3737
+      ],
+      "pages": [
+        94
+      ],
+      "replacements": [
+        [
+          "имымак кер)",
+          "имымак керте."
+        ]
+      ],
+      "confidence": "low",
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 94; Preferred hypotheses from the reviewed list; confidence=low",
+      "sentenceId": "18a2f6d53acf4bf090a85ee630a43764",
+      "before": " Тиде мутшо Йыванын шӱмышкыжӧ кугу имымак кер) «Оклий йӧршын тунемдыме улмашыс.",
+      "after": " Тиде мутшо Йыванын шӱмышкыжӧ кугу имымак керте. «Оклий йӧршын тунемдыме улмашыс.",
+      "saved": true,
+      "analysisParts": [
+        " Тиде мутшо Йыванын шӱмышкыжӧ кугу имымак керте. ",
+        "«Оклий йӧршын тунемдыме улмашыс."
+      ],
+      "componentRunIds": [
+        "8de2589eee6d425ea2390d21dbd625f1",
+        "b7a63fd72a244034ab0bcd81eb1dd451"
+      ],
+      "unknownTokens": [],
+      "runId": "3d69edaf8b1d4b19895de7dd233bceb9",
+      "warnings": [
+        "Token 6: inferred layout, verify page/footnote placement",
+        "Token 7: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 2,
+      "dictionaryEntriesRestored": 6,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3834,
+        3835
+      ],
+      "pages": [
+        98
+      ],
+      "replacements": [
+        [
+          "авто» влакын",
+          "автор-влакын"
+        ],
+        [
+          "йылмышт де: Г. пьесым",
+          "йылмышт дене пьесым"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 98; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "6f3909dac5b9493c8fb6e02ece23b677",
+      "before": " Руш театрым ончен, руш авто» влакын пьесыштым лудын, нуно шочмо йылмышт де: Г. пьесым, тӱрлӧ койдарчыкым' возат.",
+      "after": " Руш театрым ончен, руш автор-влакын пьесыштым лудын, нуно шочмо йылмышт дене пьесым, тӱрлӧ койдарчыкым' возат.",
+      "saved": true,
+      "analysisParts": [
+        " Руш театрым ончен, руш автор-влакын пьесыштым лудын, нуно шочмо йылмышт дене пьесым, тӱрлӧ койдарчыкым' возат."
+      ],
+      "componentRunIds": [
+        "1013461d618e477fb0d4ed7ee8b0d52f"
+      ],
+      "unknownTokens": [
+        "койдарчыкым"
+      ],
+      "runId": "7d36c0e2de8943fd8f13da8fc4a5cef8",
+      "merge": {
+        "saved": true,
+        "sentenceId": "6f3909dac5b9493c8fb6e02ece23b677",
+        "revision": 2,
+        "mergedIds": [
+          "70f1a91f15ea421eb0e44e4b3bb90f0f"
+        ]
+      },
+      "warnings": [
+        "Token 5: inferred layout, verify page/footnote placement",
+        "Token 12: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 13,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3836,
+        3837
+      ],
+      "pages": [
+        98
+      ],
+      "replacements": [
+        [
+          "пьеса-вл; . лектыт",
+          "пьеса-влак лектыт"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 98; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "12f49cecfa964958a28324801ac88cd7",
+      "before": " Тиде жапыште Озаҥ олаште первый марла пьеса-вл; . лектыт: Беляев ден Белковый «Тупела илыш», А.",
+      "after": " Тиде жапыште Озаҥ олаште первый марла пьеса-влак лектыт: Беляев ден Белковый «Тупела илыш», А.",
+      "saved": true,
+      "analysisParts": [
+        " Тиде жапыште Озаҥ олаште первый марла пьеса-влак лектыт: Беляев ден Белковый «Тупела илыш», А."
+      ],
+      "componentRunIds": [
+        "af1a5b84f97243ea8bbdd260bd000cb1"
+      ],
+      "unknownTokens": [
+        "пьеса-влак"
+      ],
+      "runId": "ea4b4715de914353ae75b85ca0014255",
+      "merge": {
+        "saved": true,
+        "sentenceId": "12f49cecfa964958a28324801ac88cd7",
+        "revision": 2,
+        "mergedIds": [
+          "8094b3018c014c979780eabb4a621522"
+        ]
+      },
+      "warnings": [
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 1,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3847
+      ],
+      "pages": [
+        98
+      ],
+      "replacements": [
+        [
+          "нации} нальный",
+          "национальный"
+        ],
+        [
+          "автонс * мийым",
+          "автономийым"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 98; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "00918004ad1d4675a77a0e3d94e9e93a",
+      "before": " Ленинский нации} нальный политикым илышыш пуртен, революций деч ожно индыралтше тыгыде калыклан Коммунист партий автонс * мийым ышташ чыла йӧным пуа.",
+      "after": " Ленинский национальный политикым илышыш пуртен, революций деч ожно индыралтше тыгыде калыклан Коммунист партий автономийым ышташ чыла йӧным пуа.",
+      "saved": true,
+      "analysisParts": [
+        " Ленинский национальный политикым илышыш пуртен, революций деч ожно индыралтше тыгыде калыклан Коммунист партий автономийым ышташ чыла йӧным пуа."
+      ],
+      "componentRunIds": [
+        "dbd5586b0b4c4af2b296d941f3fe56b5"
+      ],
+      "unknownTokens": [],
+      "runId": "14b1bb62cb764bc993efae94016dd70e",
+      "warnings": [
+        "Token 1: inferred layout, verify page/footnote placement",
+        "Token 14: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 2,
+      "dictionaryEntriesRestored": 9,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3904,
+        3905
+      ],
+      "pages": [
+        99,
+        100
+      ],
+      "replacements": [
+        [
+          "койыш] ваштареш",
+          "койыш ваштареш"
+        ],
+        [
+          "келгын.; ончыктен",
+          "келгын ончыктен"
+        ],
+        [
+          "ойлымаштыжетудо",
+          "ойлымаштыже тудо"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 99,100; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "658e1499ea1f4817a0d811a5e87f2f98",
+      "before": " Шкенжын ик эн сай «Юмын языкше» ойлымаштыжетудо нужна ий годым ялыште карт ден кулак-влакын, осал пашаштым, ялысе ончыл еҥ-влакын тошто койыш] ваштареш кредалмыштым пеш реалистически да келгын.; ончыктен пуэн.",
+      "after": " Шкенжын ик эн сай «Юмын языкше» ойлымаштыже тудо нужна ий годым ялыште карт ден кулак-влакын, осал пашаштым, ялысе ончыл еҥ-влакын тошто койыш ваштареш кредалмыштым пеш реалистически да келгын ончыктен пуэн.",
+      "saved": true,
+      "analysisParts": [
+        " Шкенжын ик эн сай «Юмын языкше» ойлымаштыже тудо нужна ий годым ялыште карт ден кулак-влакын, осал пашаштым, ялысе ончыл еҥ-влакын тошто койыш ваштареш кредалмыштым пеш реалистически да келгын ончыктен пуэн."
+      ],
+      "componentRunIds": [
+        "af68b01ffa724b33893540aafe81dc0d"
+      ],
+      "unknownTokens": [],
+      "runId": "bbafd5eb8e7e4a97a467ea2ecea558f8",
+      "merge": {
+        "saved": true,
+        "sentenceId": "658e1499ea1f4817a0d811a5e87f2f98",
+        "revision": 2,
+        "mergedIds": [
+          "7b5008ba86f7403dbcb6544cd221c551"
+        ]
+      },
+      "warnings": [],
+      "revision": 3,
+      "dictionaryEntriesRestored": 56,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3910
+      ],
+      "pages": [
+        100
+      ],
+      "replacements": [
+        [
+          "нэгп, жапысе",
+          "нэп жапысе"
+        ],
+        [
+          "сознательностьшо}",
+          "сознательностьын"
+        ],
+        [
+          "«Корнышто»/,;",
+          "«Корнышто»,"
+        ],
+        [
+          "се->- ҥымыжым",
+          "сеҥымыжым"
+        ],
+        [
+          "ойлымашлаштыжаи е граждан",
+          "ойлымашлаштыже граждан"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 100; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "c882e4601fbe467185c7f3927e6649ea",
+      "before": " Шкетан шкенжын ойлымашлаштыже нэгп, жапысе Марий элын пычкемышлыкшым, класс кредалмашым, а кумлымшо ийлаште «Илыш ӱжеш», «Корнышто»/,; «Карпуш», «Капка орол» да моло ойлымашлаштыжаи е граждан сар жапым, мемнан элыштына социализмын се->- ҥымыжым, калыкын коммунистический сознательностьшо} кушмым сӱретла.",
+      "after": " Шкетан шкенжын ойлымашлаштыже нэп жапысе Марий элын пычкемышлыкшым, класс кредалмашым, а кумлымшо ийлаште «Илыш ӱжеш», «Корнышто», «Карпуш», «Капка орол» да моло ойлымашлаштыже граждан сар жапым, мемнан элыштына социализмын сеҥымыжым, калыкын коммунистический сознательностьын кушмым сӱретла.",
+      "saved": true,
+      "analysisParts": [
+        " Шкетан шкенжын ойлымашлаштыже нэп жапысе Марий элын пычкемышлыкшым, класс кредалмашым, а кумлымшо ийлаште «Илыш ӱжеш», «Корнышто», «Карпуш», «Капка орол» да моло ойлымашлаштыже граждан сар жапым, мемнан элыштына социализмын сеҥымыжым, калыкын коммунистический сознательностьын кушмым сӱретла."
+      ],
+      "componentRunIds": [
+        "00065f9476034cb7b2b58c87fa7dd5c6"
+      ],
+      "unknownTokens": [],
+      "runId": "a69461e5c85a42aaa53f5ef32f0d5301",
+      "warnings": [
+        "Token 3: inferred layout, verify page/footnote placement",
+        "Token 34: inferred layout, verify page/footnote placement",
+        "Token 42: inferred layout, verify page/footnote placement",
+        "Token 46: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 14,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3920,
+        3921
+      ],
+      "pages": [
+        100
+      ],
+      "replacements": [
+        [
+          "кредал! - моштыдымым",
+          "кредалаш моштыдымым"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 100; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "f65593eec6aa4ea19a041b0055801772",
+      "before": " Тый нимодымо айдемым уланым ыштенат, кредал! - моштыдымым кредалаш туныктенат.",
+      "after": " Тый нимодымо айдемым уланым ыштенат, кредалаш моштыдымым кредалаш туныктенат.",
+      "saved": true,
+      "analysisParts": [
+        " Тый нимодымо айдемым уланым ыштенат, кредалаш моштыдымым кредалаш туныктенат."
+      ],
+      "componentRunIds": [
+        "a47a853e445d4f4e9f7ab1475670d24f"
+      ],
+      "unknownTokens": [],
+      "runId": "a9210a43be3f4c5091c8a826a32ba910",
+      "merge": {
+        "saved": true,
+        "sentenceId": "f65593eec6aa4ea19a041b0055801772",
+        "revision": 2,
+        "mergedIds": [
+          "96dc1dd8015c43f98fd3e14ea77d5b77"
+        ]
+      },
+      "warnings": [
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 7,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        3991,
+        3992,
+        3993
+      ],
+      "pages": [
+        102
+      ],
+      "replacements": [
+        [
+          "патриотизм,!!",
+          "патриотизм,"
+        ],
+        [
+          "преданный ул: йыж",
+          "преданный улмыж"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 102; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "8d6f9c779c3140fc9218fcc4cc5773cc",
+      "before": " Тунамсе поэзий патриотизм,!! шочмо элым йӧратымыж дене, партийлан преданный ул: йыж дене виян лийын.",
+      "after": " Тунамсе поэзий патриотизм, шочмо элым йӧратымыж дене, партийлан преданный улмыж дене виян лийын.",
+      "saved": true,
+      "analysisParts": [
+        " Тунамсе поэзий патриотизм, шочмо элым йӧратымыж дене, партийлан преданный улмыж дене виян лийын."
+      ],
+      "componentRunIds": [
+        "fe1240610f374a579aa990dff4e8c2fe"
+      ],
+      "unknownTokens": [],
+      "runId": "3669613cd0814111a312996417954e74",
+      "merge": {
+        "saved": true,
+        "sentenceId": "8d6f9c779c3140fc9218fcc4cc5773cc",
+        "revision": 2,
+        "mergedIds": [
+          "cd7c882c207f48e493c4237d2a001eed",
+          "1713eeac092842cd979eb94e9e99a5e0"
+        ]
+      },
+      "warnings": [
+        "Token 11: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 4,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4026
+      ],
+      "pages": [
+        103
+      ],
+      "replacements": [
+        [
+          "Айзенворт ӱйыштым",
+          "Айзенворт лӱйыштым"
+        ]
+      ],
+      "confidence": "low",
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 103; Preferred hypotheses from the reviewed list; confidence=low",
+      "sentenceId": "2604bc4abed74cc4ad07b1b44f835254",
+      "before": " Тиде жапыште шочмо элын эрыкше да независимость- ю верч кредалмашеш марий писатель-влак Шадт Булат, Элмар, П. Першут, Г. Ефруш, С. Эчан, А. Айзенворт ӱйыштым пыштышт.",
+      "after": " Тиде жапыште шочмо элын эрыкше да независимость- ю верч кредалмашеш марий писатель-влак Шадт Булат, Элмар, П. Першут, Г. Ефруш, С. Эчан, А. Айзенворт лӱйыштым пыштышт.",
+      "saved": true,
+      "analysisParts": [
+        " Тиде жапыште шочмо элын эрыкше да независимость- ю верч кредалмашеш марий писатель-влак Шадт Булат, Элмар, П. ",
+        "Першут, Г. ",
+        "Ефруш, С. ",
+        "Эчан, А. ",
+        "Айзенворт лӱйыштым пыштышт."
+      ],
+      "componentRunIds": [
+        "c1eb41c08ea64b5aaf06382d3701abc5",
+        "a3fe6619ee0b49de9cb6681cc8fcc92a",
+        "c8bc5678c36b4910a55f9416ab287c8a",
+        "02ae93da78c84917990f13135cfbfe0d",
+        "e18bf16aaaa4442eba94eb4e71324305"
+      ],
+      "unknownTokens": [
+        "лӱйыштым"
+      ],
+      "runId": "252a3f86abca4b2ab150ecca3fed06fd",
+      "warnings": [
+        "Token 33: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 20,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4048
+      ],
+      "pages": [
+        103,
+        104
+      ],
+      "replacements": [
+        [
+          "захва ; чик",
+          "захватчик"
+        ],
+        [
+          "сеҥымаш веое",
+          "сеҥымаш вере"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 103,104; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "222d32157932417dab2ed15864367ef1",
+      "before": " Матюковскийын «Сеҥымаш корно дене» произведенийышт да моло авторын возымышт немыч захва ; чик ваштареш шыдым тарватеныт да сеҥымаш веое чарныде кредалаш ӱжын шогеныт.",
+      "after": " Матюковскийын «Сеҥымаш корно дене» произведенийышт да моло авторын возымышт немыч захватчик ваштареш шыдым тарватеныт да сеҥымаш вере чарныде кредалаш ӱжын шогеныт.",
+      "saved": true,
+      "analysisParts": [
+        " Матюковскийын «Сеҥымаш корно дене» произведенийышт да моло авторын возымышт немыч захватчик ваштареш шыдым тарватеныт да сеҥымаш вере чарныде кредалаш ӱжын шогеныт."
+      ],
+      "componentRunIds": [
+        "48fce4d46dda4c07ad380a5f910e0e20"
+      ],
+      "unknownTokens": [],
+      "runId": "10744b71ff17499dbc07615ca5fb1e8f",
+      "warnings": [
+        "Token 12: inferred layout, verify page/footnote placement",
+        "Token 18: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 4,
+      "dictionaryEntriesRestored": 6,
+      "dictionaryRevision": 5,
+      "currentRevision": 5,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4072,
+        4073
+      ],
+      "pages": [
+        104
+      ],
+      "replacements": [
+        [
+          "пытыш, д! чумыр",
+          "пытыш, да чумыр"
+        ],
+        [
+          "пашалан пижем Фронт",
+          "пашалан пиже.\n\nФронт"
+        ],
+        [
+          "моло лит ратор",
+          "моло литератор"
+        ],
+        [
+          "сеҥымыже д[ тудын",
+          "сеҥымыже да тудын"
+        ],
+        [
+          "тӱ' ҥалыт",
+          "тӱҥалыт"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 104; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "f27e116338104d58a067e0a92c7c387b",
+      "before": " Сар Совет Ушемын кугу сеҥымашыж дене пытыш, д! чумыр совет калык уло вийже дене тыныс пашалан пижем Фронт гыч пӧртылшӧ марий писатель-влакат, моло лит ратор дене пырля, совет калыкын войнаште сеҥымыже д[ тудын мирный, созидательный пашаж нерген возаш тӱ' ҥалыт.",
+      "after": " Сар Совет Ушемын кугу сеҥымашыж дене пытыш, да чумыр совет калык уло вийже дене тыныс пашалан пиже.\n\nФронт гыч пӧртылшӧ марий писатель-влакат, моло литератор дене пырля, совет калыкын войнаште сеҥымыже да тудын мирный, созидательный пашаж нерген возаш тӱҥалыт.",
+      "saved": true,
+      "analysisParts": [
+        " Сар Совет Ушемын кугу сеҥымашыж дене пытыш, да чумыр совет калык уло вийже дене тыныс пашалан пиже.\n",
+        "\nФронт гыч пӧртылшӧ марий писатель-влакат, моло литератор дене пырля, совет калыкын войнаште сеҥымыже да тудын мирный, созидательный пашаж нерген возаш тӱҥалыт."
+      ],
+      "componentRunIds": [
+        "6eb1ccdab464421bbfbbb018df521bd4",
+        "49f5b505e6e84eabb0aff2bd7a85ca99"
+      ],
+      "unknownTokens": [
+        "пиже",
+        "созидательный"
+      ],
+      "runId": "bb691fb06b3b452e93130d9a9b7fdd7c",
+      "merge": {
+        "saved": true,
+        "sentenceId": "f27e116338104d58a067e0a92c7c387b",
+        "revision": 2,
+        "mergedIds": [
+          "d3cdcc3c9cab4f09b46e3a3315879f0e"
+        ]
+      },
+      "warnings": [
+        "Token 8: inferred layout, verify page/footnote placement",
+        "Token 17: inferred layout, verify page/footnote placement",
+        "Token 18: inferred layout, verify page/footnote placement",
+        "Token 26: inferred layout, verify page/footnote placement",
+        "Token 34: inferred layout, verify page/footnote placement",
+        "Token 42: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 18,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4223,
+        4224
+      ],
+      "pages": [
+        107,
+        108
+      ],
+      "replacements": [
+        [
+          "1 0 7Тудо",
+          "Тудо"
+        ],
+        [
+          "эр та р а л те",
+          "эртаралтын"
+        ],
+        [
+          "литературын БО ий",
+          "литературын 50 ий"
+        ],
+        [
+          "ш! тешлен",
+          "шотешлен"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 107,108; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "b733c4471bfb452588d164115444eb06",
+      "before": " 1 0 7Тудо Совет властьлан 50 ий темме жапыште эр та р а л те да литературын БО ий жапыште кушкын толмыжым ш! тешлен, тудлан ончык кушкашыже корным ончыктен.",
+      "after": " Тудо Совет властьлан 50 ий темме жапыште эртаралтын да литературын 50 ий жапыште кушкын толмыжым шотешлен, тудлан ончык кушкашыже корным ончыктен.",
+      "saved": true,
+      "analysisParts": [
+        " Тудо Совет властьлан 50 ий темме жапыште эртаралтын да литературын 50 ий жапыште кушкын толмыжым шотешлен, тудлан ончык кушкашыже корным ончыктен."
+      ],
+      "componentRunIds": [
+        "6819d32377d743deb1f88c8069c8b798"
+      ],
+      "unknownTokens": [
+        "шотешлен"
+      ],
+      "runId": "19b323471ef84432b741b0d61aed7caf",
+      "merge": {
+        "saved": true,
+        "sentenceId": "b733c4471bfb452588d164115444eb06",
+        "revision": 2,
+        "mergedIds": [
+          "80c61b67a7ec4545a87897824e51e27d"
+        ]
+      },
+      "warnings": [
+        "Token 7: inferred layout, verify page/footnote placement",
+        "Token 10: inferred layout, verify page/footnote placement",
+        "Token 15: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 9,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4236
+      ],
+      "pages": [
+        108
+      ],
+      "replacements": [
+        [
+          "задачыштлаи",
+          "задачыштлан"
+        ],
+        [
+          "эта) пым",
+          "этапым"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 108; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "bbb8ce98cf894ae7b982138824f77b8d",
+      "before": " Партий ЦК-н письмаштыже тыге каласыме: «Совет литератор-влакын ик эн кӱлешан задачыштлаи - тачысе илышым, у обществым ыштен толшо кызытсе эта) пым сылнымут дене ончыктымаш шотлалтеш».",
+      "after": " Партий ЦК-н письмаштыже тыге каласыме: «Совет литератор-влакын ик эн кӱлешан задачыштлан - тачысе илышым, у обществым ыштен толшо кызытсе этапым сылнымут дене ончыктымаш шотлалтеш».",
+      "saved": true,
+      "analysisParts": [
+        " Партий ЦК-н письмаштыже тыге каласыме: «Совет литератор-влакын ик эн кӱлешан задачыштлан - тачысе илышым, у обществым ыштен толшо кызытсе этапым сылнымут дене ончыктымаш шотлалтеш»."
+      ],
+      "componentRunIds": [
+        "c6065229eeac4021b0e2bbfe4d4b1073"
+      ],
+      "unknownTokens": [],
+      "runId": "76cbd19d770e411398906cbafaf44f08",
+      "warnings": [
+        "Token 12: inferred layout, verify page/footnote placement",
+        "Token 22: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 9,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4400
+      ],
+      "pages": [
+        113
+      ],
+      "replacements": [
+        [
+          "[анен лудам",
+          "куанен лудам"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 113; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "79688959db244aa4b08ad4fe3fd69984",
+      "before": " Моткоч-моткоч [анен лудам.",
+      "after": " Моткоч-моткоч куанен лудам.",
+      "saved": true,
+      "analysisParts": [
+        " Моткоч-моткоч куанен лудам."
+      ],
+      "componentRunIds": [
+        "cabf52dc3c4d432eba917c5586ebdba3"
+      ],
+      "unknownTokens": [],
+      "runId": "4cbbf50c4a6b4bc39c44cfca242e1500",
+      "warnings": [
+        "Token 1: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 2,
+      "dictionaryEntriesRestored": 5,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4409
+      ],
+      "pages": [
+        113
+      ],
+      "replacements": [
+        [
+          "кол- )",
+          "колто"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 113; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "fb8268cd81ed49da9da5c68ab43918e0",
+      "before": " Но мылам мӧҥгеш ида кол- ).",
+      "after": " Но мылам мӧҥгеш ида колто.",
+      "saved": true,
+      "analysisParts": [
+        " Но мылам мӧҥгеш ида колто."
+      ],
+      "componentRunIds": [
+        "802bed71b82b4a52b10fc697ef4ca890"
+      ],
+      "unknownTokens": [],
+      "runId": "e09bb41973364d5183201eeb54384ce8",
+      "warnings": [
+        "Token 4: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 2,
+      "dictionaryEntriesRestored": 3,
+      "dictionaryRevision": 3,
+      "currentRevision": 3,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4451,
+        4452
+      ],
+      "pages": [
+        114
+      ],
+      "replacements": [
+        [
+          "Мог! шижын",
+          "Мом шижын"
+        ]
+      ],
+      "confidence": "low",
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 114; Preferred hypotheses from the reviewed list; confidence=low",
+      "sentenceId": "cb2773533b124cbf9336b11e35c48a42",
+      "before": " Мог! шижын, мыйын чонем, ом шинче, ала сайлан, ала осаллан тулла йӱла.",
+      "after": " Мом шижын, мыйын чонем, ом шинче, ала сайлан, ала осаллан тулла йӱла.",
+      "saved": true,
+      "analysisParts": [
+        " Мом шижын, мыйын чонем, ом шинче, ала сайлан, ала осаллан тулла йӱла."
+      ],
+      "componentRunIds": [
+        "d82b4213795b4edfbd85d63331761e8a"
+      ],
+      "unknownTokens": [],
+      "runId": "8752e040327040638431ca9483bccca3",
+      "merge": {
+        "saved": true,
+        "sentenceId": "cb2773533b124cbf9336b11e35c48a42",
+        "revision": 2,
+        "mergedIds": [
+          "30f7782577f34fa09bcead11fd3f8e33"
+        ]
+      },
+      "warnings": [
+        "Token 0: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 8,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4454,
+        4455
+      ],
+      "pages": [
+        114
+      ],
+      "replacements": [
+        [
+          "илыш! кодам",
+          "илыште кодам"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 114; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "f279ab9500f642e5adf2d0b0cf0a2d42",
+      "before": " Пӱрымашем уло гын, илыш! кодам, уке гын — чеверын, ош тӱня.",
+      "after": " Пӱрымашем уло гын, илыште кодам, уке гын — чеверын, ош тӱня.",
+      "saved": true,
+      "analysisParts": [
+        " Пӱрымашем уло гын, илыште кодам, уке гын — чеверын, ош тӱня."
+      ],
+      "componentRunIds": [
+        "d6da399333344ea6976cc8cf5c1e889f"
+      ],
+      "unknownTokens": [],
+      "runId": "b5ea3fe4cf514acdad10bf3bc7db809c",
+      "merge": {
+        "saved": true,
+        "sentenceId": "f279ab9500f642e5adf2d0b0cf0a2d42",
+        "revision": 2,
+        "mergedIds": [
+          "178cfea0f3d34bc1b4e9ae7a93bed285"
+        ]
+      },
+      "warnings": [
+        "Token 4: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 10,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4460,
+        4461
+      ],
+      "pages": [
+        114
+      ],
+      "replacements": [
+        [
+          "Нун! литературный",
+          "Нуно литературный"
+        ],
+        [
+          "маа рий",
+          "марий"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 114; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "eab4ab52740c4790b98b77e6505fe2a9",
+      "before": " Нун! литературный илышыште активнын участвоватленыт, маа рий поэзийым рушлашке кусареныт.",
+      "after": " Нуно литературный илышыште активнын участвоватленыт, марий поэзийым рушлашке кусареныт.",
+      "saved": true,
+      "analysisParts": [
+        " Нуно литературный илышыште активнын участвоватленыт, марий поэзийым рушлашке кусареныт."
+      ],
+      "componentRunIds": [
+        "a32af20f6cd14100b210f093d5ccec41"
+      ],
+      "unknownTokens": [],
+      "runId": "42d7138aa5904a6199664045da7203b2",
+      "merge": {
+        "saved": true,
+        "sentenceId": "eab4ab52740c4790b98b77e6505fe2a9",
+        "revision": 2,
+        "mergedIds": [
+          "f9fe686561c141d6b2c8976a4cba4c9d"
+        ]
+      },
+      "warnings": [
+        "Token 0: inferred layout, verify page/footnote placement",
+        "Token 6: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 4,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4480
+      ],
+      "pages": [
+        115
+      ],
+      "replacements": [
+        [
+          "Марпединститу- лн",
+          "Марпединститутын"
+        ],
+        [
+          "тыге нчыктен",
+          "тыге ончыктен"
+        ],
+        [
+          "материалеш озымо",
+          "материалеш возымо"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 115; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "4c7085a743044baa956347ae553d7218",
+      "before": " Фатов Крупская лӱмеш Марпединститу- лн 1942 ийыште лекше ученый запискылаштыже тыге нчыктен: «Пьесым военный жап деч ончычсо материалеш озымо.",
+      "after": " Фатов Крупская лӱмеш Марпединститутын 1942 ийыште лекше ученый запискылаштыже тыге ончыктен: «Пьесым военный жап деч ончычсо материалеш возымо.",
+      "saved": true,
+      "analysisParts": [
+        " Фатов Крупская лӱмеш Марпединститутын 1942 ийыште лекше ученый запискылаштыже тыге ончыктен: «Пьесым военный жап деч ончычсо материалеш возымо."
+      ],
+      "componentRunIds": [
+        "0a86759249fb42d4a0eee53a93c08959"
+      ],
+      "unknownTokens": [],
+      "runId": "167c0054098242cab78fdce1a3b0d5ff",
+      "warnings": [
+        "Token 3: inferred layout, verify page/footnote placement",
+        "Token 10: inferred layout, verify page/footnote placement",
+        "Token 19: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 4,
+      "dictionaryEntriesRestored": 36,
+      "dictionaryRevision": 5,
+      "currentRevision": 5,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4556,
+        4557
+      ],
+      "pages": [
+        118
+      ],
+      "replacements": [
+        [
+          "пр* Т мышленный",
+          "промышленный"
+        ],
+        [
+          "йӧршьп . лан",
+          "йӧршынлан"
+        ]
+      ],
+      "confidence": "low",
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 118; Preferred hypotheses from the reviewed list; confidence=low",
+      "sentenceId": "4e5880451f8242808d5cefd4344f3fa9",
+      "before": " Касвел гыч лу дене пр* Т мышленный предприятий-влак кусненыт, южышт йӧршьп . лан тышан кодыныт.",
+      "after": " Касвел гыч лу дене промышленный предприятий-влак кусненыт, южышт йӧршынлан тышан кодыныт.",
+      "saved": true,
+      "analysisParts": [
+        " Касвел гыч лу дене промышленный предприятий-влак кусненыт, южышт йӧршынлан тышан кодыныт."
+      ],
+      "componentRunIds": [
+        "1c1a92d6c2db47c1911d0a4170fac5ac"
+      ],
+      "unknownTokens": [],
+      "runId": "5170fcbbac914e80be0ed4f9e312b9bb",
+      "merge": {
+        "saved": true,
+        "sentenceId": "4e5880451f8242808d5cefd4344f3fa9",
+        "revision": 2,
+        "mergedIds": [
+          "3868062f506f41eb882dae14c3a1782e"
+        ]
+      },
+      "warnings": [
+        "Token 4: inferred layout, verify page/footnote placement",
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 6,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4559,
+        4560
+      ],
+      "pages": [
+        118
+      ],
+      "replacements": [
+        [
+          "Моло олт. гыч",
+          "Моло ола гыч"
+        ],
+        [
+          "ончыктеныт Олаштына",
+          "ончыктеныт.\n\nОлаштына"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 118; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "96e4b19fcdc3425cbd4985fa79e2ee2a",
+      "before": " Моло олт. гыч театральный коллектив, посна артист-влак гастрол дене толеденыт, спектакльым, концертым ончыктеныт Олаштына чӱчкыдынак ик военный частьын ансамбльже выступатлен.",
+      "after": " Моло ола гыч театральный коллектив, посна артист-влак гастрол дене толеденыт, спектакльым, концертым ончыктеныт.\n\nОлаштына чӱчкыдынак ик военный частьын ансамбльже выступатлен.",
+      "saved": true,
+      "analysisParts": [
+        " Моло ола гыч театральный коллектив, посна артист-влак гастрол дене толеденыт, спектакльым, концертым ончыктеныт.\n",
+        "\nОлаштына чӱчкыдынак ик военный частьын ансамбльже выступатлен."
+      ],
+      "componentRunIds": [
+        "cabbde6263be461787d2d8d6c61ea123",
+        "7d009a6e2b3e4813930d9f08072b4140"
+      ],
+      "unknownTokens": [
+        "гастрол",
+        "ончыктеныт"
+      ],
+      "runId": "2c5818ee056e4d98a2a13dc6e9f521c4",
+      "merge": {
+        "saved": true,
+        "sentenceId": "96e4b19fcdc3425cbd4985fa79e2ee2a",
+        "revision": 2,
+        "mergedIds": [
+          "4e7c793671b54e18a109f674df44f194"
+        ]
+      },
+      "warnings": [
+        "Token 1: inferred layout, verify page/footnote placement",
+        "Token 16: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 7,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4566,
+        4567
+      ],
+      "pages": [
+        118
+      ],
+      "replacements": [
+        [
+          "Концерт годы!",
+          "Концерт годым"
+        ],
+        [
+          "ик рат гьн весыш",
+          "ик рат гыч весыш"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 118; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "c79a7a17ce144a319da2cd4f3ce3f3ad",
+      "before": " Концерт годы! ӱдырамаш тӱшкаште кожганаш тӱҥальыч, ик рат гьн весыш кагазым колтылыт, южышт лудыт, южышт возен налыт.",
+      "after": " Концерт годым ӱдырамаш тӱшкаште кожганаш тӱҥальыч, ик рат гыч весыш кагазым колтылыт, южышт лудыт, южышт возен налыт.",
+      "saved": true,
+      "analysisParts": [
+        " Концерт годым ӱдырамаш тӱшкаште кожганаш тӱҥальыч, ик рат гыч весыш кагазым колтылыт, южышт лудыт, южышт возен налыт."
+      ],
+      "componentRunIds": [
+        "df0232d8ec86402c88ffab3becfb6b33"
+      ],
+      "unknownTokens": [],
+      "runId": "ed0225985b87485699c03421eed44f75",
+      "merge": {
+        "saved": true,
+        "sentenceId": "c79a7a17ce144a319da2cd4f3ce3f3ad",
+        "revision": 2,
+        "mergedIds": [
+          "54ffe92f61704984b162c290b8313c97"
+        ]
+      },
+      "warnings": [
+        "Token 1: inferred layout, verify page/footnote placement",
+        "Token 9: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 9,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4575,
+        4576
+      ],
+      "pages": [
+        118
+      ],
+      "replacements": [
+        [
+          "йӧратымаш! совет",
+          "йӧратымаш, совет"
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 118; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "8a79ef10b91c4328b620605c40edd7b9",
+      "before": " Шочмо мландым йӧратымаш! совет патриотизм, калык-влакын келшен илымышт Отечественный война жапысе марий литературын тӱҥ темыже лийыныт.",
+      "after": " Шочмо мландым йӧратымаш, совет патриотизм, калык-влакын келшен илымышт Отечественный война жапысе марий литературын тӱҥ темыже лийыныт.",
+      "saved": true,
+      "analysisParts": [
+        " Шочмо мландым йӧратымаш, совет патриотизм, калык-влакын келшен илымышт Отечественный война жапысе марий литературын тӱҥ темыже лийыныт."
+      ],
+      "componentRunIds": [
+        "46d6bb0a83e74a13a41bc444b989def7"
+      ],
+      "unknownTokens": [],
+      "runId": "d1165bbc185441bfadf8800afeac9cb3",
+      "merge": {
+        "saved": true,
+        "sentenceId": "8a79ef10b91c4328b620605c40edd7b9",
+        "revision": 2,
+        "mergedIds": [
+          "9ce4f3c4d2964f2fbe115dca0242fba7"
+        ]
+      },
+      "warnings": [
+        "Token 3: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 4,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    },
+    {
+      "ordinals": [
+        4929,
+        4930
+      ],
+      "pages": [
+        128
+      ],
+      "replacements": [
+        [
+          "Лени лӱмеш",
+          "Ленин лӱмеш"
+        ],
+        [
+          "эртаралте! марий",
+          "эртаралтын, марий"
+        ],
+        [
+          "ончыктыш!",
+          "ончыктыш."
+        ]
+      ],
+      "evidence": "User-authorized conjectural restoration, NOT source-certified; PDF 128; Preferred hypotheses from the reviewed list; confidence=contextual",
+      "sentenceId": "4e16d2c7a286498ea16d0fb520232560",
+      "before": " Лени лӱмеш культура дворецеш юбилейный кас эртаралте! марий театр «Салика» пьесым 700-шӧ гана ончыктыш!",
+      "after": " Ленин лӱмеш культура дворецеш юбилейный кас эртаралтын, марий театр «Салика» пьесым 700-шӧ гана ончыктыш.",
+      "saved": true,
+      "analysisParts": [
+        " Ленин лӱмеш культура дворецеш юбилейный кас эртаралтын, марий театр «Салика» пьесым 700-шӧ гана ончыктыш."
+      ],
+      "componentRunIds": [
+        "feee27b0ab2f4dcfba6106a878a4ef60"
+      ],
+      "unknownTokens": [
+        "культура"
+      ],
+      "runId": "fbae6cdd29344676a9e7a0e89c019182",
+      "merge": {
+        "saved": true,
+        "sentenceId": "4e16d2c7a286498ea16d0fb520232560",
+        "revision": 2,
+        "mergedIds": [
+          "d9a9206809074b19a1277a67c2fdbaef"
+        ]
+      },
+      "warnings": [
+        "Token 0: inferred layout, verify page/footnote placement",
+        "Token 6: inferred layout, verify page/footnote placement",
+        "Token 7: inferred layout, verify page/footnote placement",
+        "Token 19: inferred layout, verify page/footnote placement"
+      ],
+      "revision": 3,
+      "dictionaryEntriesRestored": 11,
+      "dictionaryRevision": 4,
+      "currentRevision": 4,
+      "outcome": "saved-conjectural-restoration",
+      "sourceCertified": false
+    }
+  ],
+  "publication": {
+    "id": "edition_43be7044888e4e938575110b818ca1d2_r1094",
+    "title": "Элнет пӱнчерыште [r1094]",
+    "language": "mhr",
+    "workId": "43be7044888e4e938575110b818ca1d2",
+    "revision": 1094,
+    "sha256": "f30d34f9370e29e247bc68b74ecc45e2854dfbfa4703fe0ab3bd4bcdd7038964"
+  }
+}

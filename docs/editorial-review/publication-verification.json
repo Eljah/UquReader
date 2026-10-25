@@ -1,0 +1,156 @@
+{
+  "publicationId": "edition_43be7044888e4e938575110b818ca1d2_r1094",
+  "revision": 1094,
+  "publicUrl": "https://uqureader.tatar",
+  "verifiedGroups": 59,
+  "verifiedPages": 33,
+  "tokenCount": 50137,
+  "sha256": "f30d34f9370e29e247bc68b74ecc45e2854dfbfa4703fe0ab3bd4bcdd7038964",
+  "textMatchesSnapshot": true,
+  "timings": [
+    {
+      "pageIndex": 1,
+      "ms": 140
+    },
+    {
+      "pageIndex": 3,
+      "ms": 59
+    },
+    {
+      "pageIndex": 15,
+      "ms": 55
+    },
+    {
+      "pageIndex": 20,
+      "ms": 49
+    },
+    {
+      "pageIndex": 21,
+      "ms": 47
+    },
+    {
+      "pageIndex": 27,
+      "ms": 54
+    },
+    {
+      "pageIndex": 29,
+      "ms": 58
+    },
+    {
+      "pageIndex": 30,
+      "ms": 54
+    },
+    {
+      "pageIndex": 31,
+      "ms": 50
+    },
+    {
+      "pageIndex": 37,
+      "ms": 53
+    },
+    {
+      "pageIndex": 39,
+      "ms": 59
+    },
+    {
+      "pageIndex": 43,
+      "ms": 91
+    },
+    {
+      "pageIndex": 45,
+      "ms": 52
+    },
+    {
+      "pageIndex": 51,
+      "ms": 50
+    },
+    {
+      "pageIndex": 57,
+      "ms": 61
+    },
+    {
+      "pageIndex": 59,
+      "ms": 50
+    },
+    {
+      "pageIndex": 65,
+      "ms": 53
+    },
+    {
+      "pageIndex": 67,
+      "ms": 51
+    },
+    {
+      "pageIndex": 71,
+      "ms": 51
+    },
+    {
+      "pageIndex": 75,
+      "ms": 64
+    },
+    {
+      "pageIndex": 91,
+      "ms": 50
+    },
+    {
+      "pageIndex": 95,
+      "ms": 51
+    },
+    {
+      "pageIndex": 96,
+      "ms": 56
+    },
+    {
+      "pageIndex": 97,
+      "ms": 61
+    },
+    {
+      "pageIndex": 99,
+      "ms": 55
+    },
+    {
+      "pageIndex": 100,
+      "ms": 43
+    },
+    {
+      "pageIndex": 101,
+      "ms": 52
+    },
+    {
+      "pageIndex": 105,
+      "ms": 62
+    },
+    {
+      "pageIndex": 110,
+      "ms": 57
+    },
+    {
+      "pageIndex": 111,
+      "ms": 54
+    },
+    {
+      "pageIndex": 112,
+      "ms": 45
+    },
+    {
+      "pageIndex": 115,
+      "ms": 49
+    },
+    {
+      "pageIndex": 125,
+      "ms": 57
+    }
+  ],
+  "browser": {
+    "publication": "edition_43be7044888e4e938575110b818ca1d2_r1094",
+    "firstPageLoaded": true,
+    "secondPageLoaded": true,
+    "pageStatus": "2 / 4",
+    "errors": [],
+    "mobileOverflow": true,
+    "suppressedWrites": [
+      "/api/reading/state",
+      "/api/reading/events"
+    ]
+  }
+}

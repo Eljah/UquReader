@@ -53,7 +53,7 @@ def vienna(text):
             head = table.select_one('tr.headword')
             if head is None or head.find_parent('table') is not table:
                 continue
-            match = regex.search(r'\p{Script=Cyrillic}+(?:[-\x27]\p{Script=Cyrillic}+)*', head.get_text(' ', strip=True))
+            match = regex.search(r'\p{L}[\p{L}\p{M}]*(?:[-\x27][\p{L}\p{M}]+)*', head.get_text(' ', strip=True))
             if not match:
                 continue
             word = match.group().casefold()
@@ -61,7 +61,7 @@ def vienna(text):
                 row = table.select_one('tr.' + cls)
                 return [td.get_text(' ', strip=True) for td in row.find_all('td')] if row else []
             segments, gloss, pos = cells('div'), cells('gloss'), cells('pos')
-            if not segments or not any(p and p != 'na' for p in pos):
+            if not segments or not any(p and p != '***' for p in pos):
                 continue
             lemma = segments[0]
             entry = dict(lemma=lemma, segments=segments, gloss=gloss, pos=pos,

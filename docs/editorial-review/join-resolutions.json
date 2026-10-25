@@ -1,0 +1,53 @@
+{
+  "schema": "Each edit: candidate IDs, inclusive original token span, visually confirmed replacement. Offsets refer to revision-64 snapshot.",
+  "edits": [
+    [[3],2,4,"дене"], [[24],0,4,"Кокытшкыжо"], [[28],4,6,"тӱҥале"],
+    [[34],7,11,"йӱкшӧ"], [[51],2,3,"лиймашет"], [[58],0,4,"Неужели"],
+    [[66,67],14,17,"оптымо"], [[68],0,2,"Тиде"], [[69],11,13,"шкеже"],
+    [[72],7,10,"материалым"], [[75,76],2,6,"воштылале"], [[77],2,5,"тыдат"],
+    [[78],12,13,"шоналтыш"], [[99,100],16,18,"станцийыште"], [[102],3,5,"рвезыже"],
+    [[116,117],7,10,"деке"], [[118,119,120,121],11,15,"каена"], [[122],0,3,"Рвезе-влакын"],
+    [[124],3,6,"гына"], [[155,156],0,3,"Тышкыжат"], [[164],1,5,"нойышо"],
+    [[189,190],4,7,"шӱргыжланат"], [[193],11,13,"колтынеже"],
+    [[216],4,5,"шоалтен"], [[218],5,7,"авырен"], [[224],5,8,"куштымо"], [[225],12,16,"толын"],
+    [[231],19,20,"почеш"], [[233],1,4,"Карпушкин"], [[237],1,4,"жаплан"],
+    [[251],12,15,"пӧрт"], [[252],6,7,"лийын"], [[253,254],12,16,"погаш"],
+    [[255,256],18,23,"питомниклан"], [[287],8,9,"тылзе"], [[294],22,24,"шкеже"],
+    [[295],5,7,"куд"], [[297,298],6,8,"лий"], [[299],8,11,"культурым"],
+    [[319,320],6,9,"тудо"], [[322],5,7,"нелыжым"], [[330],7,8,"Каче-влак"],
+    [[342],1,3,"национальный"], [[343,344],4,11,"вӱйлатымыж"],
+    [[346,347,348,349],3,10,"Шарнымаш"], [[361],8,10,"дене"],
+    [[374],3,4,"эвакуироватлалтше"], [[379],7,8,"республикынам"], [[380,381,382],13,21,"фабрикынам"],
+    [[392,393,394,395],6,13,"Шарнымаш"], [[397],6,11,"вашлиялтын"],
+    [[403,404,405,406,407],2,8,"каласкалышт"], [[424,425,426],0,5,"Чудаков"],
+    [[430],4,11,"пытартыш"], [[435,436,437,438],4,11,"Шарнымаш"],
+    [[466],10,12,"тудо"], [[475],8,9,"мочоло"], [[484],3,6,"Ефрем"], [[496],7,8,"драматургийыш"],
+    [[497,498,499,500],5,12,"шарнымаш"], [[501,502,503,504],7,14,"шарнымаш"],
+    [[505,506,507,508],6,13,"шарнымаш"], [[509,510,511],0,8,"Тимиркаев"],
+    [[512],0,7,"Андреева"], [[513,514],0,8,"Шехурдина"], [[515,516,517,518],0,7,"Валитова"],
+    [[519],0,6,"Чапаева"], [[520,521],0,7,"Армякова"],
+    [[125,126,127],3,8,"каласем"], [[128],10,11,"пиалан"], [[150],4,5,"ревизорат"],
+    [[172,173],6,9,"коклаште"], [[194],48,50,"удан"], [[214],10,14,"шындыме"], [[232],4,7,"пурымыж"]
+  ],
+  "reject": {
+    "33":"Across pages 19-20 the printed words are лышташла да, not one word.",
+    "38":"Printed чыла питомникна: т is a spurious extracted fragment, not a suffix to join.",
+    "84":"Margin noise beside dialogue and printer signature; я + т is not a printed word.",
+    "134":"Standalone corrupted margin unit А й е; no corresponding printed word to join.",
+    "159":"Margin extraction noise beside dialogue on p57; no printed аЛ word.",
+    "175":"Printed а тый on next line; preceding г is an extraction artifact, not part of а.",
+    "266":"Printed загсыш каена, no т suffix; extra extracted т 4 с is not a join.",
+    "275":"Printed оласе followed by a damaged margin character, not a confirmed оласеш word."
+  },
+  "unresolved": {
+    "70":"Right edge of p30 is obscured. Printed ти... before такай cannot safely be reconstructed as ие.",
+    "104":"Right edge of p40 cuts off the end of шӱм...; the provisional unit ends early. Requires boundary repair, not ӱш.",
+    "176":"p60 ӧрдыж-кӧ crosses a spurious sentence boundary; current unit ends before кӧ. Needs multi-unit repair.",
+    "181":"p62 right gutter obscures the end of олаш; extra т cannot be confidently joined.",
+    "338":"p108 right edge hides end of эртаралт...; full span must be resolved before changing.",
+    "339":"Same full-word span as candidate 338.",
+    "371":"p114 right edge hides word after нуно лий...; extracted л и ш е is not reliable.",
+    "372":"Same full-word span as candidate 371.",
+    "373":"p114 right edge hides beginning of ...йын; муйын not confirmed visually."
+  }
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "ordinals": [4740, 4741],
+    "pages": [123],
+    "replacements": [["бомбардир-навӧдчик . лийын", "бомбардир-наводчик лийын"]],
+    "evidence": "PDF p123 middle paragraph prints бомбардир-наводчик / лийын without a period. Merge against r905, preserving the earlier removal of the spurious opening parenthesis in 4741. Printed letter is о, not ӧ."
+  }
+]

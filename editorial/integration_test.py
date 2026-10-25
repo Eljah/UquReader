@@ -29,7 +29,18 @@ try:
     assert store.render(image_id, 1).startswith(b'\x89PNG')
     doc = {k: analysis[k] for k in ('text', 'tokens', 'trailing')}
     doc['sourceRefs'] = [{'sourceId': source_id, 'page': 1}]
+    combined = store.combine_runs('mhr', [analysis['runId'], analysis['runId']])
+    assert combined['text'] == analysis['text'] * 2
+    assert combined['tokens'][len(analysis['tokens'])]['start'] == len(analysis['text'])
+    try:
+        store.combine_runs('tt', [analysis['runId']])
+        raise AssertionError('Cross-language bundle accepted')
+    except ValueError as error:
+        assert 'language' in str(error)
     sid = store.append(work_id, [doc], [analysis['runId']])[0]
+    bundle_doc = {k: combined[k] for k in ('text', 'tokens', 'trailing')}
+    bundle_doc['sourceRefs'] = doc['sourceRefs']
+    assert store.revise(sid, 1, bundle_doc, 'Validate sentence bundle', combined['runId'], True)['valid']
     assert len(store.find(work_id, doc['text'])) == 1
     assert store.revise(sid, 1, doc, 'Same text, reviewed source', dry_run=True)['valid']
     bad = copy.deepcopy(doc)
@@ -58,6 +69,31 @@ try:
         assert store.publish(work_id, revision) == publication
     split = store.split(sid, 2, 1, 'Integration test: lossless token boundary split')
     assert store.get(sid)['document']['text'] + store.get(split['nextSentenceId'])['document']['text'] == doc['text']
+    tail = split['nextSentenceId']
+    preview = store.merge([sid, tail], [3, 1], 'Test adjacent merge', True)
+    assert preview['document']['text'] == doc['text']
+    assert len(store.sentences(work_id)) == 2
+    try:
+        store.merge([sid, tail], [2, 1], 'Stale merge')
+        raise AssertionError('Stale merge accepted')
+    except ValueError as error:
+        assert 'conflict' in str(error)
+    merged = store.merge([sid, tail], [3, 1], 'Test adjacent merge')
+    assert merged['saved'] and store.get(sid)['document']['text'] == doc['text']
+    assert len(store.sentences(work_id)) == 1
+    assert store.get(tail)['merged_into'] == sid
+    assert store.revision(tail, 1)['document']['text']
+    try:
+        store.revise(tail, 2, store.get(tail)['document'], 'Archived edit')
+        raise AssertionError('Archived edit accepted')
+    except ValueError as error:
+        assert 'merged' in str(error)
+    revision = next(w['revision'] for w in store.works() if w['id'] == work_id)
+    with tempfile.TemporaryDirectory() as temp:
+        os.environ['EDITOR_PUBLISH_DIR'] = temp
+        publication = store.publish(work_id, revision)
+        published = [json.loads(line) for line in (Path(temp) / (publication['id'] + '.ttmorph.jsonl')).read_text().splitlines()]
+        assert ''.join(t.get('prefix', '') + t['surface'] for t in published) == doc['text']
     print('PASS: PostgreSQL, source upload/render, append, attestation, source bounds, stale write, history, immutable publication')
 finally:
     with store.connect() as db:

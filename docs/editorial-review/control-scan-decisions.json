@@ -1,0 +1,9 @@
+[
+  {
+    "ordinal": 1245,
+    "joined": "Алатыдат",
+    "page": 32,
+    "status": "rejected",
+    "reason": "Full original PDF page 32 inspected: Ала ты-дат is two words, Ала тыдат. This new adjacency appeared after restoring тыдат; it is not another hyphenation repair."
+  }
+]
