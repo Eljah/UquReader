@@ -1,0 +1,33 @@
+{
+  "revision": 1001,
+  "baselineRevision": 989,
+  "changedUnits": 12,
+  "unchangedUnits": 796,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "sourceRefsVerified": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    328,
+    329,
+    330,
+    331,
+    335,
+    336,
+    337,
+    338,
+    340,
+    341,
+    342,
+    343,
+    344,
+    346,
+    351,
+    353
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 51 after its opening sentence; pages 51-73 remain. Column-order repair on page 62 and final typography/reader checks remain."
+}

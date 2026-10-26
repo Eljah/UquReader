@@ -1,0 +1,30 @@
+{
+  "revision": 1041,
+  "baselineRevision": 1028,
+  "changedUnits": 13,
+  "unchangedUnits": 794,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "sourceRefsVerified": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    400,
+    403,
+    405,
+    406,
+    410,
+    411,
+    412,
+    413,
+    418,
+    420,
+    421,
+    422,
+    423
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 54 after opening continuation; pages 54-73 and final QA remain."
+}

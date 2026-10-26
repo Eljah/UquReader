@@ -1,0 +1,21 @@
+{
+  "revision": 870,
+  "baselineRevision": 860,
+  "changedUnits": 10,
+  "unchangedUnits": 799,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    85,
+    88,
+    92,
+    93,
+    95
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Repair column order on page 42; unit 97 contains the page-41 ending plus the wrong column of page 42. Pages 43-73 remain afterward."
+}

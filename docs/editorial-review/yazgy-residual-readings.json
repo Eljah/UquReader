@@ -1,0 +1,13 @@
+{
+  "workId": "fea266e5c60a4747898024bd321321ca",
+  "revision": 1298,
+  "status": "Visually reviewed; uncertain small-print readings retained, not silently emended",
+  "items": [
+    {"ordinal": 591, "printedPage": 61, "current": "Вәләәза-а-а-ллинн", "candidate": "Вәләәзза-а-а-ллинн", "reason": "Repeated vowel/consonant in the printed chant is ambiguous at available resolution."}
+  ],
+  "resolvedByUser": [
+    {"ordinal": 682, "printedPage": 66, "before": "Йорканны", "accepted": "Порканы"},
+    {"ordinal": 709, "printedPage": 67, "before": "җибәр сакаллы", "accepted": "җилбер сакаллы"}
+  ],
+  "publicationChecksRemaining": ["Reader-side physical pagination", "Footnote placement", "Typography preview"]
+}

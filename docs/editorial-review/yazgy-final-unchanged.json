@@ -1,0 +1,8 @@
+{
+  "workId":"fea266e5c60a4747898024bd321321ca",
+  "baselineRevision":1296,
+  "reviewedUnchangedOrdinals":[2,4,5,8,10,11,13,14,16,17,22,25],
+  "reviewEvidence":"Magnified source images 37 and 38 re-rendered and visually compared in final review. These unchanged records were missing explicit unchanged-review entries in the early audit plans. No text or analyses changed.",
+  "changes":[],
+  "nextReview":"First visual pass complete for all pages; publication requires reader pagination/footnote preview."
+}

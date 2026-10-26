@@ -1,0 +1,28 @@
+{
+  "revision": 845,
+  "baselineRevision": 828,
+  "changedUnits": 17,
+  "unchangedUnits": 792,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 65,
+  "reviewedUnchangedOrdinals": [
+    40,
+    41,
+    42,
+    43,
+    44,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    56
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Continue page 40 after its opening word (unit 58 onward). Pages 40-73 remain; restore column order on pages 42 and 62. Completed visual text pass through page 39 is not final publication QA."
+}

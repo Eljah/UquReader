@@ -1,0 +1,26 @@
+{
+  "revision": 1017,
+  "baselineRevision": 1002,
+  "changedUnits": 15,
+  "unchangedUnits": 792,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "sourceRefsVerified": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    356,
+    357,
+    358,
+    359,
+    360,
+    363,
+    364,
+    377,
+    378
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 52 after its opening dialogue; pages 52-73 and final QA remain."
+}

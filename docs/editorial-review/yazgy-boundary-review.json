@@ -1,0 +1,21 @@
+{
+  "issue": "1948-10",
+  "status": "source-page coverage; not proofread text or exact token boundaries",
+  "boundaries": [
+    [37,0],[38,18],[39,31],[40,57],[41,81],[42,97],[43,132],
+    [44,155],[45,195],[46,218],[47,246],[48,277],[49,297],
+    [50,323],[51,351],[52,376],[53,396],[54,422],[55,436],
+    [56,460],[57,479],[58,493],[59,515],[60,539],[61,572],
+    [62,588],[63,615],[64,633],[65,652],[66,670],[67,690],
+    [68,717],[69,731],[70,753],[71,777],[72,791],[73,805]
+  ],
+  "notes": [
+    "Ordinal values refer exclusively to the revision-4 snapshot after merging the first two units. The generator pins stable IDs and text hashes.",
+    "Boundary units retain both adjacent images. This is provenance coverage, not an assertion that a whole sentence belongs to one printed page.",
+    "Page 42: right column starts in unit 97 before the left column in unit 121; verified against the complete image. Column order requires repair.",
+    "Page 62: right column starts in unit 588 before the left column in unit 601; verified against images 61 and 62. Column order requires repair.",
+    "Page 68: OCR printed-page marker is incorrectly 65 in unit 717. Actual scan 068 establishes page 68.",
+    "Page 46: printed text is sharykka, not the initially transcribed shyrlykka in the exploratory anchor list. No book text changed on that basis.",
+    "OCR automatic word alignment was rejected for insufficient coverage. These boundaries use visual page headings, surviving text fragments and corroborated printed-page markers instead."
+  ]
+}

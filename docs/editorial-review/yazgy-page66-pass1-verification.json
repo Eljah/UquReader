@@ -1,0 +1,30 @@
+{
+  "revision": 1200,
+  "baselineRevision": 1194,
+  "changedUnits": 6,
+  "unchangedUnits": 798,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "sourceRefsVerified": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    677,
+    678,
+    679,
+    680,
+    681,
+    683,
+    684,
+    685,
+    686,
+    687,
+    688,
+    689,
+    694
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 67; pages 67-73 and final QA remain."
+}

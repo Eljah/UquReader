@@ -1,0 +1,31 @@
+{
+  "revision": 963,
+  "baselineRevision": 946,
+  "changedUnits": 17,
+  "unchangedUnits": 793,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "sourceRefsVerified": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    253,
+    254,
+    256,
+    260,
+    261,
+    262,
+    263,
+    264,
+    266,
+    267,
+    269,
+    272,
+    277,
+    278
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 48 after opening sentence; pages 48-73 remain, with page 62 column-order restoration pending."
+}

@@ -1,0 +1,1645 @@
+{
+  "workId": "fea266e5c60a4747898024bd321321ca",
+  "revision": 813,
+  "sourceIssue": "1948-10",
+  "rejectedLocalSource": {
+    "project": "D:/Java/kazan-utlary-ocr-java",
+    "directory": "out/issue",
+    "issue": "1948-8",
+    "reason": "Different installment; no forced mapping"
+  },
+  "sourcePages": 37,
+  "mappedRecords": 809,
+  "mappingMethod": "visual-boundary-review",
+  "mappingNotes": [
+    "Ordinal values refer exclusively to the revision-4 snapshot after merging the first two units. The generator pins stable IDs and text hashes.",
+    "Boundary units retain both adjacent images. This is provenance coverage, not an assertion that a whole sentence belongs to one printed page.",
+    "Page 42: right column starts in unit 97 before the left column in unit 121; verified against the complete image. Column order requires repair.",
+    "Page 62: right column starts in unit 588 before the left column in unit 601; verified against images 61 and 62. Column order requires repair.",
+    "Page 68: OCR printed-page marker is incorrectly 65 in unit 717. Actual scan 068 establishes page 68.",
+    "Page 46: printed text is sharykka, not the initially transcribed shyrlykka in the exploratory anchor list. No book text changed on that basis.",
+    "OCR automatic word alignment was rejected for insufficient coverage. These boundaries use visual page headings, surviving text fragments and corroborated printed-page markers instead."
+  ],
+  "pageBoundaryUnits": 36,
+  "sourceRefsVerified": true,
+  "textChangesDuringMapping": 0,
+  "published": false,
+  "proofreadingComplete": false,
+  "completedCorrections": [
+    {
+      "sentenceId": "994250392ebd4f93920668d6f6b6c495",
+      "before": "\n\n\n Калай тышлы, авыр тупсалы ишекләргә, карандаш һәм пәке очы белән төрле сүзләр язылган стеналарга, яр саллад-төсле. тезелгән өч катлы сәкеләргә таң яктысы төште.",
+      "after": "\n\n\n Калай тышлы, авыр тупсалы ишекләргә, карандаш һәм пәке очы белән төрле сүзләр язылган стеналарга, яр кырыендагы саллар төсле тезелгән өч катлы сәкеләргә таң яктысы төште.",
+      "runId": "14e088ac41c94ed48a2b8c6be90be948",
+      "sourceRef": {
+        "sourceId": "55b7a5e863d9443889921063607309d1",
+        "page": 1
+      },
+      "reason": "Page 37 left column: restore missing кырыендагы, read саллар төсле, remove spurious full stop and reunite one printed sentence.",
+      "valid": true,
+      "saved": true,
+      "revision": 3
+    },
+    {
+      "sentenceId": "02bb5c33e7a44e15859fe7de28c54e72",
+      "before": " Кайдадыр, еракта, казарма ишек алдында биш тапкыр чуен суктылар бөтен бүлмәләренә завод төтене кебек куе пар таратып, калай бак белән чәй күтәреп уздылар.",
+      "after": "\nКайдадыр, еракта, казарма ишек алдында биш тапкыр чуен суктылар. Гауптвахтаның бөтен бүлмәләренә завод төтене кебек куе пар таратып, калай бак белән чәй күтәреп уздылар.",
+      "runId": "85295f76b4754cd9981f541b1b6ae019",
+      "sourceRef": {
+        "sourceId": "55b7a5e863d9443889921063607309d1",
+        "page": 1
+      },
+      "reason": "Page 37 left column: restore sentence boundary after суктылар and the omitted word Гауптвахтаның.",
+      "valid": true,
+      "saved": true,
+      "revision": 2
+    }
+  ],
+  "deferred": "Remaining text, punctuation, footnotes, split words and exact reader page breaks require visual review",
+  "pages": [
+    {
+      "page": 37,
+      "sourceId": "55b7a5e863d9443889921063607309d1",
+      "file": "037.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/037.jpg",
+      "sha256": "a4a14f4441d95d6ed159d3f3f09a493a713d9126d69362471759d978632913dc",
+      "sentenceIds": [
+        "994250392ebd4f93920668d6f6b6c495",
+        "02bb5c33e7a44e15859fe7de28c54e72",
+        "dd4c74bb17a24cc18024d448667b7932",
+        "9b689411cdcf4269bf65bd032df443b9",
+        "90f3da19c19c46f287c9207423687c71",
+        "630d73854beb4bb7a86bc18982b76cb9",
+        "49cc82a481e94ebd8ca68d161d295093",
+        "2a63bbadc65e4dec9e6859234acdef5e",
+        "30559d3ee95944df8791b88ad1748671",
+        "818ae68b1b384171b1eac7235aee3941",
+        "9e0a02dee4d04524b0655e22f3901725",
+        "46cf83ff97e24351b64b6d6ae4eab417",
+        "a7c8040023db4912abd09818352cbe78",
+        "7c2622548f3048d88ed3c913485e935f",
+        "335fa531840f481a9ce1bd80c9025528",
+        "89c7f4a644d343be9272c3aba7acb995",
+        "519d46b5a1124396a2a3750e8d54cf16",
+        "7a5359ff90af458f96e75987df65878d"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "7a5359ff90af458f96e75987df65878d"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 38,
+      "sourceId": "001c4ca636594b118d069187e00705ef",
+      "file": "038.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/038.jpg",
+      "sha256": "06302f1a6d12b472d50a3868cb9ed3ee03b0ed467b8d7c2573aa3e6219786fd8",
+      "sentenceIds": [
+        "7a5359ff90af458f96e75987df65878d",
+        "ddef7c26932b4e18bb70076fe5726b5a",
+        "dd595dfd1eb74e74a365158ab89214c8",
+        "85d5143d11dd4534882bf861e2297f40",
+        "e2ea7d1095134d99b66ece14c4893203",
+        "11c119276af64b5d8580e005834b28df",
+        "7f5c4b58b4a949919e79b20b0e7e0620",
+        "71470680a57748f794df19066b1fe464",
+        "06f10e86b0db4a0d8913dd55465167fb",
+        "e676892d0e674c4e968e8a06c3014e1e",
+        "647e7c2a4a8d4cdfac61e507f07ba4b1",
+        "ac6b54e4d3494c8cbfcf608a95460709",
+        "338af890da054d5c931e81d42d5d6ca4",
+        "0801a1d8a24c476286113aa45ea364ae"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "e676892d0e674c4e968e8a06c3014e1e",
+          "surface": "турында’"
+        }
+      ],
+      "boundaryUnits": [
+        "7a5359ff90af458f96e75987df65878d",
+        "0801a1d8a24c476286113aa45ea364ae"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 39,
+      "sourceId": "81c104a60e1f4cc992da8ef2b22320a6",
+      "file": "039.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/039.jpg",
+      "sha256": "8c81b44b301ae99487873744e65d75ed568a71dc5b69d72b3e4da9f0e5ac554c",
+      "sentenceIds": [
+        "0801a1d8a24c476286113aa45ea364ae",
+        "f51fcc27d71d47399fa49947eacf382b",
+        "d1d4f0a71dc44c3d9dddd1027a52b969",
+        "5026aed9f5a044ad88939192dddb74cc",
+        "e3cc7baa642a426aa5fcb06792f6df2f",
+        "bbccb2f1a0e24e7c8c8db258ad7fed34",
+        "53cb0b4826224719860e93668bae053a",
+        "6337ead41b674e2daa616645577841b9",
+        "d6b1b3225d8d4e06a7f6f49e6dc8957e",
+        "91d3bfe94aa84581ba6fdcbc5e3440c8",
+        "980e067264c3463794c918afc8a99fca",
+        "92a8f2735eda42c09cea4f7b5a23ab9a",
+        "099b47043407412e8cadfa13f54a2cac",
+        "2ce99030ca88472ea34daf4a9c68dee7",
+        "e79874d81554466091b1a0b16ac9e341",
+        "3762dc7bd46e42309e4882befca5f6a4",
+        "d2fb25bc322d48b69b9f052d391c6e2f",
+        "217348732dca4e5d9afd9991feb07dc9",
+        "12ad1b97ac5e4c348b133b470e39c831",
+        "7fc7ea60d8f64b859304ecdbb8e428da",
+        "19c50edbdabd459aa4aea9c6314540c1",
+        "6af274eb72ed4781aae9b290c8bc14e9",
+        "081bc2ad7a0b40e2bdfae42be3bd3ac0",
+        "e19b7769b4894771935d239be715cf1e",
+        "57d1f80430bd4465a4797aee1e7a188a",
+        "c41c39f2e0b8442d9f53bb737bda9e63",
+        "1258e97b4e40430c8e8de6a17c462351"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "0801a1d8a24c476286113aa45ea364ae",
+        "1258e97b4e40430c8e8de6a17c462351"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 40,
+      "sourceId": "7463ef22bc374939a2b6c1f428c30fef",
+      "file": "040.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/040.jpg",
+      "sha256": "bfc7a8ee2824e771fde5f975f1f9964f40f44568368385f2427f180457397f82",
+      "sentenceIds": [
+        "1258e97b4e40430c8e8de6a17c462351",
+        "1ee82a6d7cd046caa6678bc955fb3f7a",
+        "199dd6a0c78b460b8d31d0b4a99eb613",
+        "7c6fc64d824b41359d28db841ce99670",
+        "1fecea1c9d134c8d88842b70882da4eb",
+        "2f7d2ee7765745c088cf943eb6f80eab",
+        "e75fd2af7b6445a480111488da7c2ec3",
+        "71e8631623224fd5a7889f47528766df",
+        "9afbf949d5584377acca6be78073762c",
+        "797a351618b54402a64f06502ca6eaa8",
+        "8843e2d907f24285821a4920ddfb4fd9",
+        "252c9e5915dd45e2bf1807f2c61129f2",
+        "9825965d20234e58b3a8d34e9d66348f",
+        "7080a231eee342bdbf6eb960656f15bb",
+        "be4d7475dde648a79a8e77ccccda4b75",
+        "edaed25918514d62918b3ac807c8b16e",
+        "5f72856b57f64573bf3ff4f699ba4fa9",
+        "454c73517ad547b59f8cd583dd481466",
+        "eace09482b1e4c31bc192ca109fe8a80",
+        "74ff27186dd245e696852aded9f57bb0",
+        "2f3ec8844d6041b0b81e310fcb2652b9",
+        "6a13d5e71be34ee49a94dd5fd37751fe",
+        "a9f90c678b50488fb041a1f52d6a3831",
+        "31e53300db1141bb9ee0b2ef7fbc7623",
+        "df77484a5f894afe9e2c27514e9459d0"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "1258e97b4e40430c8e8de6a17c462351",
+        "df77484a5f894afe9e2c27514e9459d0"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 41,
+      "sourceId": "a85fde6a625d4523b7901eb52ed205a5",
+      "file": "041.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/041.jpg",
+      "sha256": "b2df9a7238e57f6975e6a1c188891dab70b54c3f2ef995787edf6421bd77d257",
+      "sentenceIds": [
+        "df77484a5f894afe9e2c27514e9459d0",
+        "84252cb9a7b44fc2823af21dea6ee911",
+        "19082d892f804bd39da3de85e6a6dba9",
+        "5dd5cef02a984cbc978b00b3cb965673",
+        "a93a6d64d7584880a03a15f4c010c76d",
+        "3a68890d286f4057a2cc1895a79dbcad",
+        "4029cea1ec384ecba5ea2688b7828cf7",
+        "33ae87f439784594acb3646199f847bd",
+        "11d17b14c40e4e3fabe908de4378a83b",
+        "b0a947f84c6d47cd8fc3d56b450559f6",
+        "142767a01b4f4b709241a2b4f26a3ed3",
+        "36aa5359d13240749b490981c9d92df3",
+        "6bc28534d1db418b99abc50fdeeb217d",
+        "9ccd904bd08f497d80e3291c382ca7c4",
+        "eac157f2b09647cda70d2160a16b2edd",
+        "e75421250d1b4e0986a674fb4bc626dc",
+        "b31c25a95c7c4204b25d35806143d690"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "4029cea1ec384ecba5ea2688b7828cf7",
+          "surface": "пы’яланы"
+        }
+      ],
+      "boundaryUnits": [
+        "df77484a5f894afe9e2c27514e9459d0",
+        "b31c25a95c7c4204b25d35806143d690"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 42,
+      "sourceId": "cf3cd759f7104faa8d7136157b2a7c70",
+      "file": "042.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/042.jpg",
+      "sha256": "077e76b9ed517e0304af0afcba7b14c8325f605e766189cf68c0de454c5bad2f",
+      "sentenceIds": [
+        "b31c25a95c7c4204b25d35806143d690",
+        "92a62cf9b84c4384a20d5aa5027f2507",
+        "9b2ebc63dbf4443f9e2f831313db7d3e",
+        "257c8747399e4553acb5e2856cb3b647",
+        "5a7d978835ea4bd793deac2f2a59203b",
+        "4a02d763284044bf8d8dc2e18d966748",
+        "47d7443f614946e0b600543d46a4d3ca",
+        "0c0cfda2d9454e4598b592639075f8e0",
+        "a68b1cf1930b402ba1676b48b10c60c9",
+        "6737c22cfaea4b6997cdeee6df520001",
+        "871c4e7fa9024dda9caca80994c706ee",
+        "34cca99c4f4e492abff19ee40b9eba71",
+        "4ded0c16f06846f08e769b748bdec577",
+        "9d19ed67d2244998a8f7694b8201add8",
+        "aa3cdaaded0d41d0b6f6f0b67f2a9405",
+        "be3a2249b01a4fca87da9efc43ec6b2e",
+        "2b23910836e747b1be7117525e9c66e1",
+        "ffcc359bccdc4a368e21f8b0a3d03d83",
+        "3593ec2ce5044dbca4d4e422050e8d1b",
+        "fdcfc1ae018443cbbf536433bd5ce1ff",
+        "28ab622f56bf490f8573361d5a46374b",
+        "0d07cbd7555f4e60af09781eb1cfc504",
+        "4afebf8c1fb04efda008d95069a907ee",
+        "f00827a1ec114db990befc3651642948",
+        "ca8688b10f1c47628ee446e918a1f709",
+        "00bb50aed4fa4f1a8fcce6b47b223a9b",
+        "00765d018d2c4bbca6940006fc489ba3",
+        "211f2e77989e42e490c8554945220f21",
+        "102f9b9f6a6748d19ba2b99b2e925621",
+        "2cbc512fbb6d41a5aef028100db30b17",
+        "a1ea604cb23c4ad59a0441bc4935f7e6",
+        "c2ffe6f21dad4602b4ba2ebba8edb0da",
+        "f4a8924265ea4020b309f8edeefa4e8c",
+        "b4efa6ac9fe54207b26deca9b805dfb6",
+        "40d332aa54ac4d57a990bd506dcad37d",
+        "ac52c740d82645039e4952c25acf9e61"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "ac52c740d82645039e4952c25acf9e61",
+          "surface": "Гү-ү-ү-ү"
+        }
+      ],
+      "boundaryUnits": [
+        "b31c25a95c7c4204b25d35806143d690",
+        "ac52c740d82645039e4952c25acf9e61"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 43,
+      "sourceId": "abf2e77c68884bc08a83fb210f0b34fd",
+      "file": "043.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/043.jpg",
+      "sha256": "5e59d8a582f673da604ac11bbad843dd194babf793602f04dc4feca289b6560d",
+      "sentenceIds": [
+        "ac52c740d82645039e4952c25acf9e61",
+        "0f734f9cafe942839b6eeb921e1eab5d",
+        "a4738c8b6d6346fcae0acc53d5a75ada",
+        "d2102f3c6819470180921e9bb7bb059c",
+        "edb0002e57674720b5f1492261cbb560",
+        "461ff38e8bc740f9b4ab37c324d34e0c",
+        "67ecc80f417a4bb19093767f40ea4cea",
+        "501033af13874c55a6120be565420c9a",
+        "67ffa5b3ece546e18cff801125b1ca95",
+        "49d69ddc58814d8394b3b78ee44bdda0",
+        "ac6227d2e3a94024a3d5992fe489be0f",
+        "a33e563c5b604e1998cc62570d4c4cd1",
+        "2cfa1be94327447e9a5e4f84e7251197",
+        "5d40e25e7ddc43da869d241bc17cd775",
+        "e760624889224caf9c5f2c4fa889e1cb",
+        "33a35e4cf1f3421e906f2890b9fcb405",
+        "20e90084801e43aab20b487870e5b60b",
+        "5af18fde898749548dc77c4dde805a8f",
+        "b47300c96f5b478eba47f165bccebf25",
+        "47985d45cba24ea4978fd3d364b74bfb",
+        "a342f9c01fb64c218b1683b78749e431",
+        "cbca1c9f73ea46ab8279a7d17c2d8c62",
+        "018806c805514c7b8e7657c845841818",
+        "39660f62405442338d24a9204381c6ed"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "ac52c740d82645039e4952c25acf9e61",
+          "surface": "Гү-ү-ү-ү"
+        },
+        {
+          "sentenceId": "39660f62405442338d24a9204381c6ed",
+          "surface": "берәрсен’постка"
+        }
+      ],
+      "boundaryUnits": [
+        "ac52c740d82645039e4952c25acf9e61",
+        "39660f62405442338d24a9204381c6ed"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 44,
+      "sourceId": "d83298c3044d45f4af08687337a92630",
+      "file": "044.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/044.jpg",
+      "sha256": "68b31622acd339f1d2383e092eb5818f4b8cdb75eaaed8b782b771bcbecd0b5e",
+      "sentenceIds": [
+        "39660f62405442338d24a9204381c6ed",
+        "f8cc75710fcc483c88f91866abf6f757",
+        "4c71c1a8377c47d584b83970022ac769",
+        "1b85ba3a6a084e868b7dba3448911add",
+        "ac675ef3570e4f019bc38a3cd8d2e0be",
+        "16339e0feff44bf59961ed15ef4453ed",
+        "bf1579ba557b4632923dc5edc1308c83",
+        "1163b6b2f503412080a419638a709b33",
+        "bbdcdbaad90a46d3b5f4910337f4858e",
+        "7ef72ef5590b4329a850300439555eed",
+        "db5abcfc52e8438697fb809b3bc2bbf7",
+        "bfe013da0a49487093bc68c124179912",
+        "ca1fcbe730014dc19397b18290225d4f",
+        "fb75d719ff084225aba953c84f74098d",
+        "dd5563137c544a6697a2e329299c30ff",
+        "6a9f7f355a36409684dfa85e57d7091c",
+        "064a672a45a04e93ab1b8a3e14c0828a",
+        "2ab1b035943d4af79256d9f6cfa32516",
+        "775bdffc3d4345178ad80d607ec0b643",
+        "062557e82df14f60b71a24fc27851762",
+        "5dc6904264dd449393fabf219daaa5af",
+        "039bd1b0a6b3494891a2ea3aba7b0867",
+        "2c1dc8ebf26e43f0a0b81c00f9c7c1fe",
+        "bc364dd8630f49e5b79205ecda6b513c",
+        "d7d02e1e5aa7461fae26d926ceb5e1f5",
+        "e35784036d544b96a3e63d77898feff2",
+        "da643d1e4f92408e80c7bb12dc8410ef",
+        "61903920a2064d1f83fa74bbebd35458",
+        "4bb965daae234722be739cf52adf020f",
+        "9e283ea398b84966b9f70f661808c179",
+        "636deed8e1bd4d709b24f15730255f32",
+        "6da74e426597446d941c248f70ab779d",
+        "9795d2820dd346b7af8b8d6b0d7a518c",
+        "4d065ac93fd04325be6f2a9290da0b7c",
+        "d374e24c2d83466db29c63472af83080",
+        "106810c31f734825941c71429073413a",
+        "4b779ff4f32c4d0e860705eb996c06fd",
+        "dc7841c62e544cf1ac2635a0370caa5c",
+        "7b695499a3314309a23a1ade5511aa2a",
+        "1b7723a919574580b8e20366026c64c1",
+        "7fd0615e83424161bf9a2e05fa3835bc"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "39660f62405442338d24a9204381c6ed",
+          "surface": "берәрсен’постка"
+        }
+      ],
+      "boundaryUnits": [
+        "39660f62405442338d24a9204381c6ed",
+        "7fd0615e83424161bf9a2e05fa3835bc"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 45,
+      "sourceId": "b3849fd70b0644188f961db236ec36f3",
+      "file": "045.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/045.jpg",
+      "sha256": "f814428598008394a45804d6fbc3516c9c3572aac71d7731463ffa98a904dc79",
+      "sentenceIds": [
+        "7fd0615e83424161bf9a2e05fa3835bc",
+        "8dbb4f0c38994e9ea5ac85396a014673",
+        "f033afa487134df09dac9ba43bbe799b",
+        "c9959b97588a49378665ad3e46d77024",
+        "70a4ebbd85bf4efea6f3926774563df9",
+        "33e1ab59feb44cd79f8eb3051c533b6b",
+        "e62fb08d111b4f97ab28f6562f0bf1d5",
+        "d4903c1562014f7cba8788fcf74f35de",
+        "3f1230df6a9f4d91bc9b600d8442c0f1",
+        "60a0aabfd73043729a5d27d5fa66d999",
+        "7e8c7881abd04c919576ba0be21fa735",
+        "1eb94bfd0f564902810e10df3647ec92",
+        "dac081c2da264750b8438aea2d20e41e",
+        "ee8d6edd01454f4e95606d81bebebb07",
+        "edf77e73c07c402899f0b8a091996470",
+        "6aa5b920121b46bca8102616aeb73105",
+        "9de1ee5fc1554dd1be8abf3e0407d10b",
+        "b3e302455fdc40418fc12465e01e10b5",
+        "7429313f87a84db28a1e17890f40eca3",
+        "586ed2371a93499790ce2169c6f8c486",
+        "8829088dc46b415299989a2833130405",
+        "57a5724af4cc4e73a45a55f10e0adffb",
+        "08843077a2a54ec8b9056171aa16c7aa",
+        "673a6c45cad64f5c82462ffa657f4c6a"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "f033afa487134df09dac9ba43bbe799b",
+          "surface": "г£нә"
+        }
+      ],
+      "boundaryUnits": [
+        "7fd0615e83424161bf9a2e05fa3835bc",
+        "673a6c45cad64f5c82462ffa657f4c6a"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 46,
+      "sourceId": "b2f6622abedd417da692f3ff75d2e0bc",
+      "file": "046.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/046.jpg",
+      "sha256": "c05d452e3a31ffb46102d4b4a86cf7e88502793fc74f68064d8fd9800f98bbbe",
+      "sentenceIds": [
+        "673a6c45cad64f5c82462ffa657f4c6a",
+        "ad7a6ba9289b4d9a86319fb068b0695c",
+        "d8f64524222f49feb29bdd1bee734a7a",
+        "cc8908dd54e74827a47d1ec08e9a4236",
+        "3dbcdaad31da41ad8d21aa9d77c2212c",
+        "21992965bb39401ea8894bf13ff6c098",
+        "5b1f12008ff0450babb0c91ec63072ab",
+        "5d3b4162b18f4e09bdfb5d96fd0cbb81",
+        "e9a1789c51474551904c034d02c8835d",
+        "e24ecf80729142d09ffe743d3cf0c4da",
+        "d62c150192a24378953244af569709cb",
+        "0bafc731adc746e5ad157c283912f6b1",
+        "31a86c0602414d109a6bec042911346e",
+        "7cf92a63e4f14363af4f9e8fc0d7bfa6",
+        "5bab6f1983714c5e99805bb138b6ee15",
+        "6e0711a4144f4ca9818dc6bc5e0ba6fe",
+        "af22138561194096bf372b776ecef21b",
+        "51edb8cb113b4e31866d7e29243ccd21",
+        "8b7daab3c7d34b4590b2802d63ed9ffb",
+        "d92706dec18e4ce8b59d46845a6e9001",
+        "59456b870c284f3b92e8949ff37844b2",
+        "35aeabf3f8f343a1b132f8e52b40cc27",
+        "add3d0caad5b418ca00dda1b232a3f88",
+        "2d38d40f14c1481188b2ba0a623ab25c",
+        "57b708367c3849f0b18ad43580b2c759",
+        "624c286b45934d1095f7e76549eadd44",
+        "acd03308487141c2a96ef3402edccce5",
+        "203a0a6642294406b541a1ff72a3a2ed",
+        "3b2f415ab9c5491695097ed0503b3918"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "3dbcdaad31da41ad8d21aa9d77c2212c",
+          "surface": "эше’"
+        }
+      ],
+      "boundaryUnits": [
+        "673a6c45cad64f5c82462ffa657f4c6a",
+        "3b2f415ab9c5491695097ed0503b3918"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 47,
+      "sourceId": "18f0c07f34cd4de28ce170d4767283fc",
+      "file": "047.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/047.jpg",
+      "sha256": "14f61285f9db8b46d331d7c4915afab6eda7d193983879164b506487e4329067",
+      "sentenceIds": [
+        "3b2f415ab9c5491695097ed0503b3918",
+        "7877bb5b8d4a47cc85a04a94c6f59af3",
+        "ae34fe5a97784bd7a14e0c10aefcdfb7",
+        "0b4bd4e521a248648c53e560be8feced",
+        "8581335317214aee8d70f9848fe9ea65",
+        "6da42f51cf294928b144a48001b358b7",
+        "6944b26f888b439b917f2d79bc813754",
+        "674dc087c1ca4ac1938d48dd4bd9a0bb",
+        "c0aa5e62f63c48aea53f01593d553eed",
+        "a4a7cc62f48a4dae9e471d5ca8a20e1d",
+        "f5e15593f8af4c83a882a7c3022d7c55",
+        "e4c8143962cf4a668929c32151aa2c9c",
+        "47f275bcc65f4b9e93188cf46b5bca38",
+        "17c0d9cc1954400aa69766cf10a527c7",
+        "c92c205f089940e3a976d78b1f32fe3e",
+        "d92e63a6eb804b2d985914f269f2c38b",
+        "8794f7fc87264a0e839e00614c15567e",
+        "248466f46e6f41c6a2e2a5472fafbb95",
+        "d7ab9ab22b124ec5ae63462a8a9c1c25",
+        "13a06d07707442edad9d724a034b2518",
+        "9ccfd35dd2984797aef8c02509e4fc97",
+        "a6363986504546e1b1be9a5e037ff1ff",
+        "61a063d6c17c493ebf7f7d57040efab8",
+        "9336e5b9108c4113ae7830edad2155ce",
+        "dff7c68d754b43a3834d0cdae91aef26",
+        "cd29c37b3277404aaf91b97eebde8ab2",
+        "4ebd4bcff4ef4aab8cdc4c94dfa21022",
+        "3d2a182fcc8241b8bdbd6b71fdf2cb0a",
+        "2b12e63cd9be4975a3b3adf572f75935",
+        "3904e6d25427466cbcc1b92f1990eff3",
+        "594dfcb98b644e5095b9f0b4f2e8478c",
+        "6b013d1876f24e56b480a0b5a4c99dac"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "3b2f415ab9c5491695097ed0503b3918",
+        "6b013d1876f24e56b480a0b5a4c99dac"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 48,
+      "sourceId": "f3450c01bf7443d0bda2caccf49fb99e",
+      "file": "048.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/048.jpg",
+      "sha256": "612bb318793eb13ae6c6879d51c6157f51e40f9303818f19fae29d01c6a64206",
+      "sentenceIds": [
+        "6b013d1876f24e56b480a0b5a4c99dac",
+        "66d03aa381bb439bafa3d8b063eeac46",
+        "78cde26c943e486893e36edd7979898d",
+        "5527c9a319d240789b7d2ab0f3e5f60f",
+        "2df261c8953845aa90409b6ed2c91dec",
+        "1fa6456e06a642f2b36ecf31509adebd",
+        "92fc915a512e4f8db5773dd3ca0f3c23",
+        "7d6047b6679145338f94d3858a6664fe",
+        "6b7ab60ead4c4619abf9536cf3e79503",
+        "a90a8936e0164bfc8705490cbb6d3fab",
+        "ae9fdd89725949fbbce769492b02ba59",
+        "c82d0fc2cbae4d358afe356d5e4b8706",
+        "252d98ae8ba44a2f8c69dc5a4866af2b",
+        "9392c6d33bf6443092a5656ad01c4a32",
+        "5b830894351d4826835d8359ba6228b9",
+        "2cb93dcb57c34f9facd232fcf9b16468",
+        "103af65109a4456a87f36355a4731def",
+        "fe6c08a8932a47f59a160a66362123a2",
+        "4b274d607c2645ea82c72cb055f0ad61",
+        "e6896e03cdd24f76bdc11a78ddee6d73",
+        "2254bc544b10431c9782f24c1cbc7619"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "2254bc544b10431c9782f24c1cbc7619",
+          "surface": "ачы’"
+        }
+      ],
+      "boundaryUnits": [
+        "6b013d1876f24e56b480a0b5a4c99dac",
+        "2254bc544b10431c9782f24c1cbc7619"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 49,
+      "sourceId": "b0833cff7b5a43d4b21fd5bbc1ce92dd",
+      "file": "049.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/049.jpg",
+      "sha256": "f66aa6a7e0a36fa294b5b10ccd396507c0286ef2bbf53c697801918fca62f304",
+      "sentenceIds": [
+        "2254bc544b10431c9782f24c1cbc7619",
+        "a5f99b864db7475aa95e49c987932a8d",
+        "4a834e15e9b9452da4c0f355d040a1c9",
+        "6bfb3a11de664eb0a975ae7d3745378e",
+        "0ea4af54be8e416ba97b3e986bacc603",
+        "1e65748142ef417185200248690694ec",
+        "6600961fe73048218a712ed752949b82",
+        "0276c79e96434612bcf54c2bce4c7e45",
+        "70ee50bced4f41e98a7ce77d640c60d9",
+        "ac10c920520c49b892f384ac4172e52b",
+        "fe7a8cd903b34c139cac095411ca3659",
+        "c9f0db7119d1406daa49ae8f3ab61b9a",
+        "aff8b4e6aeab473399788e2886f4a8f5",
+        "527827bdb71e4fd8b43b2e294b3934b9",
+        "ec75a66bb28f46d08f7334ad36f5acbb",
+        "75842d59efe248bdae6e082000c5e000",
+        "ccb9c19e5d0641e58d34bcce33eb118f",
+        "039bf9363b394e22a90336629c98f794",
+        "507636d053714d418df1486acdbff4ce",
+        "287cd6c9a10e4466a50649ede4aa1a72",
+        "ce8af50c09c74fcd85c8526074e555a4",
+        "70fe7309dce6407d94db8c57592c2ab8",
+        "0f618b2863bf4e44bf4383567cff56f3",
+        "f6d20d84363d4495b13c5839e2573820",
+        "e14cfb2186844b62a1dd4735ae9640b2",
+        "6da14b035d704a52b64ea5f56f41950b",
+        "9950b7387d61484b906777ca60690247"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "2254bc544b10431c9782f24c1cbc7619",
+          "surface": "ачы’"
+        },
+        {
+          "sentenceId": "4a834e15e9b9452da4c0f355d040a1c9",
+          "surface": "прово-ка-торр"
+        },
+        {
+          "sentenceId": "1e65748142ef417185200248690694ec",
+          "surface": "•өстенә"
+        },
+        {
+          "sentenceId": "6da14b035d704a52b64ea5f56f41950b",
+          "surface": "Гәрәй’"
+        },
+        {
+          "sentenceId": "9950b7387d61484b906777ca60690247",
+          "surface": "’залга"
+        }
+      ],
+      "boundaryUnits": [
+        "2254bc544b10431c9782f24c1cbc7619",
+        "9950b7387d61484b906777ca60690247"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 50,
+      "sourceId": "a50196c3d7ea4326b6da6926572eeb32",
+      "file": "050.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/050.jpg",
+      "sha256": "0b50fe1b2361926ecf9074e212d3b8600edf662d0b84b95bb57674bb539dfb5c",
+      "sentenceIds": [
+        "9950b7387d61484b906777ca60690247",
+        "694739bdc26c4690aa4cca63deb153e3",
+        "b5f6bae6ccd346b48394d53d3ca7d528",
+        "05b4b9fc10f1409cb7227e13b246ab23",
+        "2ae3c4f7349b49a8b75c2995228d0b38",
+        "c4cc6d4435fe4f2fa2c42bc5c0feeb0c",
+        "149ad5ff63ea4710ac03c19bd0421b57",
+        "6286927f864d405cacb8edfbb918fe47",
+        "7ec30190ce274376a8e07d90ada6ca0b",
+        "c991f7bf6ad842a2a9d6ff0146363600",
+        "b4b1a375af5340cfba3bf3541445486f",
+        "fa73c8eb32bf4da4a494f45106d740d9",
+        "526d06e6f49d4083a01b61028ef4a096",
+        "6fab7d3156294b418c5a6f6f99ffa4b8",
+        "15efc31afdd64578a1738c549aa80697",
+        "0124e6bf5a614242a2e65450cfad5058",
+        "bc03ecd828b04dc3a709935820d7aebc",
+        "499c96a19a7245bda3a6b276dcaee378",
+        "6cf4149d373844f2aecadca9d0e86fbd",
+        "f7c9a7df92164380999998112f19d96e",
+        "0b52d4f077724e03812fbbe8e78457c1",
+        "7f89f337ecfe4b5f958a70082eecb7e3",
+        "80e99cca9cb742b6a6f08a5bcb28d9f4",
+        "c6f2ea0d81b34452a2348165cf72a247",
+        "86a1e3cb4dbe44378ecdeb5db14fc27c",
+        "5638a0491f7449e1b785e0683f85cf21",
+        "f1c4211c0b5d4006b90b42ed111bd210",
+        "923c3f051cb34cf99dc3ec2dbb35f2e8",
+        "397188d5f8244a8d9252a1cc3ca2428b"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "9950b7387d61484b906777ca60690247",
+          "surface": "’залга"
+        }
+      ],
+      "boundaryUnits": [
+        "9950b7387d61484b906777ca60690247",
+        "397188d5f8244a8d9252a1cc3ca2428b"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 51,
+      "sourceId": "1f250adebd9740a6bf51e80937269519",
+      "file": "051.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/051.jpg",
+      "sha256": "db7e842be504deb1d461b1f1b23e2fa93b29dcad61df30e8f594e28c626975ae",
+      "sentenceIds": [
+        "397188d5f8244a8d9252a1cc3ca2428b",
+        "4fdb08663c1344a6a3d5a5d7accab3a2",
+        "fc9470911bf84aebba11de8004887286",
+        "540319510109451987f0a24cfeb2a172",
+        "4b24fc5bf9ad4321aa8a645534d38cee",
+        "a7c8f7921c65472da4c5a17fbf6c48a2",
+        "9e2524fab0054b5f9255f1b97553557e",
+        "3e4be5cf37bc4a9bb5566a53efe155b5",
+        "aaf805aae124496da10d2ac2d8210155",
+        "a3beff3c084f495799e675cbbafba315",
+        "03b16c3c30964f49863fbdaa0b252b8c",
+        "fc36041d7b4a4be88f1d34934e9d665f",
+        "cf72d765796643f9b2ebd744ab6073fc",
+        "37bbce95aad84ba1939601caa878f1b3",
+        "37ab5f72bb3f4637a035ee46e77fd4e6",
+        "4da80d897ebe4658907d56605db0ed1d",
+        "e7ab1f3a37d247cfbbd5caa58932c53b",
+        "3594d042720c4d2a855973aa8260c998",
+        "8bfb9d1389804ffca0e7d180d8c00938",
+        "59798c2844364c6db0e5a0f177c6a62a",
+        "05591fd4de6f46c6b580c0e12dbeaed5",
+        "c3e4b9492c934d81877aee8eeeb78c3f",
+        "6a95a5921a9144989157414da7af64e2",
+        "3a228381a6594913842d294d4b16ea6c",
+        "f3eebc3172f74922b119995f9a410e39",
+        "b1c7b47091ef429388aa948a5ff0b412"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "397188d5f8244a8d9252a1cc3ca2428b",
+        "b1c7b47091ef429388aa948a5ff0b412"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 52,
+      "sourceId": "66727bed7b154e009801fabe2d8ed21f",
+      "file": "052.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/052.jpg",
+      "sha256": "e71b1422f24046dcc318d5fa73d000424c7289981fe8c4d0f01dc60fa426fd70",
+      "sentenceIds": [
+        "b1c7b47091ef429388aa948a5ff0b412",
+        "0aa1c9a10b8340a4a1a1dbede36d606a",
+        "050735aeed9849379d4f840f935d336d",
+        "4925928d7e844e9687ec7bfc569b22ba",
+        "1ed48abd1a9843bc988174279b908dae",
+        "f5db4e68d99a44d484c1bc19aee3bef0",
+        "ccaa0438d6c9408b919534178944e53c",
+        "69e2f44ef09e42fbabc01297bf7a75ce",
+        "dcb56dc6b8c64da5976c6628d2db4536",
+        "1c3ddbe2aaf9455ba76de159d5f6659f",
+        "65c763de181a4330ba5050d1858a1779",
+        "eed3451fcbcb40fc99dc77a4071751e6",
+        "58124082533c4aa7a88e0e3dfc9a4c9e",
+        "b846a0971bbb42ed9bb129ab450d60c6",
+        "f936705a204f41cd82a1607ccf84c33e",
+        "23c36135da6942c3bb24182f828dfcdf",
+        "4c129bd7cffb439e9c0388118b62382e",
+        "ae779252ab174763b58590b55a62ab15",
+        "bd7a8634e47c4afbb928e00e5ecffb50",
+        "a944452c35db45229eec58965fbd88e8",
+        "cb913206ec2349049667821cd56d0753"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "ccaa0438d6c9408b919534178944e53c",
+          "surface": "’рырга"
+        }
+      ],
+      "boundaryUnits": [
+        "b1c7b47091ef429388aa948a5ff0b412",
+        "cb913206ec2349049667821cd56d0753"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 53,
+      "sourceId": "5a6df952bc7048d592f28772b3bfb7a5",
+      "file": "053.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/053.jpg",
+      "sha256": "dbce9901153ff8b67e60b2b3b93ed40dffee1239f2121e4a3f0a83ba5c483f43",
+      "sentenceIds": [
+        "cb913206ec2349049667821cd56d0753",
+        "030d2a6385f74275a70372fa844a8a60",
+        "54efcb997eb34dc7a7aae6265820e586",
+        "ba367ab89152414387f9450188400e67",
+        "2785fd6d187842acbf7c8a5a0c1f7f3a",
+        "6b59b497c4b64faa9b777473ed36de57",
+        "3516cbe0f54f497f99ac81eac3935775",
+        "0a2289f1a62c43fdb7ce34980d9888fa",
+        "99bdae6c0f8b420eaee22aefcf438948",
+        "19f9478424a64ea0b4d53236c9a1d2a9",
+        "ae59dea6b26d4b5e834098bbf20bd9c6",
+        "5ebda131d3f446d0bbc353d3a36ab04c",
+        "ca17df8e47a640c2bd30c0a1314309e2",
+        "2e799be869a549c4876312a576093fd3",
+        "5027bd6eb51e46ebba18889a0132baf4",
+        "e1939182fffa4406b8a0fff40b2daae2",
+        "92132240c0e747f6a166d27576a6971e",
+        "1f8f4bc4409a41a094ff2d490e33d62a",
+        "56e45b316a254784ad801739728c4587",
+        "7bd318ff1908476b868c9ddf142b517e",
+        "e1d5357f713f474494e9ea5a6110c5a2",
+        "fb356b40af544cde8843fa2e75c209e3",
+        "6286b37c142f45df804b841b7c10b08d",
+        "498328b83f74413ead40fb6486f9e1d8",
+        "ebcc6d498fe14f0cac800353f6ad43c8",
+        "435fceb330874a4c8ca47a066dd22003",
+        "c5a2beaf8c9d4d8dba09c360cf372b52"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "92132240c0e747f6a166d27576a6971e",
+          "surface": "күргәч’кенә"
+        }
+      ],
+      "boundaryUnits": [
+        "cb913206ec2349049667821cd56d0753",
+        "c5a2beaf8c9d4d8dba09c360cf372b52"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 54,
+      "sourceId": "6bbb8d779c1340bebc003341048e93a9",
+      "file": "054.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/054.jpg",
+      "sha256": "9293e642ea42e64ac12923d0c987b7568299bacd874fbe1ebef42def3a14a153",
+      "sentenceIds": [
+        "c5a2beaf8c9d4d8dba09c360cf372b52",
+        "f54a32fb523b4ca68df939b8be775ae3",
+        "fcc0732784834ff79962005012f9d8de",
+        "919f5916eaf349f5926f53c785d58a05",
+        "3e95bd80afff4bc687ea2d258a127b24",
+        "04ac42ef4873446bbd72e7234c4f598f",
+        "840c073b0a0d4aa5966b3ce63fc32dc2",
+        "92a4fcb755d448cc943bc2ab15f3d77c",
+        "7a68e3e7f3864101a08661dc981dccb7",
+        "6d85a400aa1843a397c4d4dc55d31661",
+        "07018f25f72543e69411618f5be48995",
+        "f9b44a6dd3e1445a9e4491c87c5ee817",
+        "a1f2773a674945729f8c8d98757148b2",
+        "74da894be8e141dd937ae0ca05a80c1f",
+        "99d11e5aa739491ca68bfe625a356350"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "c5a2beaf8c9d4d8dba09c360cf372b52",
+        "99d11e5aa739491ca68bfe625a356350"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 55,
+      "sourceId": "ab6d9833a5b4438985df0fa1c77886d3",
+      "file": "055.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/055.jpg",
+      "sha256": "5c2676c7b371ac1134710f2bee950c39e5b0bfd5ceb7dccdd395bd80eb29f0bc",
+      "sentenceIds": [
+        "99d11e5aa739491ca68bfe625a356350",
+        "182d8a70f7d54b679235a08320b26b41",
+        "dff1d572bfcf4459bb6546d358e5809b",
+        "fc6568f868b64d27848b0d3ec56cdfb5",
+        "9eddba351b8b4352b33f3f1a5c99f9e7",
+        "20d5fbc5379a46adbb49baebf013bf24",
+        "f333972cec45412a99ae307419d3859b",
+        "05f54b8745d24265bd7cb7fee816d20e",
+        "8fa3038a7f1c4922a9bd7a01b0f87290",
+        "0890e2028d0c4f6eafdbe1e0aeadb37a",
+        "e6a1cc44323c4c5da333b6cd25364c3f",
+        "f66000791c98435dafe4ecd8d3f01562",
+        "46f3496e1cb447cd92bf724c6b9c273c",
+        "5d42cc1bd59341f2b5ae3d7cbabafb28",
+        "11aaccdf2f4b429ba00c4fb4dffeecd7",
+        "703c5024f39f4533bbd314aec3ed8699",
+        "790b7bdd817245d1a011aff369ca6c8f",
+        "87d35e37e01641a2b0fbc50e55f44c21",
+        "72a5c03e819e436cbac4323ca27e7491",
+        "3bfb86a1bd1a4c508b37bd2ab595e746",
+        "cd98b37d928c4420b5bba9a78595828d",
+        "0c9bcab063294793bde127ae3bd5d58f",
+        "07be17afe2e7488f9b740146507305bb",
+        "f4d62b2f890a47bcaf52eb92e759621f",
+        "7be401a101cc4f6b82adae7f0eef523b"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "5d42cc1bd59341f2b5ae3d7cbabafb28",
+          "surface": "Во-о-ольно"
+        },
+        {
+          "sentenceId": "7be401a101cc4f6b82adae7f0eef523b",
+          "surface": "На-а-а-чпнай"
+        }
+      ],
+      "boundaryUnits": [
+        "99d11e5aa739491ca68bfe625a356350",
+        "7be401a101cc4f6b82adae7f0eef523b"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 56,
+      "sourceId": "2e8daf8108964da3aadbe3752feb259a",
+      "file": "056.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/056.jpg",
+      "sha256": "874dc047f1b7ad489db471e312371813c24709f93ad449ee91f6115525228529",
+      "sentenceIds": [
+        "7be401a101cc4f6b82adae7f0eef523b",
+        "6ecc06674d4443e3863de6c95a427533",
+        "25798628179c4cd2a36907a359fa70fa",
+        "411c56b993564328938610272f7353c6",
+        "e5089f27bdad4846907ba07077894b99",
+        "deed4ac3df3743da812524e6e605e90b",
+        "dbe95451a4d148a8906d03d2fec5749c",
+        "36f1b7fa2db24867bbc95e6217dbca36",
+        "1741ecd9df37401197ebcc67854e23ff",
+        "61e4eacc582f4083a4ee0db8b20f5d07",
+        "a1eb2cc5d9a5489b917c03b665a13de6",
+        "99ec47fca3e54b03b205191b7497dc8e",
+        "fa5854ce79e548d68fe3839d6352e434",
+        "56f2484b0c094dacb627975f32806cc4",
+        "9b74acad9e6b4fa99483acaeee20fa31",
+        "6b3f2f748f5d4d22ad3b0a45efb612b3",
+        "9c8ba778e0584ed1b6527625e1962f1d",
+        "a554803a1002415b8c388666543ccc40",
+        "1fe618d12458433fb461c30a06590dc0",
+        "7a523e79d0004aa4a6d29ef6c7f2c675"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "7be401a101cc4f6b82adae7f0eef523b",
+          "surface": "На-а-а-чпнай"
+        },
+        {
+          "sentenceId": "e5089f27bdad4846907ba07077894b99",
+          "surface": "Баталь-о-он"
+        },
+        {
+          "sentenceId": "e5089f27bdad4846907ba07077894b99",
+          "surface": "С-с-смирно"
+        }
+      ],
+      "boundaryUnits": [
+        "7be401a101cc4f6b82adae7f0eef523b",
+        "7a523e79d0004aa4a6d29ef6c7f2c675"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 57,
+      "sourceId": "68320b03bcef4070b7ba79cd000d740c",
+      "file": "057.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/057.jpg",
+      "sha256": "9e824cf85d5692d47bf21932ecc78389a8ed76cd207cf5078472679c8da57b0a",
+      "sentenceIds": [
+        "7a523e79d0004aa4a6d29ef6c7f2c675",
+        "b38de3ca81774f5388316847cfbe3c74",
+        "9a6e69aee1854bba8c38c30f597a6bdc",
+        "9cd4979960d141d9b0e1ff322d5e8b6b",
+        "61ad13bae74f4fdd9f18cac8d59f24d7",
+        "cbce4b8fe24f47c8b754d894f8c7d896",
+        "41294df1086d4259a206c3511d7979c0",
+        "352927723f9c49439985f8369764febf",
+        "e4d5a5766ccf4366bcba44ad86b7a5ea",
+        "0285e5d2a2454ef2a70e7af831b73092",
+        "86a0f518ae294682b270217f8ab8017c",
+        "3551474e1177472d8f7f7ceea685e39b",
+        "5b7b077f28984ed7be712ddc98b42f4b",
+        "33fd717cee474ffdbac58c185804e639",
+        "c4801d1c40a74a8bba6d37fd39bed5f0"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "33fd717cee474ffdbac58c185804e639",
+          "surface": "тыпы-р-р-ру"
+        }
+      ],
+      "boundaryUnits": [
+        "7a523e79d0004aa4a6d29ef6c7f2c675",
+        "c4801d1c40a74a8bba6d37fd39bed5f0"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 58,
+      "sourceId": "3dbb7a4ecc944507aa7615a940f4683b",
+      "file": "058.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/058.jpg",
+      "sha256": "c33fa4695bfa2cac8336e43af5d64e760f5a67a2e08b5b7f1104fe3f88e68d62",
+      "sentenceIds": [
+        "c4801d1c40a74a8bba6d37fd39bed5f0",
+        "fe8c0bad57e345e7858fe6c46eb6c0bf",
+        "be1d098eb40d47bbb633d97d32a1c847",
+        "8db84f6192b54522879f36f83547722f",
+        "ef6e068eee284cccbcfdc960aac1ecff",
+        "5dc83c1f66ef4d08a838b5e0ad5f9ccd",
+        "c432d6e14e1f4eeeae29c593d1246b50",
+        "ec3aa788039648ad923e6a60ebcf8960",
+        "3a7ce10c0fbb4d6ea6359ab29871ee3e",
+        "471fcb776c734182aaacd2372ec11d3b",
+        "5c728c686f43420a9898169883339beb",
+        "1a63d835d3864b93bb720c00c750df4b",
+        "e6c3b457954a423e8e471186cc67341c",
+        "f04677584e244230aaf928ecd1ec3e9c",
+        "80aa610b5090416abb3d60cd54e9d8d8",
+        "1420c4ae334040e5b1d0011adcff6960",
+        "fe3ee1baa80d4195b5158d0b26006340",
+        "38d53a0a5fde4d6d89fbd40c0d9b3382",
+        "7b02986f44f743a09a67f3330af86fe4",
+        "c66e55c684ef4774a070151b3ba4721d",
+        "4fc8274dc2dc4230a5392d5f428462c1",
+        "b277fd119b7f4eeea46775e24761d244",
+        "662c1eb7531a4e60b4d118cdd1f06c33"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "80aa610b5090416abb3d60cd54e9d8d8",
+          "surface": "ти$"
+        }
+      ],
+      "boundaryUnits": [
+        "c4801d1c40a74a8bba6d37fd39bed5f0",
+        "662c1eb7531a4e60b4d118cdd1f06c33"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 59,
+      "sourceId": "73541e3c78e14e25ad029b968d41a658",
+      "file": "059.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/059.jpg",
+      "sha256": "dbde10e5fcadd5237b02f8b293ffb819fda7df0f7b6bef3cd12dbc28505892bc",
+      "sentenceIds": [
+        "662c1eb7531a4e60b4d118cdd1f06c33",
+        "6b9ae261a4cf477db2f3f7038cab31d8",
+        "f7bfc871ebdf49fe99123d544405bfd3",
+        "cfe1f3d202914a2593bcdf2d43d28066",
+        "02c3f4907f454bb99b263a2a932cc2d7",
+        "15e4a12a318842658c6673ee0581b950",
+        "bdde7fff4310422e8932af1b48a0f81f",
+        "62ebc0604c1149d4ac28282beaf8193f",
+        "bf6507b7aa794d1d9fc4142390a54297",
+        "b75b6b64526f40409a516029606d6829",
+        "bfcc025e78a842cdbe42189fa4670a5c",
+        "759349a78c374cbc8cea68eaa762ebcc",
+        "012cac62ed3144eda5cdb6e15dde70b0",
+        "ffaad5659eba4591a71af95da135f594",
+        "e36e429746f8407d879b6bcbef4420be",
+        "f9b20a70800d4b91b6c0edab284ed8b6",
+        "f8cc7b1de5764f6caa96bead866e8ea4",
+        "872d7473a1ac4b78923bc0cf6eeb4f9e",
+        "8a989ce3beb0411290e6f01a97dc346e",
+        "3512074819a8460988e6aa64cb490362",
+        "fc0fec3117ad4df7aeba40cab5fc3207",
+        "439d1dba166049ca95377a98046e7aaf",
+        "6dd3bad5b15c4d9ab4115b8773434eca",
+        "837909129f9141b1998365d6e5425e22",
+        "044132b5ee134cfebafb8cbb700782e4"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "f8cc7b1de5764f6caa96bead866e8ea4",
+          "surface": "•тапты"
+        },
+        {
+          "sentenceId": "439d1dba166049ca95377a98046e7aaf",
+          "surface": "’булышты"
+        }
+      ],
+      "boundaryUnits": [
+        "662c1eb7531a4e60b4d118cdd1f06c33",
+        "044132b5ee134cfebafb8cbb700782e4"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 60,
+      "sourceId": "506bd58710174af29595fdba4165a34d",
+      "file": "060.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/060.jpg",
+      "sha256": "e74c642f2b1ab34d9f37eb484cf403b37fd8fd776eefb70bc2cb7910801758d2",
+      "sentenceIds": [
+        "044132b5ee134cfebafb8cbb700782e4",
+        "0696abfc9aad4f63a52f7ef6b95c946d",
+        "4c59e5502ffb4d8a83e3886d9ba8db91",
+        "4a9406006be945f0a40065cd586e61b2",
+        "44cb5ad2334942a183bb93c4fbe8f93c",
+        "5ccd716f1f47409b89ea931611905bc0",
+        "c5771ee39864440db0b3433fcf81403a",
+        "56effc6e5f2e4aed818901a69196db4f",
+        "dbe429cfad06421c999f737e0b482738",
+        "2c6afb7eac9e4023ae44341196b03c93",
+        "fe76f410f0884c4aa08b3fa9c5324d63",
+        "28fecfed8a0343729fb2f14d39c2708d",
+        "8b1de847178c488383f95ede41a3e079",
+        "081e4671f670447a9bd8e595757db1ef",
+        "dd49aeca16294f8daecbb3e05fec5ebf",
+        "651f2f997cc848a181db2ccd99fae277",
+        "3c127a37bb9a462bae868baa6143f71c",
+        "61aebdab5c384e6994456c87fbc5a66b",
+        "c0823cf70f3c430990e75b7b69048c81",
+        "d5d76789a894436785443712baf30147",
+        "85dc054cf85c431d8bb76be692799094",
+        "4c95e9ce23a542e896d9a525e0884294",
+        "9909decd50fb472aaf366c6aac9d289c",
+        "2d97437135b54d7b9f53bdb2d2ac0433",
+        "c60aef585a3f4507bbc6326caf619ba5",
+        "609349fe5a4547cea188ab50da293d79",
+        "743b45e2fa47443883195bdbe1283d88",
+        "dfab034dd95544149c8f10225a69c21b",
+        "344148c0b8c14ae3bd9826716bd1069e",
+        "36e2b9a0746040c6a57ff98286281039",
+        "07701f1426094f0a999cfec8d6a8774f",
+        "ae8c7290240a440c82788823b66f70ac",
+        "29aa5545ba014a458a6c611619d1057f",
+        "90c3cff0ad064efea74293cb827731ea"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "081e4671f670447a9bd8e595757db1ef",
+          "surface": "Б’олай"
+        },
+        {
+          "sentenceId": "07701f1426094f0a999cfec8d6a8774f",
+          "surface": "’рыда"
+        }
+      ],
+      "boundaryUnits": [
+        "044132b5ee134cfebafb8cbb700782e4",
+        "90c3cff0ad064efea74293cb827731ea"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 61,
+      "sourceId": "372217aaa6174108a9f1bbda85ede749",
+      "file": "061.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/061.jpg",
+      "sha256": "4bd309b7b5f053e1b89227d400a369e1798364a258dcae4bf131f934371e77e0",
+      "sentenceIds": [
+        "90c3cff0ad064efea74293cb827731ea",
+        "514de40dc41b4e61849869dff4e13c01",
+        "225202e74330419d98a5e7814a32e68e",
+        "69bff53854ad4c2abd744b685c984344",
+        "b143c29a674a4dad9da5830743ec0a15",
+        "08420dbc9a90463eac7d0ee17847e332",
+        "017202d2a81541abb97b87d81b189808",
+        "f8d16f110d45434a94fac40977a9fbdd",
+        "15bb6ff4ec35453d8f271da84d9bbe2d",
+        "ea2ef2f0e600486e974b97ba66b633d0",
+        "f25b8c3252bd4b81adc7b73a5c7c1412",
+        "c17a1c372f304c2f9b77210b4d0b3f8a",
+        "0927ffdae3f54392b906112556814821",
+        "9f86f37f006140f4a1d545924a893744",
+        "1ba7a6d14d5549a29dbda789e7d45b4a",
+        "0763eddf25eb482baf4c8c3aaa9b1b2f",
+        "550d91b788a64d2cb0339aa1f8cc15da"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "550d91b788a64d2cb0339aa1f8cc15da",
+          "surface": "Вәләзза-а-а-ллиңн"
+        },
+        {
+          "sentenceId": "550d91b788a64d2cb0339aa1f8cc15da",
+          "surface": "<теле"
+        }
+      ],
+      "boundaryUnits": [
+        "90c3cff0ad064efea74293cb827731ea",
+        "550d91b788a64d2cb0339aa1f8cc15da"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 62,
+      "sourceId": "38a9c548869a4a688bbe21573f87adf2",
+      "file": "062.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/062.jpg",
+      "sha256": "70af9986582c0910a5df191f138c4b1cd2ce445302650294bd83adb264bb6c59",
+      "sentenceIds": [
+        "550d91b788a64d2cb0339aa1f8cc15da",
+        "aa11f113a20a4eb78043aecae37e4689",
+        "c239f8a3ac034838b5d6d72c1768252f",
+        "01ee08302dba4e8eb492c31b3fb1f57c",
+        "108a69f8de2249d195e87d565e563698",
+        "c0a02666ec364914b62e277fe7432521",
+        "7430b697b08542a8ae7343623d3105dc",
+        "c1e3214722904261a77dcf044bcb8ef3",
+        "3b672273528d45e1ab7f8707ef39c003",
+        "5bf03624935146038bf9ca2a0e823f6a",
+        "9160ea72fe9d41fe9e17f6d4137408d1",
+        "32140990c0d54e0696168488a1c37b53",
+        "cf69b5ac00ab434eaa6e9538ff7206c5",
+        "229c270f341b41c18f44ac89722e2a40",
+        "2545f97831814217b12e8201775e5a27",
+        "b06f336bee9c4869966495e5603c9c60",
+        "5c7a821bb5af4911a61182f0feeb0afb",
+        "7c59441548e147b299eac811a2a30734",
+        "941fdd97208a4a1398eea6f248db25e1",
+        "e6eab214b23947799c42a0027f9b4ecd",
+        "86fb250d54ab4b39bb3f09794c261be2",
+        "4d6d5200ee904f98b3d45cbb7d98edfa",
+        "35b560576a0f4dc0b4646e8487d2382b",
+        "37bef12636ef4900a0bce1650e715ed0",
+        "db32e54213624ec78338e9e46426007d",
+        "7472577364a8455194795a6bd3d9b7eb",
+        "e799975a3c054e34bba14f615718cb70",
+        "11c0e197b4c94e7facb9f812865b7bf4"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "550d91b788a64d2cb0339aa1f8cc15da",
+          "surface": "Вәләзза-а-а-ллиңн"
+        },
+        {
+          "sentenceId": "550d91b788a64d2cb0339aa1f8cc15da",
+          "surface": "<теле"
+        }
+      ],
+      "boundaryUnits": [
+        "550d91b788a64d2cb0339aa1f8cc15da",
+        "11c0e197b4c94e7facb9f812865b7bf4"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 63,
+      "sourceId": "ce7718d5ebbf48ebb0af6151d2e34edc",
+      "file": "063.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/063.jpg",
+      "sha256": "4f4acf15b5a2c9e28951584cf8731f14f08e68ae13e97a1c0926dd6bca22bd41",
+      "sentenceIds": [
+        "11c0e197b4c94e7facb9f812865b7bf4",
+        "5232d3eba2d3454a976e80816317e02c",
+        "d4d9a677cdc0421994b21b5d3d6065a4",
+        "109470f9a1404d1d9d076b9f4e33e946",
+        "866a027c08fd40c395466fc9bcd21a0f",
+        "cbe24adcc43e4b54ad672330a6d32a4c",
+        "04a544c8401f43dea7f119d57ef04281",
+        "c9501f3a6bec4879a182be6304f98e5a",
+        "6cdda11cdbc54bd69c4f24f439716fd1",
+        "0a1476e74aff416d977fee7ff70c7405",
+        "ac720d7723ad44c28f0b66740801578b",
+        "10ef6c403b1b47b1a5f613a787b4ce84",
+        "a99251fbadb54851af6f93f15812fcaa",
+        "b550e33d4383491088350e7d27e29d0b",
+        "4218bc06e2044de2ab983c33be2e5503",
+        "db280e9b37344a3686f4d31e142667e0",
+        "5040dec221224b6c9610dc4d06205a51",
+        "6ab508168fbd451c90290543f036d21d",
+        "f5bee5325149443dab8eb54c67c0208d"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "11c0e197b4c94e7facb9f812865b7bf4",
+        "f5bee5325149443dab8eb54c67c0208d"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 64,
+      "sourceId": "3cc1df65b30f45c78c442c709ad1bd25",
+      "file": "064.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/064.jpg",
+      "sha256": "d0388f1e10e8c446a867b9139b7951be7d65f8c0b015e10d2f10363cd88f23c2",
+      "sentenceIds": [
+        "f5bee5325149443dab8eb54c67c0208d",
+        "3a4d267050074eefbb8d74ac80686292",
+        "a3d886430e234497afbf5e93ced15d8f",
+        "683e66911e5e43abb73ee7cd6687acee",
+        "7f75127b31364648b26be90593b6b5ea",
+        "5c76baefb46b42929391b66f142220d5",
+        "20cb22e16ce949ad85d8bc989e88de49",
+        "8eda571f9d144410a9c4cf511a28aea8",
+        "6c86b2ab9041413fb11206c3c3cfac0b",
+        "1389020ebe0a4e1da1de8efbdb8591d6",
+        "827d475a90244fc5b8501924c99aa143",
+        "8e4bd1d2d604491a81c1763b1229be83",
+        "fc0e9d67783442fd8df57327291bf367",
+        "41f1b4ae32804a5980883a102c4cf548",
+        "d2590bd80fc542a7a5c17cbe1f6a0122",
+        "847ebf5ad00a41918a6ee27d4008bae0",
+        "1cb6a169cb6146a4811f2a32e99dd2f7",
+        "b9d085928631417295936f73a037e5bc",
+        "db2cdd3a188244eda193e99553bb2239",
+        "e713c2a7e60a463ca3db2c7b0c33e23b"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "683e66911e5e43abb73ee7cd6687acee",
+          "surface": "кач’"
+        }
+      ],
+      "boundaryUnits": [
+        "f5bee5325149443dab8eb54c67c0208d",
+        "e713c2a7e60a463ca3db2c7b0c33e23b"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 65,
+      "sourceId": "12ad711aeb4a4b439e4a642b879857dc",
+      "file": "065.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/065.jpg",
+      "sha256": "d2bc44be1c5975bc05e926cbb7e4c0e2a21fa53f093fbf88232ff529a75b55d9",
+      "sentenceIds": [
+        "e713c2a7e60a463ca3db2c7b0c33e23b",
+        "8e8d3a4a5530481e8f16c41cf85ab380",
+        "659c7e13442c419c8df5c994420cb4f5",
+        "0096b5367b094286b6a077c19493d1b7",
+        "ac7746a723a843c093a057d859b44844",
+        "69d87b3cc52b4cf68aa5f61911b8c12b",
+        "05f5713060814ec6b85bb2174d34a688",
+        "0e9a3c75fe63477b9b05b39e277ba6ad",
+        "6cb40277c24747b4a9469bc6d950143c",
+        "b4f9876d407c4fabb5bcec245df1d0a5",
+        "ec2d57556fe94e33a6fe4e02f5666704",
+        "6073577c8a3644c68a9a66fdda35ddda",
+        "f199181ca8b84675b24d36d6d9eeef0d",
+        "b88731c965cf469a90aa64576a5b65d0",
+        "199b4b01fada4b05b8e427965e10ed8f",
+        "71a5409cd4eb4170bf4b59cbb4f5c12f",
+        "9c4c7548bee849619dc4e15e07a656f1",
+        "e6298f8406354a16ac68bee1b12232f2",
+        "bcfe2f55721b47b7bac699a405fecb36"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "0096b5367b094286b6a077c19493d1b7",
+          "surface": "Ти-и-ти-ти-тии"
+        }
+      ],
+      "boundaryUnits": [
+        "e713c2a7e60a463ca3db2c7b0c33e23b",
+        "bcfe2f55721b47b7bac699a405fecb36"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 66,
+      "sourceId": "7dc93709696a47bd961ab8f78226647e",
+      "file": "066.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/066.jpg",
+      "sha256": "0e3fdb8f77ff1975d8d441a2f8bb8907e7318402c406ee0ac1d219c6e27b6ada",
+      "sentenceIds": [
+        "bcfe2f55721b47b7bac699a405fecb36",
+        "e183c390799d4a27b5d235fc24de2583",
+        "be2970965b914e6ca0d3b6edb8561871",
+        "34fa6b80dfc44a7383e84191aee1d5bf",
+        "eedbd4147c9d4498a820f873e7568aa9",
+        "2355d34ec77b4338a86639e48becf03e",
+        "e1598afaad5f42d9a2e0223c0e7a5702",
+        "ea3a58d2e5c2450faeeecfe2e205b152",
+        "98fc8fed59a54766aa524f0908cbc4a6",
+        "54a569bd7f04412da9a52d9c27386d5b",
+        "41225ca623154da1a216587ed9cfe514",
+        "51b6a6a2192b41fe838040a6258b55a1",
+        "938da72fc5774df7a2ea477c3e38d3cd",
+        "7754d664f8694f0386b159cbeab1a632",
+        "e383ed582b6748f9b52f8db073b08136",
+        "6c297432ff0e424a8bb2cc171d382a33",
+        "b4c34871df5d44639a42c65aeedb419d",
+        "110b7243b33b41208ffeb524a23462cd",
+        "dd688b069c124607afac49de3f18c109",
+        "b7ceba9352164b948ceafd37fdfbd304",
+        "9b7a4483c566423f9fc5e892327c6625"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "bcfe2f55721b47b7bac699a405fecb36",
+        "9b7a4483c566423f9fc5e892327c6625"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 67,
+      "sourceId": "9c5d51acb0a543e2b412c1c7e842634e",
+      "file": "067.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/067.jpg",
+      "sha256": "23a13e93b69700efa16b307390db23c8f7cd21c3fbff04a8ae3062f47fe424d6",
+      "sentenceIds": [
+        "9b7a4483c566423f9fc5e892327c6625",
+        "deaacadd3eca4fc4bc0136d33ddf5abc",
+        "588eda81e19a46d3ac7619a7c62e7b75",
+        "73d193fc922b48969c1cac36310f0474",
+        "2db055744b754abdb2ffe965970575ff",
+        "8b42be7248ed4318bc7a5d8067e4e3e7",
+        "ea87eb02d09c4b0184ccb38d67001094",
+        "59522479c7fb44c0917f142346ea8150",
+        "d5d2b4f2100d49be91b08c49ce6cbeab",
+        "df8b22121c124d879092413db433cd69",
+        "c57326b78bf9462cbcd4715b19122115",
+        "3731a170f03442839d80007385ca4514",
+        "614a3c9134e54d5ebc9c1473e1f25dbb",
+        "c42257a64c0a469c9c007376670dc5eb",
+        "cbb07284870f49ba94ec82e91dab627a",
+        "701e8b972f164085b34d1a0a91c7492d",
+        "eb32a8fcf5eb4ca7b3d49357ad9b5630",
+        "b3ce9102569044a98e252bfcbda3ec6f",
+        "0a297d5a69f84adda8e617e5000a03af",
+        "539d36952adc44bfab62108ff6a33665",
+        "872f9df413a84521b0e4580e0eaed9c7",
+        "b717853b943748cfb69bc72d85b107d5",
+        "497871d5d26140ddbaaa457f878edf12",
+        "756ebd3594f2456eaa0c2be3eec04d13",
+        "6aebe1ba644d4f2ab502b08d6194e26f",
+        "a6091a58d46b4b6f80ad5b6c2a64cca4",
+        "eae4ff79de2c43a5862548f421d0219d",
+        "3ee6df99803043d5b476caa73b88c644"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "9b7a4483c566423f9fc5e892327c6625",
+        "3ee6df99803043d5b476caa73b88c644"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 68,
+      "sourceId": "00b94ee559d1462096c65e97be8a720a",
+      "file": "068.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/068.jpg",
+      "sha256": "b39ed9f4f3f32263f6d994e0eb139440f6185bbd0e47969dc6ff003950833bcc",
+      "sentenceIds": [
+        "3ee6df99803043d5b476caa73b88c644",
+        "325d837b0f8947fcabae7e6ed576ca07",
+        "a30f5da139fc4989b290635fd1aabf15",
+        "52bae6bca9c949ec9d538011594a191f",
+        "bdd1ff1181b44ae8a9bc61201ae674ec",
+        "d283c7b4992a408a8d357450a2682fb5",
+        "850fe6a569184a2dab07cde5a8cd53f5",
+        "0158be2eb312410ca6e76b01048b0efe",
+        "d0bd546050ca4defa5b6e331283bc134",
+        "e2cced98421e4407a084d751c6dd1c67",
+        "a6e444bec00d464d90b6c5e3ee15e67f",
+        "6a65d69c7c304e70bef71edec5beb35f",
+        "a3e344dfbc1342ae9f295a7abab2dd5a",
+        "8a8da73a5bf94739bdedaeea5bb75513",
+        "5bcd040cca444d3a925a515f3ac10741"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "3ee6df99803043d5b476caa73b88c644",
+        "5bcd040cca444d3a925a515f3ac10741"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 69,
+      "sourceId": "8e94099d281742e8836ae3e2b63be151",
+      "file": "069.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/069.jpg",
+      "sha256": "30216dbbd2f7ddb9b59db590078d68b50ddcd9fac5db8343cfb9c613ffbd7b08",
+      "sentenceIds": [
+        "5bcd040cca444d3a925a515f3ac10741",
+        "47eb3450751a484c9a75e6b957800216",
+        "27181c324a7e423185de776019430cb8",
+        "f969a57178584742b34cacdbfc1a93d2",
+        "ffb50032f5f54e06a02de6ce6602402e",
+        "ff9d84c7c41740f2b5ad8ff329662a9b",
+        "9679d33f3b2545b7964fcff7d8b17bbe",
+        "30abd63b89fe4e15b923178d19a7b643",
+        "24d6bc7ee2254797936555cbd39e167d",
+        "4983554fccda45fca554d3621ce8fe11",
+        "17ebb5a51d254e9ca1d5c43c0aef4eab",
+        "302da7a3e7cb479d8841952b4f469799",
+        "3bd3e90e8f844ab5ae291d92519bb87d",
+        "a4e9fe823f8e41ee808e2fda07dee435",
+        "fa85cf7f5f9042d2bed2661e0cd1ba17",
+        "b94a7a61c058404082596509b28f862b",
+        "9aade9061c0543afba6d92ec96f4b237",
+        "0791e2afa37544a58fae49b2e3b38ffa",
+        "b588e545feed4ff9a63437be1971c975",
+        "8b73af8272f541f2922dcc326fe9cf48",
+        "b8633b0c9aa646709879f5c424e42345",
+        "42a912246d1e4aee83647541cf7380c6",
+        "53524cddec6f47129c65928b2215a3b7"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "17ebb5a51d254e9ca1d5c43c0aef4eab",
+          "surface": "’шундый"
+        }
+      ],
+      "boundaryUnits": [
+        "5bcd040cca444d3a925a515f3ac10741",
+        "53524cddec6f47129c65928b2215a3b7"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 70,
+      "sourceId": "acb0397c7f3f4fb18a36aaf80bee740b",
+      "file": "070.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/070.jpg",
+      "sha256": "e4c80d36f34456c93f4ef556102e2ba24315914e0422c36ee94d4a02c29e4394",
+      "sentenceIds": [
+        "53524cddec6f47129c65928b2215a3b7",
+        "462a339c8add49e781d7dcb004a500fb",
+        "f3a84b7c6b8449a083dba966aa522e1b",
+        "9a8ff18b9fa84de2850b3c48820dacfc",
+        "03cb8a16218e49c7bc1ebda071c9475e",
+        "00f404cbd03147f4830ae85d613dad65",
+        "d20713355893447d8b154401c0f07f0d",
+        "8c5037231c30441eb65b0395c93a060d",
+        "0c017cbf08854dad84b24db6296e644c",
+        "40e9ad10c324407899780613dbdbf927",
+        "320d5c5601c341538a8c6e99cf97e21c",
+        "4fc10af4fe514092a6942dc0e7720c33",
+        "746afd4b20494209ba4da7702ffdd992",
+        "12a16666bd8e46e4954013d8296d6c33",
+        "7a7c575af56746c28e7a6752625d6f60",
+        "985d450342cf4ed8a4e85261cdf25718",
+        "25eed78597b6482a97422b82e13ffc00",
+        "b2d6d972edd44757ac7bdeec680c201e",
+        "7a830903771342b3886d6733e803a39b",
+        "6d5c43f0853b4fd88f171a6cfa07effb",
+        "10516694e7724156a2890ae838d237e3",
+        "50533d7d73c546bf9e5b3beb302ca977",
+        "74e6d5e80ddc4cddb8ed146a1408c0dc",
+        "0f125ad577924ecc98d48412cf545ddf",
+        "45872a943b2e4130ae3f63cca199e766"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "40e9ad10c324407899780613dbdbf927",
+          "surface": "£ндый"
+        }
+      ],
+      "boundaryUnits": [
+        "53524cddec6f47129c65928b2215a3b7",
+        "45872a943b2e4130ae3f63cca199e766"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 71,
+      "sourceId": "73a296ff7ee6464799bc645e7ea56e12",
+      "file": "071.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/071.jpg",
+      "sha256": "e79471b62c40256f44464fe976bcd54afe79a7131bf9b011e25ad9080a266922",
+      "sentenceIds": [
+        "45872a943b2e4130ae3f63cca199e766",
+        "a28226fd8b904f72a595f45f7e4c4da2",
+        "66b480d90186432c8c13d9741ef6dbd7",
+        "3fed99921605468890da36778b517bd4",
+        "0cdca5f33ee1479aa573807042797901",
+        "98488169bb944741aa73de4f4885443a",
+        "33e79ce83ae8478a8e90d8e4ef9b99da",
+        "f77e6a621cee4c47805bffdb6fb31c25",
+        "162812cc96ab4edbb52f5a280135fe1a",
+        "0558a22fa12a45cebdd377e58c8fb8f8",
+        "6d658502331f4c2bb041e304768b9116",
+        "b8abba4ac6f54df499f27ea32e20d339",
+        "bb9a51a373814104b389e15f82f4a8b6",
+        "4fb65fab2bec44c89d2c81e51aabd694",
+        "06e85d8475ff4d6aa844d1f2be6819dc"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "3fed99921605468890da36778b517bd4",
+          "surface": "Сто-о-ой"
+        },
+        {
+          "sentenceId": "98488169bb944741aa73de4f4885443a",
+          "surface": "Эш-ч-ту-туф"
+        },
+        {
+          "sentenceId": "98488169bb944741aa73de4f4885443a",
+          "surface": "Эш-ч-т-туф"
+        }
+      ],
+      "boundaryUnits": [
+        "45872a943b2e4130ae3f63cca199e766",
+        "06e85d8475ff4d6aa844d1f2be6819dc"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 72,
+      "sourceId": "b23876e389c941208111e15c8763492f",
+      "file": "072.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/072.jpg",
+      "sha256": "092e2414bb3d4680c1298d79c8952b6800c2735fea23ad1236adbbbe29537666",
+      "sentenceIds": [
+        "06e85d8475ff4d6aa844d1f2be6819dc",
+        "d163719824a04a868cb35959f41ebe87",
+        "966978cdf2ee4ce1b2997ff58e5a3947",
+        "7690a8a528d94bfd8ec132570cc80b19",
+        "3b863afe2a244e4b89b968632378bad2",
+        "0a34ef2c41f345299a134e627ea15cf3",
+        "5b60d8fe44f44a5d876ad3e796e1b8d0",
+        "54e66aa62f7e4011b5fa3e20cf7f2c39",
+        "22a4a368f5c74ec896cddc1dc1ed45b6",
+        "8024587d72914ff190a4ae026e87662d",
+        "5c171a902b1c4224866a5b06ee8aec48",
+        "d22cc464f9eb440dbbde0b74e155f4f2",
+        "05bb0529ec2345d9abc8e1c0352bf2b8",
+        "572c512f43e148bda3d3a6edd823bc2b",
+        "d3b3670b7171409b8dce98095e8b3fe4"
+      ],
+      "unknownForms": [
+        {
+          "sentenceId": "572c512f43e148bda3d3a6edd823bc2b",
+          "surface": "А-у-у"
+        }
+      ],
+      "boundaryUnits": [
+        "06e85d8475ff4d6aa844d1f2be6819dc",
+        "d3b3670b7171409b8dce98095e8b3fe4"
+      ],
+      "visuallyProofread": false
+    },
+    {
+      "page": 73,
+      "sourceId": "e9eebaf7118b421a9890f01f1affdf72",
+      "file": "073.jpg",
+      "url": "https://kazanutlary.ru/images/uploads/j-archive/1948-10/073.jpg",
+      "sha256": "90e47444fba686442a501de87dd68ac4451b03aff0c41128dfa2ad4972e314ad",
+      "sentenceIds": [
+        "d3b3670b7171409b8dce98095e8b3fe4",
+        "8a95d51aeaac45d491b3e8e336ecfdb6",
+        "b0086848bab849899e2f31000cd8a317",
+        "8064b4c95c0e451292a10f957dadc42b",
+        "8fbba6fdc1184fb390611c01ea6fb36e"
+      ],
+      "unknownForms": [],
+      "boundaryUnits": [
+        "d3b3670b7171409b8dce98095e8b3fe4"
+      ],
+      "visuallyProofread": false
+    }
+  ]
+}

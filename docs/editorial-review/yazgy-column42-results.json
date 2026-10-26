@@ -1,0 +1,276 @@
+{
+  "workId": "fea266e5c60a4747898024bd321321ca",
+  "baselineRevision": 870,
+  "splits": [
+    {
+      "originalOrdinal": 97,
+      "sentenceId": "b31c25a95c7c4204b25d35806143d690",
+      "revision": 3,
+      "nextSentenceId": "8833878b0135463897c165742df6bd70"
+    },
+    {
+      "originalOrdinal": 121,
+      "sentenceId": "ca8688b10f1c47628ee446e918a1f709",
+      "revision": 3,
+      "nextSentenceId": "0e86c71765d34a0a82c7f21eb18d1208"
+    },
+    {
+      "originalOrdinal": 132,
+      "sentenceId": "ac52c740d82645039e4952c25acf9e61",
+      "revision": 3,
+      "nextSentenceId": "ba4618d5936a4340a34ba404f86f383c"
+    }
+  ],
+  "merges": [
+    {
+      "saved": true,
+      "sentenceId": "b31c25a95c7c4204b25d35806143d690",
+      "revision": 4,
+      "mergedIds": [
+        "0e86c71765d34a0a82c7f21eb18d1208"
+      ]
+    },
+    {
+      "saved": true,
+      "sentenceId": "ac52c740d82645039e4952c25acf9e61",
+      "revision": 5,
+      "mergedIds": [
+        "8833878b0135463897c165742df6bd70"
+      ]
+    }
+  ],
+  "reorder": {
+    "valid": true,
+    "saved": true,
+    "moves": [
+      {
+        "sentenceId": "0e86c71765d34a0a82c7f21eb18d1208",
+        "from": 123,
+        "to": 98
+      },
+      {
+        "sentenceId": "00bb50aed4fa4f1a8fcce6b47b223a9b",
+        "from": 124,
+        "to": 99
+      },
+      {
+        "sentenceId": "00765d018d2c4bbca6940006fc489ba3",
+        "from": 125,
+        "to": 100
+      },
+      {
+        "sentenceId": "211f2e77989e42e490c8554945220f21",
+        "from": 126,
+        "to": 101
+      },
+      {
+        "sentenceId": "102f9b9f6a6748d19ba2b99b2e925621",
+        "from": 127,
+        "to": 102
+      },
+      {
+        "sentenceId": "2cbc512fbb6d41a5aef028100db30b17",
+        "from": 128,
+        "to": 103
+      },
+      {
+        "sentenceId": "a1ea604cb23c4ad59a0441bc4935f7e6",
+        "from": 129,
+        "to": 104
+      },
+      {
+        "sentenceId": "c2ffe6f21dad4602b4ba2ebba8edb0da",
+        "from": 130,
+        "to": 105
+      },
+      {
+        "sentenceId": "f4a8924265ea4020b309f8edeefa4e8c",
+        "from": 131,
+        "to": 106
+      },
+      {
+        "sentenceId": "b4efa6ac9fe54207b26deca9b805dfb6",
+        "from": 132,
+        "to": 107
+      },
+      {
+        "sentenceId": "40d332aa54ac4d57a990bd506dcad37d",
+        "from": 133,
+        "to": 108
+      },
+      {
+        "sentenceId": "ac52c740d82645039e4952c25acf9e61",
+        "from": 134,
+        "to": 109
+      },
+      {
+        "sentenceId": "8833878b0135463897c165742df6bd70",
+        "from": 98,
+        "to": 110
+      },
+      {
+        "sentenceId": "92a62cf9b84c4384a20d5aa5027f2507",
+        "from": 99,
+        "to": 111
+      },
+      {
+        "sentenceId": "9b2ebc63dbf4443f9e2f831313db7d3e",
+        "from": 100,
+        "to": 112
+      },
+      {
+        "sentenceId": "257c8747399e4553acb5e2856cb3b647",
+        "from": 101,
+        "to": 113
+      },
+      {
+        "sentenceId": "5a7d978835ea4bd793deac2f2a59203b",
+        "from": 102,
+        "to": 114
+      },
+      {
+        "sentenceId": "4a02d763284044bf8d8dc2e18d966748",
+        "from": 103,
+        "to": 115
+      },
+      {
+        "sentenceId": "47d7443f614946e0b600543d46a4d3ca",
+        "from": 104,
+        "to": 116
+      },
+      {
+        "sentenceId": "0c0cfda2d9454e4598b592639075f8e0",
+        "from": 105,
+        "to": 117
+      },
+      {
+        "sentenceId": "a68b1cf1930b402ba1676b48b10c60c9",
+        "from": 106,
+        "to": 118
+      },
+      {
+        "sentenceId": "6737c22cfaea4b6997cdeee6df520001",
+        "from": 107,
+        "to": 119
+      },
+      {
+        "sentenceId": "871c4e7fa9024dda9caca80994c706ee",
+        "from": 108,
+        "to": 120
+      },
+      {
+        "sentenceId": "34cca99c4f4e492abff19ee40b9eba71",
+        "from": 109,
+        "to": 121
+      },
+      {
+        "sentenceId": "4ded0c16f06846f08e769b748bdec577",
+        "from": 110,
+        "to": 122
+      },
+      {
+        "sentenceId": "9d19ed67d2244998a8f7694b8201add8",
+        "from": 111,
+        "to": 123
+      },
+      {
+        "sentenceId": "aa3cdaaded0d41d0b6f6f0b67f2a9405",
+        "from": 112,
+        "to": 124
+      },
+      {
+        "sentenceId": "be3a2249b01a4fca87da9efc43ec6b2e",
+        "from": 113,
+        "to": 125
+      },
+      {
+        "sentenceId": "2b23910836e747b1be7117525e9c66e1",
+        "from": 114,
+        "to": 126
+      },
+      {
+        "sentenceId": "ffcc359bccdc4a368e21f8b0a3d03d83",
+        "from": 115,
+        "to": 127
+      },
+      {
+        "sentenceId": "3593ec2ce5044dbca4d4e422050e8d1b",
+        "from": 116,
+        "to": 128
+      },
+      {
+        "sentenceId": "fdcfc1ae018443cbbf536433bd5ce1ff",
+        "from": 117,
+        "to": 129
+      },
+      {
+        "sentenceId": "28ab622f56bf490f8573361d5a46374b",
+        "from": 118,
+        "to": 130
+      },
+      {
+        "sentenceId": "0d07cbd7555f4e60af09781eb1cfc504",
+        "from": 119,
+        "to": 131
+      },
+      {
+        "sentenceId": "4afebf8c1fb04efda008d95069a907ee",
+        "from": 120,
+        "to": 132
+      },
+      {
+        "sentenceId": "f00827a1ec114db990befc3651642948",
+        "from": 121,
+        "to": 133
+      },
+      {
+        "sentenceId": "ca8688b10f1c47628ee446e918a1f709",
+        "from": 122,
+        "to": 134
+      }
+    ],
+    "workRevision": 874,
+    "desiredOrder": [
+      "b31c25a95c7c4204b25d35806143d690",
+      "0e86c71765d34a0a82c7f21eb18d1208",
+      "00bb50aed4fa4f1a8fcce6b47b223a9b",
+      "00765d018d2c4bbca6940006fc489ba3",
+      "211f2e77989e42e490c8554945220f21",
+      "102f9b9f6a6748d19ba2b99b2e925621",
+      "2cbc512fbb6d41a5aef028100db30b17",
+      "a1ea604cb23c4ad59a0441bc4935f7e6",
+      "c2ffe6f21dad4602b4ba2ebba8edb0da",
+      "f4a8924265ea4020b309f8edeefa4e8c",
+      "b4efa6ac9fe54207b26deca9b805dfb6",
+      "40d332aa54ac4d57a990bd506dcad37d",
+      "ac52c740d82645039e4952c25acf9e61",
+      "8833878b0135463897c165742df6bd70",
+      "92a62cf9b84c4384a20d5aa5027f2507",
+      "9b2ebc63dbf4443f9e2f831313db7d3e",
+      "257c8747399e4553acb5e2856cb3b647",
+      "5a7d978835ea4bd793deac2f2a59203b",
+      "4a02d763284044bf8d8dc2e18d966748",
+      "47d7443f614946e0b600543d46a4d3ca",
+      "0c0cfda2d9454e4598b592639075f8e0",
+      "a68b1cf1930b402ba1676b48b10c60c9",
+      "6737c22cfaea4b6997cdeee6df520001",
+      "871c4e7fa9024dda9caca80994c706ee",
+      "34cca99c4f4e492abff19ee40b9eba71",
+      "4ded0c16f06846f08e769b748bdec577",
+      "9d19ed67d2244998a8f7694b8201add8",
+      "aa3cdaaded0d41d0b6f6f0b67f2a9405",
+      "be3a2249b01a4fca87da9efc43ec6b2e",
+      "2b23910836e747b1be7117525e9c66e1",
+      "ffcc359bccdc4a368e21f8b0a3d03d83",
+      "3593ec2ce5044dbca4d4e422050e8d1b",
+      "fdcfc1ae018443cbbf536433bd5ce1ff",
+      "28ab622f56bf490f8573361d5a46374b",
+      "0d07cbd7555f4e60af09781eb1cfc504",
+      "4afebf8c1fb04efda008d95069a907ee",
+      "f00827a1ec114db990befc3651642948",
+      "ca8688b10f1c47628ee446e918a1f709",
+      "ba4618d5936a4340a34ba404f86f383c"
+    ],
+    "documentsUnchanged": true
+  }
+}

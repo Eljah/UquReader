@@ -1,0 +1,236 @@
+{
+  "workId": "fea266e5c60a4747898024bd321321ca",
+  "baselineRevision": 1119,
+  "splits": [
+    {
+      "originalOrdinal": 591,
+      "sentenceId": "550d91b788a64d2cb0339aa1f8cc15da",
+      "revision": 3,
+      "nextSentenceId": "95e399d21a844f6893acad9116b1b914"
+    },
+    {
+      "originalOrdinal": 604,
+      "sentenceId": "229c270f341b41c18f44ac89722e2a40",
+      "revision": 3,
+      "nextSentenceId": "7c440580a15e4ccab8a09e5f4a1cb43e"
+    },
+    {
+      "originalOrdinal": 618,
+      "sentenceId": "11c0e197b4c94e7facb9f812865b7bf4",
+      "revision": 3,
+      "nextSentenceId": "b6769e9a54d841f0b936270b5db13982"
+    }
+  ],
+  "merges": [
+    {
+      "saved": true,
+      "sentenceId": "550d91b788a64d2cb0339aa1f8cc15da",
+      "revision": 4,
+      "mergedIds": [
+        "7c440580a15e4ccab8a09e5f4a1cb43e"
+      ]
+    },
+    {
+      "saved": true,
+      "sentenceId": "11c0e197b4c94e7facb9f812865b7bf4",
+      "revision": 5,
+      "mergedIds": [
+        "95e399d21a844f6893acad9116b1b914"
+      ]
+    },
+    {
+      "saved": true,
+      "sentenceId": "229c270f341b41c18f44ac89722e2a40",
+      "revision": 5,
+      "mergedIds": [
+        "b6769e9a54d841f0b936270b5db13982"
+      ]
+    }
+  ],
+  "reorder": {
+    "valid": true,
+    "saved": true,
+    "moves": [
+      {
+        "sentenceId": "7c440580a15e4ccab8a09e5f4a1cb43e",
+        "from": 606,
+        "to": 592
+      },
+      {
+        "sentenceId": "2545f97831814217b12e8201775e5a27",
+        "from": 607,
+        "to": 593
+      },
+      {
+        "sentenceId": "b06f336bee9c4869966495e5603c9c60",
+        "from": 608,
+        "to": 594
+      },
+      {
+        "sentenceId": "5c7a821bb5af4911a61182f0feeb0afb",
+        "from": 609,
+        "to": 595
+      },
+      {
+        "sentenceId": "7c59441548e147b299eac811a2a30734",
+        "from": 610,
+        "to": 596
+      },
+      {
+        "sentenceId": "941fdd97208a4a1398eea6f248db25e1",
+        "from": 611,
+        "to": 597
+      },
+      {
+        "sentenceId": "e6eab214b23947799c42a0027f9b4ecd",
+        "from": 612,
+        "to": 598
+      },
+      {
+        "sentenceId": "86fb250d54ab4b39bb3f09794c261be2",
+        "from": 613,
+        "to": 599
+      },
+      {
+        "sentenceId": "4d6d5200ee904f98b3d45cbb7d98edfa",
+        "from": 614,
+        "to": 600
+      },
+      {
+        "sentenceId": "35b560576a0f4dc0b4646e8487d2382b",
+        "from": 615,
+        "to": 601
+      },
+      {
+        "sentenceId": "37bef12636ef4900a0bce1650e715ed0",
+        "from": 616,
+        "to": 602
+      },
+      {
+        "sentenceId": "db32e54213624ec78338e9e46426007d",
+        "from": 617,
+        "to": 603
+      },
+      {
+        "sentenceId": "7472577364a8455194795a6bd3d9b7eb",
+        "from": 618,
+        "to": 604
+      },
+      {
+        "sentenceId": "e799975a3c054e34bba14f615718cb70",
+        "from": 619,
+        "to": 605
+      },
+      {
+        "sentenceId": "11c0e197b4c94e7facb9f812865b7bf4",
+        "from": 620,
+        "to": 606
+      },
+      {
+        "sentenceId": "95e399d21a844f6893acad9116b1b914",
+        "from": 592,
+        "to": 607
+      },
+      {
+        "sentenceId": "aa11f113a20a4eb78043aecae37e4689",
+        "from": 593,
+        "to": 608
+      },
+      {
+        "sentenceId": "c239f8a3ac034838b5d6d72c1768252f",
+        "from": 594,
+        "to": 609
+      },
+      {
+        "sentenceId": "01ee08302dba4e8eb492c31b3fb1f57c",
+        "from": 595,
+        "to": 610
+      },
+      {
+        "sentenceId": "108a69f8de2249d195e87d565e563698",
+        "from": 596,
+        "to": 611
+      },
+      {
+        "sentenceId": "c0a02666ec364914b62e277fe7432521",
+        "from": 597,
+        "to": 612
+      },
+      {
+        "sentenceId": "7430b697b08542a8ae7343623d3105dc",
+        "from": 598,
+        "to": 613
+      },
+      {
+        "sentenceId": "c1e3214722904261a77dcf044bcb8ef3",
+        "from": 599,
+        "to": 614
+      },
+      {
+        "sentenceId": "3b672273528d45e1ab7f8707ef39c003",
+        "from": 600,
+        "to": 615
+      },
+      {
+        "sentenceId": "5bf03624935146038bf9ca2a0e823f6a",
+        "from": 601,
+        "to": 616
+      },
+      {
+        "sentenceId": "9160ea72fe9d41fe9e17f6d4137408d1",
+        "from": 602,
+        "to": 617
+      },
+      {
+        "sentenceId": "32140990c0d54e0696168488a1c37b53",
+        "from": 603,
+        "to": 618
+      },
+      {
+        "sentenceId": "cf69b5ac00ab434eaa6e9538ff7206c5",
+        "from": 604,
+        "to": 619
+      },
+      {
+        "sentenceId": "229c270f341b41c18f44ac89722e2a40",
+        "from": 605,
+        "to": 620
+      }
+    ],
+    "workRevision": 1123,
+    "desiredOrder": [
+      "550d91b788a64d2cb0339aa1f8cc15da",
+      "7c440580a15e4ccab8a09e5f4a1cb43e",
+      "2545f97831814217b12e8201775e5a27",
+      "b06f336bee9c4869966495e5603c9c60",
+      "5c7a821bb5af4911a61182f0feeb0afb",
+      "7c59441548e147b299eac811a2a30734",
+      "941fdd97208a4a1398eea6f248db25e1",
+      "e6eab214b23947799c42a0027f9b4ecd",
+      "86fb250d54ab4b39bb3f09794c261be2",
+      "4d6d5200ee904f98b3d45cbb7d98edfa",
+      "35b560576a0f4dc0b4646e8487d2382b",
+      "37bef12636ef4900a0bce1650e715ed0",
+      "db32e54213624ec78338e9e46426007d",
+      "7472577364a8455194795a6bd3d9b7eb",
+      "e799975a3c054e34bba14f615718cb70",
+      "11c0e197b4c94e7facb9f812865b7bf4",
+      "95e399d21a844f6893acad9116b1b914",
+      "aa11f113a20a4eb78043aecae37e4689",
+      "c239f8a3ac034838b5d6d72c1768252f",
+      "01ee08302dba4e8eb492c31b3fb1f57c",
+      "108a69f8de2249d195e87d565e563698",
+      "c0a02666ec364914b62e277fe7432521",
+      "7430b697b08542a8ae7343623d3105dc",
+      "c1e3214722904261a77dcf044bcb8ef3",
+      "3b672273528d45e1ab7f8707ef39c003",
+      "5bf03624935146038bf9ca2a0e823f6a",
+      "9160ea72fe9d41fe9e17f6d4137408d1",
+      "32140990c0d54e0696168488a1c37b53",
+      "cf69b5ac00ab434eaa6e9538ff7206c5",
+      "229c270f341b41c18f44ac89722e2a40",
+      "b6769e9a54d841f0b936270b5db13982"
+    ],
+    "documentsUnchanged": true
+  }
+}

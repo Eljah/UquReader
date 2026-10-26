@@ -1,0 +1,22 @@
+{
+  "revision": 1137,
+  "baselineRevision": 1127,
+  "changedUnits": 10,
+  "unchangedUnits": 795,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "sourceRefsVerified": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    578,
+    581,
+    583,
+    586,
+    589
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 62, now in correct column order; pages 62-73 and final QA remain."
+}

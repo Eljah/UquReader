@@ -1,0 +1,25 @@
+{
+  "revision": 975,
+  "baselineRevision": 964,
+  "changedUnits": 11,
+  "unchangedUnits": 798,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "sourceRefsVerified": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    286,
+    287,
+    288,
+    289,
+    292,
+    294,
+    295,
+    296
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 49 after its opening paragraph; pages 49-73 remain. Page 62 column-order repair and final reader-layout QA remain."
+}

@@ -1,0 +1,28 @@
+{
+  "workId": "fea266e5c60a4747898024bd321321ca",
+  "issue": "1948-10",
+  "archiveImage": 37,
+  "printedPage": 37,
+  "evidence": "Visually read the original 037.jpg, both columns. These edits cover only the opening paragraphs, not the entire page.",
+  "corrections": [
+    {
+      "sentenceIds": ["994250392ebd4f93920668d6f6b6c495", "19ccf3272f1f48a5b58bc34bf4ec3d5b"],
+      "originalOrdinals": [0, 1],
+      "sentences": ["\n\n\n Калай тышлы, авыр тупсалы ишекләргә, карандаш һәм пәке очы белән төрле сүзләр язылган стеналарга, яр кырыендагы саллар төсле тезелгән өч катлы сәкеләргә таң яктысы төште."],
+      "reason": "Page 37 left column: restore missing кырыендагы, read саллар төсле, remove spurious full stop and reunite one printed sentence."
+    },
+    {
+      "sentenceIds": ["02bb5c33e7a44e15859fe7de28c54e72"],
+      "originalOrdinals": [2],
+      "sentences": ["\nКайдадыр, еракта, казарма ишек алдында биш тапкыр чуен суктылар.", " Гауптвахтаның бөтен бүлмәләренә завод төтене кебек куе пар таратып, калай бак белән чәй күтәреп уздылар."],
+      "reason": "Page 37 left column: restore sentence boundary after суктылар and the omitted word Гауптвахтаның."
+    },
+    {
+      "sentenceIds": ["dd4c74bb17a24cc18024d448667b7932"],
+      "deferred": true,
+      "originalOrdinals": [3],
+      "sentences": [" Ишекнең урта бер җирендәәрәк тимер тасма белән челтәрләнгән форточкадан көрән мыеклы авыз кычкырды.", "\n— Встать!", "\n— На убор — куу!", "\nФорточка ябылды.", " Солдатлар берәм-берәм идәнгә төшеп шинельләрен селектеләр."],
+      "reason": "Candidate only: omitted location spelling needs magnified verification. Do not apply this group yet. Other omitted words and dialogue are visible."
+    }
+  ]
+}

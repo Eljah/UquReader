@@ -1,0 +1,30 @@
+{
+  "revision": 1060,
+  "baselineRevision": 1049,
+  "changedUnits": 11,
+  "unchangedUnits": 796,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "sourceRefsVerified": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 0,
+  "reviewedUnchangedOrdinals": [
+    443,
+    444,
+    445,
+    446,
+    447,
+    448,
+    450,
+    451,
+    456,
+    458,
+    460,
+    461,
+    462
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 56 after opening dialogue; pages 56-73 and final QA remain. Recheck чәрпәкләнеп in unit 434 against scan 54."
+}

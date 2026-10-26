@@ -1,0 +1,25 @@
+{
+  "revision": 860,
+  "baselineRevision": 845,
+  "changedUnits": 15,
+  "unchangedUnits": 794,
+  "stableIdsAndOrdinals": true,
+  "sourceRefsUnchanged": true,
+  "tokenReconstructionVerified": true,
+  "footnoteTokens": 13,
+  "transferredTranslationsVerified": 5,
+  "reviewedUnchangedOrdinals": [
+    58,
+    59,
+    64,
+    66,
+    70,
+    72,
+    73,
+    75,
+    80
+  ],
+  "published": false,
+  "fullProofreadingComplete": false,
+  "nextReview": "Page 41 after its opening sentence (unit 82 onward). Pages 41-73 remain, including column-order restoration on 42 and 62. Units 72/73 remain punctuation-only legacy units forming the printed ellipsis together with unit 71."
+}

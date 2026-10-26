@@ -1,0 +1,251 @@
+[
+  {
+    "sentenceId": "4c71c1a8377c47d584b83970022ac769",
+    "ordinal": 160,
+    "before": " Чыелдап бөтерелүче карлар өстенә михрабның яшелле- сарылы пыялалар белән бизәкләнгән ян тәрәзәләреннән чуар шәүләләр сузылды.",
+    "after": " Чыелдап бөтерелүче карлар өстенә михрабның яшелле-сарылы пыялалар белән бизәкләнгән ян тәрәзәләреннән чуар шәүләләр сузылды.",
+    "runId": "c4499d52f57449c9928eb560cc576b61",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 left column: remove physical line-space in яшелле-сарылы.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "bbdcdbaad90a46d3b5f4910337f4858e",
+    "ordinal": 166,
+    "before": " Бөтен картлары шәкертләр аның исәбендә.",
+    "after": " Бөтен мәхәллә картлары, кустарьлар, шәкертләр аның исәбендә.",
+    "runId": "f3683fdeeefa48e8abadc10aabf06183",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 left column: restore мәхәллә, кустарьлар and list punctuation.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "7ef72ef5590b4329a850300439555eed",
+    "ordinal": 167,
+    "before": " Намазга керешли ул аларның кәвешләрен, каталарын күздән үткәреп, сөннәт һәм фарыз бүлмәләрендә утыручыларны, сарык санаган төсле, күңелдән тикшереп уза торган иде Килгән.",
+    "after": " Намазга керешли ул аларның кәвешләрен, каталарын күздән үткәреп, сөннәт һәм фарыз бүлмәләрендә утыручыларны, сарык санаган төсле, күңелдән тикшереп уза торган иде:\n— Килгән.",
+    "runId": "40f2db63f089463dbf3360f99c570db1",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 left column: restore colon and dialogue; following unchanged punctuation units complete the printed ellipsis.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "775bdffc3d4345178ad80d607ec0b643",
+    "ordinal": 176,
+    "before": " Туры өенә кайтып, асрау кыз кулына авыр толы- рын шудырып төшерде дә кабинетына узды.",
+    "after": " Туры өенә кайтып, асрау кыз кулына авыр толыбын шудырып төшерде дә кабинетына узды.",
+    "runId": "222b7847de394636a7889b4291e5e96b",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 left column: restore split word толыбын.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "5dc6904264dd449393fabf219daaa5af",
+    "ordinal": 178,
+    "before": " Башта курку, аннан борчулы елмаю белән тыңлап, бераздан бөтенләй куанып кычкырды Менә яраган Чынлапмы Генерал Үзе чара күрәчәк Әле бит ул солдатларымны бозасыз, гарнизонны катнаштырып булмый дип, тискәреләнеп йөри иде.",
+    "after": " Башта курку, аннан борчулы елмаю белән тыңлап, бераздан бөтенләй куанып кычкырды:\n— Менә яраган! Чынлапмы? Генерал Сандецкий? Үзе чара күрәчәк? Әле бит ул солдатларымны бозасыз, гарнизонны катнаштырып булмый дип, тискәреләнеп йөри иде.",
+    "runId": "42db29b088fe439c93182db2ae6c5399",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 left column: restore Сандецкий and dialogue punctuation.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "2c1dc8ebf26e43f0a0b81c00f9c7c1fe",
+    "ordinal": 180,
+    "before": " Полковой мулла итеп куярга дисеңме Анысын инде мин белмим.",
+    "after": " Полковой мулла итеп куярга дисеңме? Анысын инде мин белмим.",
+    "runId": "6768c13d073647148229782c1505858f",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 left column: restore question boundary.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "d7d02e1e5aa7461fae26d926ceb5e1f5",
+    "ordinal": 182,
+    "before": " Имтихан ясарга кирәк булса Садыйк мулланың үзен җибәрергә кирәк булыр- булдип дисеңме шәкерте Бик шәп.",
+    "after": " Имтихан ясарга кирәк булса Садыйк мулланың үзен җибәрергә кирәк булыр. Гайфи Ижбулдин дисеңме? Хөсәения шәкерте? Бик шәп.",
+    "runId": "bd9e16365e754de6b06e229fded311c9",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 left column: restore Гайфи Ижбулдин and Хөсәения, sentence boundaries.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "61903920a2064d1f83fa74bbebd35458",
+    "ordinal": 185,
+    "before": " Ахшам Хәзер нинди ахшам Икендене бетерүгә ат җибәртеп тот та алдыр үзен Әйтерсең мин кушты диярсең Көтәм Кара әле бәлки борынны да чакырырсың Бүген миңа килеп чыкса әйбәт булыр иде Аның бит беләсең теле үткен Файдасы тию ихтимал Димәк шулай Эшкә чыкмаганнарны фронтка Солдаткалар Менә монысы ярый Нәкъ мин әйткәнчә язганнар икән тукталгач кая барырлар дисең.",
+    "after": " Ахшам? Хәзер нинди ахшам? Икендене бетерүгә ат җибәртеп тот та алдыр үзен. Әйтерсең, мин кушты диярсең. Көтәм. Кара әле, бәлки кылыч борынны да чакырырсың. Бүген миңа килеп чыкса әйбәт булыр иде. Аның бит, беләсең, теле үткен. Файдасы тию ихтимал. Димәк, шулай. Эшкә чыкмаганнарны фронтка. Солдаткалар?! Менә монысы ярый. Нәкъ мин әйткәнчә язганнар икән. Пособияләре тукталгач кая барырлар дисең.",
+    "runId": "78a6b639630547068a47c7a58218d439",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 column transition: restore кылыч, Пособияләре and spoken sentence/question/exclamation boundaries.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "4bb965daae234722be739cf52adf020f",
+    "ordinal": 186,
+    "before": " Этнең койрыгын кем киссә шул җизни \n\n«Кылыч борын дигәне иде Аның исеме беренче тапкыр елдаТаң газетасы тирәсендә күренде.",
+    "after": " Этнең койрыгын кем киссә шул аңар җизни.\n«Кылыч борын» дигәне — Мөбарәкша иде. Аның исеме беренче тапкыр 1906 нчы елда «Таң» газетасы тирәсендә күренде.",
+    "runId": "bacc5617e4d34d5787dc9424b36c7935",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 right column: restore аңар, Мөбарәкша, 1906 нчы and quotation punctuation.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "636deed8e1bd4d709b24f15730255f32",
+    "ordinal": 188,
+    "before": " Ничә ел инде менә кайда гына сөйләмәсен һәм нәрсә генә язмасын, бер әйберне тукып килә Безгә дин кирәк, милләт кирәк.",
+    "after": " Ничә ел инде менә Мөбарәкша кайда гына сөйләмәсен һәм нәрсә генә язмасын, бер әйберне тукып килә:\n— Безгә дин кирәк, милләт кирәк.",
+    "runId": "f72cbae9c9e94b5d8aa6753aff0d9c88",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 right column: restore Мөбарәкша and dialogue boundary.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "d374e24c2d83466db29c63472af83080",
+    "ordinal": 192,
+    "before": " Шушы юл белән улРабочая группага килде.",
+    "after": "\nШушы юл белән ул «Рабочая группа»га килде.",
+    "runId": "39c9e204f430456484227aa627502d0b",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 right column: restore spacing, paragraph and quotation boundary.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "dc7841c62e544cf1ac2635a0370caa5c",
+    "ordinal": 195,
+    "before": " Соңгы елларда бистә фабрика- заводларыиа килеп тулган вак һөнәрчеләр, сугыштан котылу өчен эшче булып язылган кибетчеләр шәкертләрРабочая группага бик кулай таяныч булып чыктылар.",
+    "after": " Соңгы елларда бистә фабрика-заводларына килеп тулган вак һөнәрчеләр, сугыштан котылу өчен военнообязанный эшче булып язылган кибетчеләр, толчукчылар, шәкертләр, «Рабочая группа»га бик кулай таяныч булып чыктылар.",
+    "runId": "509671c54cc34dfd82308111a70a7bd0",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 right column: restore военнообязанный and толчукчылар, fix заводларына, quotation and enumeration.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "7b695499a3314309a23a1ade5511aa2a",
+    "ordinal": 196,
+    "reviewed": true,
+    "saved": false,
+    "reason": "Magnified scan 44 right column: verified unchanged sentence."
+  },
+  {
+    "sentenceId": "1b7723a919574580b8e20366026c64c1",
+    "ordinal": 197,
+    "before": " Аны югалту сугышка китү дигән сүз.",
+    "after": " Аны югалту — сугышка китү дигән сүз.",
+    "runId": "5ce61ba784184001a64f3e6c6b5d0c60",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scan 44 right column: restore dash.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  },
+  {
+    "sentenceId": "7fd0615e83424161bf9a2e05fa3835bc",
+    "ordinal": 198,
+    "before": " Шуңа күрә элек электән бистәдә эшләп килүчеләр белән бик сак аралашалар, ә инде хуҗа турында сүз чыкса, ишанын мактаучы мөрит кебек олылап сөйлиләр үзенең ничәмә-ничә еллар язын һәм яклап килгән программасын менә шундый каршы\n\n45 \n\n \n\nЛыклы агымнар арасында сынауга куя.",
+    "after": " Шуңа күрә элек электән бистәдә эшләп килүчеләр белән бик сак аралашалар, ә инде хуҗа турында сүз чыкса, ишанын мактаучы мөрит кебек олылап сөйлиләр.\nМөбарәкша, үзенең ничәмә-ничә еллар язып һәм яклап килгән программасын менә шундый каршылыклы агымнар арасында сынауга куя.",
+    "runId": "3dd1ed42e2ef421a8b8a60a0df7aa194",
+    "sourceRefs": [
+      {
+        "sourceId": "d83298c3044d45f4af08687337a92630",
+        "page": 1
+      },
+      {
+        "sourceId": "b3849fd70b0644188f961db236ec36f3",
+        "page": 1
+      }
+    ],
+    "reason": "Magnified scans 44/45: restore Мөбарәкша, correct язып, reunite каршылыклы across page break; remove folio 45 and restore paragraph.",
+    "valid": true,
+    "saved": true,
+    "revision": 3
+  }
+]

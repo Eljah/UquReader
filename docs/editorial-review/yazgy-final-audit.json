@@ -1,0 +1,251 @@
+{
+  "workId": "fea266e5c60a4747898024bd321321ca",
+  "revision": 1298,
+  "printedPages": {
+    "first": 37,
+    "last": 73,
+    "count": 37
+  },
+  "activeUnits": 801,
+  "tokens": 20732,
+  "footnoteTokens": 13,
+  "headings": [
+    {
+      "ordinal": 0,
+      "surface": "XXV"
+    },
+    {
+      "ordinal": 134,
+      "surface": "XXVI"
+    },
+    {
+      "ordinal": 304,
+      "surface": "XXVII"
+    },
+    {
+      "ordinal": 408,
+      "surface": "XXVIII"
+    },
+    {
+      "ordinal": 503,
+      "surface": "XXIX"
+    },
+    {
+      "ordinal": 656,
+      "surface": "XXX"
+    },
+    {
+      "ordinal": 690,
+      "surface": "XXXI"
+    }
+  ],
+  "attestedSaves": 463,
+  "distinctEditedIds": 440,
+  "passes": [
+    {
+      "plan": "yazgy-final-review-pass2.json",
+      "baselineRevision": 1274,
+      "saved": 22
+    },
+    {
+      "plan": "yazgy-final-unchanged.json",
+      "baselineRevision": 1296,
+      "saved": 0
+    },
+    {
+      "plan": "yazgy-page37-pass2.json",
+      "baselineRevision": 813,
+      "saved": 7
+    },
+    {
+      "plan": "yazgy-page38-pass1.json",
+      "baselineRevision": 820,
+      "saved": 8
+    },
+    {
+      "plan": "yazgy-page40-pass1.json",
+      "baselineRevision": 845,
+      "saved": 15
+    },
+    {
+      "plan": "yazgy-page41-pass1.json",
+      "baselineRevision": 860,
+      "saved": 10
+    },
+    {
+      "plan": "yazgy-page42-pass1.json",
+      "baselineRevision": 876,
+      "saved": 14
+    },
+    {
+      "plan": "yazgy-page43-pass1.json",
+      "baselineRevision": 890,
+      "saved": 13
+    },
+    {
+      "plan": "yazgy-page44-pass1.json",
+      "baselineRevision": 903,
+      "saved": 14
+    },
+    {
+      "plan": "yazgy-page45-pass1.json",
+      "baselineRevision": 917,
+      "saved": 14
+    },
+    {
+      "plan": "yazgy-page46-pass1.json",
+      "baselineRevision": 931,
+      "saved": 15
+    },
+    {
+      "plan": "yazgy-page47-pass1.json",
+      "baselineRevision": 946,
+      "saved": 17
+    },
+    {
+      "plan": "yazgy-page48-pass1.json",
+      "baselineRevision": 964,
+      "saved": 11
+    },
+    {
+      "plan": "yazgy-page49-pass1.json",
+      "baselineRevision": 976,
+      "saved": 13
+    },
+    {
+      "plan": "yazgy-page50-pass1.json",
+      "baselineRevision": 989,
+      "saved": 12
+    },
+    {
+      "plan": "yazgy-page51-pass1.json",
+      "baselineRevision": 1002,
+      "saved": 15
+    },
+    {
+      "plan": "yazgy-page52-pass1.json",
+      "baselineRevision": 1017,
+      "saved": 11
+    },
+    {
+      "plan": "yazgy-page53-pass1.json",
+      "baselineRevision": 1028,
+      "saved": 13
+    },
+    {
+      "plan": "yazgy-page54-pass1.json",
+      "baselineRevision": 1041,
+      "saved": 8
+    },
+    {
+      "plan": "yazgy-page55-pass1.json",
+      "baselineRevision": 1049,
+      "saved": 11
+    },
+    {
+      "plan": "yazgy-page56-pass1.json",
+      "baselineRevision": 1060,
+      "saved": 8
+    },
+    {
+      "plan": "yazgy-page57-pass1.json",
+      "baselineRevision": 1068,
+      "saved": 10
+    },
+    {
+      "plan": "yazgy-page58-pass1.json",
+      "baselineRevision": 1079,
+      "saved": 12
+    },
+    {
+      "plan": "yazgy-page59-pass1.json",
+      "baselineRevision": 1091,
+      "saved": 16
+    },
+    {
+      "plan": "yazgy-page60-pass1.json",
+      "baselineRevision": 1107,
+      "saved": 12
+    },
+    {
+      "plan": "yazgy-page61-pass1.json",
+      "baselineRevision": 1127,
+      "saved": 10
+    },
+    {
+      "plan": "yazgy-page62-pass1.json",
+      "baselineRevision": 1137,
+      "saved": 19
+    },
+    {
+      "plan": "yazgy-page63-pass1.json",
+      "baselineRevision": 1156,
+      "saved": 12
+    },
+    {
+      "plan": "yazgy-page64-pass1.json",
+      "baselineRevision": 1169,
+      "saved": 13
+    },
+    {
+      "plan": "yazgy-page65-pass1.json",
+      "baselineRevision": 1182,
+      "saved": 12
+    },
+    {
+      "plan": "yazgy-page66-pass1.json",
+      "baselineRevision": 1194,
+      "saved": 6
+    },
+    {
+      "plan": "yazgy-page67-pass1.json",
+      "baselineRevision": 1200,
+      "saved": 16
+    },
+    {
+      "plan": "yazgy-page68-pass1.json",
+      "baselineRevision": 1217,
+      "saved": 10
+    },
+    {
+      "plan": "yazgy-page69-pass1.json",
+      "baselineRevision": 1227,
+      "saved": 12
+    },
+    {
+      "plan": "yazgy-page70-pass1.json",
+      "baselineRevision": 1241,
+      "saved": 11
+    },
+    {
+      "plan": "yazgy-page71-pass1.json",
+      "baselineRevision": 1252,
+      "saved": 10
+    },
+    {
+      "plan": "yazgy-pages38-39-pass2.json",
+      "baselineRevision": 828,
+      "saved": 17
+    },
+    {
+      "plan": "yazgy-pages72-73-pass1.json",
+      "baselineRevision": 1262,
+      "saved": 12
+    },
+    {
+      "plan": "yazgy-user-confirmed.json",
+      "baselineRevision": 1296,
+      "saved": 2
+    }
+  ],
+  "unreviewed": [],
+  "mixedScript": [],
+  "standaloneFolios": [],
+  "textSha256": "cfebe2bd16ddf35c360b0cab4441d032df79e55028db3b86ef6ae685ea5e1a1e",
+  "textTokenReconstructionVerified": true,
+  "sourceRefsVerified": true,
+  "firstVisualPagePassComplete": true,
+  "published": true,
+  "readerPaginationVerified": false,
+  "publicationId": "edition_fea266e5c60a4747898024bd321321ca_r1298"
+}
